@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 
-import { checkGitHubCLI } from "./validators/check-gh.js";
-import { checkClaudeCLI } from "./validators/check-claude.js";
-import { launchServers } from "./launcher.js";
-import { INSTALL_MESSAGES, AUTH_MESSAGES } from "./utils/messages.js";
+import { checkGitHubCLI } from './validators/check-gh.js';
+import { checkClaudeCLI } from './validators/check-claude.js';
+import { launchServers } from './launcher.js';
+import { INSTALL_MESSAGES, AUTH_MESSAGES } from './utils/messages.js';
 
-const VERSION = "0.0.1";
+const VERSION = '0.0.1';
 
 function displayBanner(): void {
   console.log(`
@@ -24,7 +24,7 @@ function displayBanner(): void {
 export async function main(): Promise<void> {
   displayBanner();
 
-  console.log("Validating required tools...\n");
+  console.log('Validating required tools...\n');
 
   const ghResult = await checkGitHubCLI();
   if (!ghResult.success) {
@@ -37,7 +37,7 @@ export async function main(): Promise<void> {
     }
     process.exit(1);
   }
-  console.log("✅ GitHub CLI: OK");
+  console.log('✅ GitHub CLI: OK');
 
   const claudeResult = await checkClaudeCLI();
   if (!claudeResult.success) {
@@ -50,9 +50,9 @@ export async function main(): Promise<void> {
     }
     process.exit(1);
   }
-  console.log("✅ Claude Code CLI: OK");
+  console.log('✅ Claude Code CLI: OK');
 
-  console.log("\n✨ All checks passed!\n");
+  console.log('\n✨ All checks passed!\n');
 
   await launchServers();
 }
@@ -60,7 +60,7 @@ export async function main(): Promise<void> {
 // CommonJS compatibility
 if (require.main === module) {
   main().catch((error) => {
-    console.error("Error:", error);
+    console.error('Error:', error);
     process.exit(1);
   });
 }

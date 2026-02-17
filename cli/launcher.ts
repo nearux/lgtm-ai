@@ -1,20 +1,20 @@
-import { spawn, ChildProcess } from "child_process";
-import { FRONTEND_URL } from "./utils/ports.js";
-import open from "open";
+import { spawn, ChildProcess } from 'child_process';
+import { FRONTEND_URL } from './utils/ports.js';
+import open from 'open';
 
 export async function launchServers(): Promise<void> {
-  console.log("\n🚀 Starting servers...\n");
+  console.log('\n🚀 Starting servers...\n');
 
   const processes: ChildProcess[] = [];
 
-  const backend = spawn("node", ["backend/dist/index.js"], {
-    stdio: "inherit",
+  const backend = spawn('node', ['backend/dist/index.js'], {
+    stdio: 'inherit',
     shell: true,
   });
   processes.push(backend);
 
-  const frontend = spawn("npm", ["run", "preview", "-w", "frontend"], {
-    stdio: "inherit",
+  const frontend = spawn('npm', ['run', 'preview', '-w', 'frontend'], {
+    stdio: 'inherit',
     shell: true,
   });
   processes.push(frontend);
@@ -25,12 +25,12 @@ export async function launchServers(): Promise<void> {
     try {
       await open(FRONTEND_URL);
     } catch (error) {
-      console.log("Could not auto-open browser. Please visit:", FRONTEND_URL);
+      console.log('Could not auto-open browser. Please visit:', FRONTEND_URL);
     }
   }, 3000);
 
   const cleanup = () => {
-    console.log("\n\n🛑 Shutting down servers...");
+    console.log('\n\n🛑 Shutting down servers...');
     processes.forEach((proc) => {
       if (proc && !proc.killed) {
         proc.kill();
@@ -39,6 +39,6 @@ export async function launchServers(): Promise<void> {
     process.exit(0);
   };
 
-  process.on("SIGINT", cleanup);
-  process.on("SIGTERM", cleanup);
+  process.on('SIGINT', cleanup);
+  process.on('SIGTERM', cleanup);
 }
