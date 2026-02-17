@@ -16,20 +16,12 @@ async function isClaudeCLIAuthenticated(): Promise<boolean> {
 export async function checkClaudeCLI(): Promise<ValidationResult> {
   const isInstalled = await isCommandInstalled('claude');
   if (!isInstalled) {
-    return {
-      success: false,
-      message: 'Claude Code CLI is not installed.',
-      installUrl: 'https://docs.anthropic.com/en/docs/claude-code',
-    };
+    return { success: false, needsInstall: true };
   }
 
   const isAuthenticated = await isClaudeCLIAuthenticated();
   if (!isAuthenticated) {
-    return {
-      success: false,
-      message: 'Claude Code CLI might not be configured properly.',
-      authUrl: 'Please ensure Claude Code CLI is set up correctly',
-    };
+    return { success: false, needsAuth: true };
   }
 
   return { success: true };

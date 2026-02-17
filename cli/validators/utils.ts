@@ -5,9 +5,8 @@ const execAsync = promisify(exec);
 
 export interface ValidationResult {
   success: boolean;
-  message?: string;
-  installUrl?: string;
-  authUrl?: string;
+  needsInstall?: boolean;
+  needsAuth?: boolean;
 }
 
 export async function isCommandInstalled(command: string): Promise<boolean> {

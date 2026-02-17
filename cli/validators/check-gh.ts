@@ -16,20 +16,12 @@ async function isGitHubCLIAuthenticated(): Promise<boolean> {
 export async function checkGitHubCLI(): Promise<ValidationResult> {
   const isInstalled = await isCommandInstalled('gh');
   if (!isInstalled) {
-    return {
-      success: false,
-      message: 'GitHub CLI (gh) is not installed.',
-      installUrl: 'https://cli.github.com/manual/installation',
-    };
+    return { success: false, needsInstall: true };
   }
 
   const isAuthenticated = await isGitHubCLIAuthenticated();
   if (!isAuthenticated) {
-    return {
-      success: false,
-      message: 'GitHub CLI is not authenticated.',
-      authUrl: 'Run: gh auth login',
-    };
+    return { success: false, needsAuth: true };
   }
 
   return { success: true };

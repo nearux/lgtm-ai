@@ -28,11 +28,12 @@ export async function main(): Promise<void> {
 
   const ghResult = await checkGitHubCLI();
   if (!ghResult.success) {
-    console.error(`❌ ${ghResult.message}`);
-    if (ghResult.installUrl) {
+    if (ghResult.needsInstall) {
+      console.error('❌ GitHub CLI (gh) is not installed.');
       console.log(INSTALL_MESSAGES.gh);
     }
-    if (ghResult.authUrl) {
+    if (ghResult.needsAuth) {
+      console.error('❌ GitHub CLI is not authenticated.');
       console.log(AUTH_MESSAGES.gh);
     }
     process.exit(1);
@@ -41,11 +42,12 @@ export async function main(): Promise<void> {
 
   const claudeResult = await checkClaudeCLI();
   if (!claudeResult.success) {
-    console.error(`❌ ${claudeResult.message}`);
-    if (claudeResult.installUrl) {
+    if (claudeResult.needsInstall) {
+      console.error('❌ Claude Code CLI is not installed.');
       console.log(INSTALL_MESSAGES.claude);
     }
-    if (claudeResult.authUrl) {
+    if (claudeResult.needsAuth) {
+      console.error('❌ Claude Code CLI might not be configured properly.');
       console.log(AUTH_MESSAGES.claude);
     }
     process.exit(1);
