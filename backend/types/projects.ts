@@ -3,8 +3,8 @@ export interface Project {
   name: string;
   description: string | null;
   working_dir: string;
-  created_at: string;
-  updated_at: string;
+  created_at: Date;
+  updated_at: Date;
 }
 
 export interface ProjectGitInfo {

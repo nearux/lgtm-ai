@@ -11,6 +11,6 @@ model Project {
   name        String
   description String?
   working_dir String
-  created_at  String
-  updated_at  String
+  created_at  DateTime
+  updated_at  DateTime
 }

@@ -11,8 +11,18 @@ import {
   Tags,
   SuccessResponse,
 } from 'tsoa';
+import { z } from 'zod';
 import HttpStatus from 'http-status';
 import { AppError } from '../errors/AppError.js';
+
+const uuidSchema = z.uuid();
+
+function parseUUID(id: string): string {
+  if (!uuidSchema.safeParse(id).success) {
+    throw new AppError('Invalid project id format', HttpStatus.BAD_REQUEST);
+  }
+  return id;
+}
 import * as projectsService from '../services/projects.js';
 import * as pullRequestsService from '../services/pullRequests.js';
 import * as gitUtils from '../utils/git.js';
@@ -53,7 +63,7 @@ export class ProjectsController extends Controller {
   @Get('{id}')
   @Response<ErrorResponse>(HttpStatus.NOT_FOUND, 'Project not found')
   public async getProject(@Path() id: string): Promise<ProjectDetail> {
-    return projectsService.findById(id);
+    return projectsService.findById(parseUUID(id));
   }
 
   /**
@@ -88,7 +98,7 @@ export class ProjectsController extends Controller {
     @Path() id: string,
     @Body() body: UpdateProjectBody
   ): Promise<Project> {
-    return projectsService.update(id, body);
+    return projectsService.update(parseUUID(id), body);
   }
 
   /**
@@ -100,7 +110,7 @@ export class ProjectsController extends Controller {
   @Response<ErrorResponse>(HttpStatus.NOT_FOUND, 'Project not found')
   public async deleteProject(@Path() id: string): Promise<void> {
     this.setStatus(HttpStatus.NO_CONTENT);
-    await projectsService.remove(id);
+    await projectsService.remove(parseUUID(id));
   }
 
   /**
@@ -121,7 +131,7 @@ export class ProjectsController extends Controller {
   public async listProjectPRs(
     @Path() projectId: string
   ): Promise<PRListItem[]> {
-    const project = await projectsService.findById(projectId);
+    const project = await projectsService.findById(parseUUID(projectId));
 
     if (!project.gitInfo.remoteUrl) {
       throw new AppError(
@@ -157,7 +167,7 @@ export class ProjectsController extends Controller {
     @Path() projectId: string,
     @Path() prNumber: number
   ): Promise<PRDetail> {
-    const project = await projectsService.findById(projectId);
+    const project = await projectsService.findById(parseUUID(projectId));
 
     if (!project.gitInfo.remoteUrl) {
       throw new AppError(

@@ -62,7 +62,7 @@ export async function create(input: CreateProjectBody): Promise<Project> {
     );
   }
 
-  const now = new Date().toISOString();
+  const now = new Date();
   return prisma.project.create({
     data: {
       id: randomUUID(),
@@ -113,7 +113,7 @@ export async function update(
         description: description.trim() || null,
       }),
       ...(working_dir !== undefined && { working_dir: working_dir.trim() }),
-      updated_at: new Date().toISOString(),
+      updated_at: new Date(),
     },
   });
 }
