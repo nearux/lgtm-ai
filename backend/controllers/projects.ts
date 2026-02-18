@@ -8,7 +8,7 @@ import {
   ProjectDetailSchema,
   ProjectListSchema,
 } from '../schemas/projects.js';
-import { parseSchema } from '../utils/parseSchema.js';
+import { parseSchema } from '../utils/schema.js';
 
 export const createProject = wrapAsync(async (req: Request, res: Response) => {
   const { name, description, working_dir } = parseSchema(
