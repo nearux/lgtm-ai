@@ -1,5 +1,6 @@
 import HttpStatus from 'http-status';
-import { execSync } from 'node:child_process';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import { existsSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import prisma from '../prismaClient.js';
@@ -12,35 +13,34 @@ import type {
   UpdateProjectBody,
 } from '../types/projects.js';
 
-function getGitInfo(workingDir: string): ProjectGitInfo {
+const execFileAsync = promisify(execFile);
+
+async function getGitInfo(workingDir: string): Promise<ProjectGitInfo> {
   let remoteUrl: string | null = null;
   let currentBranch: string | null = null;
   let branches: string[] = [];
 
   try {
-    remoteUrl = execSync('git remote get-url origin', {
+    const result = await execFileAsync('git', ['remote', 'get-url', 'origin'], {
       cwd: workingDir,
-      encoding: 'utf8',
-    }).trim();
+    });
+    remoteUrl = result.stdout.trim();
   } catch {
     remoteUrl = null;
   }
 
   try {
-    currentBranch =
-      execSync('git branch --show-current', {
-        cwd: workingDir,
-        encoding: 'utf8',
-      }).trim() || null;
+    const result = await execFileAsync('git', ['branch', '--show-current'], {
+      cwd: workingDir,
+    });
+    currentBranch = result.stdout.trim() || null;
   } catch {
     currentBranch = null;
   }
 
   try {
-    const raw = execSync('git branch', {
-      cwd: workingDir,
-      encoding: 'utf8',
-    });
+    const result = await execFileAsync('git', ['branch'], { cwd: workingDir });
+    const raw = result.stdout;
     branches = raw
       .split('\n')
       .map((line) => line.replace(/^\*?\s+/, '').trim())
@@ -84,8 +84,9 @@ export async function findAll(): Promise<Project[]> {
 export async function findById(id: string): Promise<ProjectDetail> {
   const project = await prisma.project.findUnique({ where: { id } });
   if (!project) throw new AppError('Project not found', HttpStatus.NOT_FOUND);
+  const gitInfo = await getGitInfo(project.working_dir);
 
-  return { ...project, gitInfo: getGitInfo(project.working_dir) };
+  return { ...project, gitInfo };
 }
 
 export async function update(
