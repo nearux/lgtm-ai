@@ -37,7 +37,7 @@ function getGitInfo(workingDir: string): ProjectGitInfo {
   }
 
   try {
-    const raw = execSync('git branch -a', {
+    const raw = execSync('git branch', {
       cwd: workingDir,
       encoding: 'utf8',
     });
