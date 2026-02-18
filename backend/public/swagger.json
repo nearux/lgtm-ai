@@ -1,0 +1,381 @@
+{
+  "openapi": "3.0.0",
+  "components": {
+    "examples": {},
+    "headers": {},
+    "parameters": {},
+    "requestBodies": {},
+    "responses": {},
+    "schemas": {
+      "Project": {
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "working_dir": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "working_dir",
+          "created_at",
+          "updated_at"
+        ],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "ProjectGitInfo": {
+        "properties": {
+          "remoteUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "currentBranch": {
+            "type": "string",
+            "nullable": true
+          },
+          "branches": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": ["remoteUrl", "currentBranch", "branches"],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "ProjectDetailResponse": {
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "working_dir": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          },
+          "gitInfo": {
+            "$ref": "#/components/schemas/ProjectGitInfo"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "working_dir",
+          "created_at",
+          "updated_at",
+          "gitInfo"
+        ],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "ErrorResponse": {
+        "properties": {
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": ["message"],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "CreateProjectBody": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Project name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Optional description"
+          },
+          "working_dir": {
+            "type": "string",
+            "description": "Absolute path to the project working directory"
+          }
+        },
+        "required": ["name", "working_dir"],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "UpdateProjectBody": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Project name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Optional description"
+          },
+          "working_dir": {
+            "type": "string",
+            "description": "Absolute path to the project working directory"
+          }
+        },
+        "type": "object",
+        "additionalProperties": false
+      }
+    },
+    "securitySchemes": {}
+  },
+  "info": {
+    "title": "LGTM AI API",
+    "version": "0.0.1",
+    "description": "API documentation for LGTM AI backend",
+    "contact": {
+      "name": "LGTM AI"
+    }
+  },
+  "paths": {
+    "/api/projects": {
+      "get": {
+        "operationId": "ListProjects",
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Project"
+                  },
+                  "type": "array"
+                }
+              }
+            }
+          }
+        },
+        "description": "Get all projects",
+        "tags": ["Projects"],
+        "security": [],
+        "parameters": []
+      },
+      "post": {
+        "operationId": "CreateProject",
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Project"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Working directory does not exist",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Create a new project",
+        "tags": ["Projects"],
+        "security": [],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProjectBody"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{id}": {
+      "get": {
+        "operationId": "GetProject",
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectDetailResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Project not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Get a project by ID",
+        "tags": ["Projects"],
+        "security": [],
+        "parameters": [
+          {
+            "description": "Project UUID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      },
+      "patch": {
+        "operationId": "UpdateProject",
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Project"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Project not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Working directory does not exist",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Update a project by ID",
+        "tags": ["Projects"],
+        "security": [],
+        "parameters": [
+          {
+            "description": "Project UUID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProjectBody"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "DeleteProject",
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Project not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Delete a project by ID",
+        "tags": ["Projects"],
+        "security": [],
+        "parameters": [
+          {
+            "description": "Project UUID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5051/"
+    }
+  ]
+}

@@ -2,13 +2,15 @@ import HttpStatus from 'http-status';
 import { execSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
-import prisma, {
+import prisma from '../prismaClient.js';
+import { AppError } from '../errors/AppError.js';
+import type {
   Project,
   ProjectDetail,
   ProjectGitInfo,
-} from '../prismaClient.js';
-import { AppError } from '../errors/AppError.js';
-import { CreateProjectInput, UpdateProjectInput } from '../schemas/projects.js';
+  CreateProjectBody,
+  UpdateProjectBody,
+} from '../types/projects.js';
 
 function getGitInfo(workingDir: string): ProjectGitInfo {
   let remoteUrl: string | null = null;
@@ -50,7 +52,7 @@ function getGitInfo(workingDir: string): ProjectGitInfo {
   return { remoteUrl, currentBranch, branches };
 }
 
-export async function create(input: CreateProjectInput): Promise<Project> {
+export async function create(input: CreateProjectBody): Promise<Project> {
   const { name, description, working_dir } = input;
 
   if (!existsSync(working_dir)) {
@@ -88,7 +90,7 @@ export async function findById(id: string): Promise<ProjectDetail> {
 
 export async function update(
   id: string,
-  input: UpdateProjectInput
+  input: UpdateProjectBody
 ): Promise<Project> {
   const existing = await prisma.project.findUnique({ where: { id } });
   if (!existing) throw new AppError('Project not found', HttpStatus.NOT_FOUND);
