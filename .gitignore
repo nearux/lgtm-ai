@@ -7,5 +7,6 @@ node_modules/
 */generated/
 backend/.env
 
-# TSOA auto-generated swagger spec
+# TSOA auto-generated files
 backend/public/swagger.json
+backend/routes.ts
