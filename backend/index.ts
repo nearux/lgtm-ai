@@ -22,6 +22,7 @@ if (process.env.NODE_ENV !== 'production') {
   const swaggerDocument = JSON.parse(
     readFileSync(join(__dirname, 'public', 'swagger.json'), 'utf-8')
   );
+  swaggerDocument.servers = [{ url: '/' }];
   app.use(
     '/api-docs',
     swaggerUi.default.serve,
