@@ -15,7 +15,7 @@
     "schemes": ["http"]
   },
   "routes": {
-    "routesDir": "routes",
+    "routesDir": ".",
     "middleware": "express",
     "esm": true
   }

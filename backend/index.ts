@@ -4,7 +4,7 @@ import swaggerUi from 'swagger-ui-express';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { RegisterRoutes } from './routes/routes.js';
+import { RegisterRoutes } from './routes.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
