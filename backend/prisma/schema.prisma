@@ -1,0 +1,16 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Project {
+  id          String  @id
+  name        String
+  description String?
+  working_dir String
+  created_at  String
+  updated_at  String
+}
