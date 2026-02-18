@@ -7,12 +7,13 @@ export function errorHandler(
   res: Response,
   _next: NextFunction
 ): void {
+  console.error(err);
+
   if (err instanceof AppError) {
     res.status(err.statusCode).json({ message: err.message });
     return;
   }
 
-  console.error(err);
   res.status(500).json({
     message: 'Internal server error',
   });

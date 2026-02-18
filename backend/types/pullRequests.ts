@@ -1,3 +1,21 @@
+export type GitHubUser = {
+  id: number;
+  login: string;
+  name?: string | null;
+  type?: string | null;
+};
+
+export type GitHubPullRequest = {
+  number: number;
+  title: string;
+  body?: string | null;
+  assignees: GitHubUser[];
+  user: GitHubUser;
+  created_at: string;
+  updated_at: string;
+  state: string;
+};
+
 export interface PRAuthor {
   id: string;
   login: string;

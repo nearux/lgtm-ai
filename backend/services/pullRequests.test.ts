@@ -17,6 +17,29 @@ describe('pullRequests service', () => {
   });
 
   describe('fetchPRList', () => {
+    const mockApiPRListData = [
+      {
+        number: 1,
+        title: 'Test PR',
+        body: 'Test body',
+        assignees: [{ id: 1, login: 'user1', name: 'User One', type: 'User' }],
+        user: { id: 2, login: 'author1', name: 'Author One', type: 'User' },
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-02T00:00:00Z',
+        state: 'open',
+      },
+      {
+        number: 2,
+        title: 'Another PR',
+        body: null,
+        assignees: [],
+        user: { id: 3, login: 'author2', type: 'Bot' },
+        created_at: '2024-01-03T00:00:00Z',
+        updated_at: '2024-01-04T00:00:00Z',
+        state: 'closed',
+      },
+    ];
+
     const mockPRListData: PRListItem[] = [
       {
         number: 1,
@@ -26,37 +49,66 @@ describe('pullRequests service', () => {
         author: { id: '2', login: 'author1', name: 'Author One' },
         createdAt: '2024-01-01T00:00:00Z',
         updatedAt: '2024-01-02T00:00:00Z',
-        state: 'OPEN',
+        state: 'open',
       },
       {
         number: 2,
         title: 'Another PR',
-        body: 'Another body',
+        body: '',
         assignees: [],
         author: {
           id: '3',
           login: 'author2',
-          name: 'Author Two',
-          is_bot: false,
+          name: 'author2',
+          is_bot: true,
         },
         createdAt: '2024-01-03T00:00:00Z',
         updatedAt: '2024-01-04T00:00:00Z',
-        state: 'CLOSED',
+        state: 'closed',
       },
     ];
 
     it('should successfully fetch PR list', async () => {
       mockExecAsync.mockResolvedValue({
-        stdout: JSON.stringify(mockPRListData),
+        stdout: JSON.stringify(mockApiPRListData),
         stderr: '',
       });
 
       const result = await fetchPRList('owner/repo');
 
       expect(result).toEqual(mockPRListData);
-      expect(mockExecAsync).toHaveBeenCalledWith(
-        'gh pr list --repo owner/repo --json number,title,body,assignees,author,createdAt,updatedAt,state --limit 100'
-      );
+      expect(mockExecAsync).toHaveBeenCalledWith('gh', [
+        'api',
+        'repos/owner/repo/pulls?per_page=100&page=1&state=open',
+      ]);
+    });
+
+    it('should pass page and limit options', async () => {
+      mockExecAsync.mockResolvedValue({
+        stdout: JSON.stringify(mockApiPRListData),
+        stderr: '',
+      });
+
+      await fetchPRList('owner/repo', { page: 2, limit: 50 });
+
+      expect(mockExecAsync).toHaveBeenCalledWith('gh', [
+        'api',
+        'repos/owner/repo/pulls?per_page=50&page=2&state=open',
+      ]);
+    });
+
+    it('should clamp invalid page and limit values', async () => {
+      mockExecAsync.mockResolvedValue({
+        stdout: JSON.stringify(mockApiPRListData),
+        stderr: '',
+      });
+
+      await fetchPRList('owner/repo', { page: 0, limit: 250 });
+
+      expect(mockExecAsync).toHaveBeenCalledWith('gh', [
+        'api',
+        'repos/owner/repo/pulls?per_page=100&page=1&state=open',
+      ]);
     });
 
     it('should return empty array when no PRs exist', async () => {
@@ -140,9 +192,15 @@ describe('pullRequests service', () => {
       const result = await fetchPRDetail('owner/repo', 1);
 
       expect(result).toEqual(mockPRDetailData);
-      expect(mockExecAsync).toHaveBeenCalledWith(
-        'gh pr view 1 --repo owner/repo --json number,title,body,assignees,author,createdAt,updatedAt,state,comments,reviews,commits'
-      );
+      expect(mockExecAsync).toHaveBeenCalledWith('gh', [
+        'pr',
+        'view',
+        '1',
+        '--repo',
+        'owner/repo',
+        '--json',
+        'number,title,body,assignees,author,createdAt,updatedAt,state,comments,reviews,commits',
+      ]);
     });
 
     it('should throw NOT_FOUND error when PR does not exist', async () => {

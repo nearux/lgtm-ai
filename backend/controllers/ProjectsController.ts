@@ -7,6 +7,7 @@ import {
   Delete,
   Body,
   Path,
+  Query,
   Response,
   Tags,
   SuccessResponse,
@@ -116,6 +117,8 @@ export class ProjectsController extends Controller {
   /**
    * Get list of pull requests for a project
    * @param projectId Project UUID
+   * @param page Page number (1-based)
+   * @param limit Results per page (max 100)
    */
   @Get('{projectId}/prs')
   @Response<ErrorResponse>(HttpStatus.BAD_REQUEST, 'Invalid remote URL')
@@ -129,7 +132,9 @@ export class ProjectsController extends Controller {
     'GitHub CLI unavailable'
   )
   public async listProjectPRs(
-    @Path() projectId: string
+    @Path() projectId: string,
+    @Query() page?: number,
+    @Query() limit?: number
   ): Promise<PRListItem[]> {
     const project = await projectsService.findById(parseUUID(projectId));
 
@@ -141,7 +146,7 @@ export class ProjectsController extends Controller {
     }
 
     const repoOwnerName = gitUtils.parseGitHubRepo(project.gitInfo.remoteUrl);
-    return pullRequestsService.fetchPRList(repoOwnerName);
+    return pullRequestsService.fetchPRList(repoOwnerName, { page, limit });
   }
 
   /**
