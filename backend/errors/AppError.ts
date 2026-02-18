@@ -1,5 +1,3 @@
-import { HttpStatus } from 'http-status';
-
 export class AppError extends Error {
   constructor(
     public readonly message: string,
