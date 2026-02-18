@@ -3,7 +3,7 @@
   "noImplicitAdditionalProperties": "throw-on-extras",
   "controllerPathGlobs": ["controllers/**/*Controller.ts"],
   "spec": {
-    "outputDirectory": "dist/public",
+    "outputDirectory": "public",
     "specVersion": 3,
     "name": "LGTM AI API",
     "description": "API documentation for LGTM AI backend",

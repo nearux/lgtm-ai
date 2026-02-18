@@ -11,7 +11,11 @@ import {
   Tags,
   SuccessResponse,
 } from 'tsoa';
+import HttpStatus from 'http-status';
+import { AppError } from '../errors/AppError.js';
 import * as projectsService from '../services/projects.js';
+import * as pullRequestsService from '../services/pullRequests.js';
+import * as gitUtils from '../utils/git.js';
 import type {
   Project,
   ProjectDetail,
@@ -19,6 +23,7 @@ import type {
   UpdateProjectBody,
   ErrorResponse,
 } from '../types/projects.js';
+import type { PRListItem, PRDetail } from '../types/pullRequests.js';
 
 export type {
   Project,
@@ -26,6 +31,8 @@ export type {
   CreateProjectBody,
   UpdateProjectBody,
   ErrorResponse,
+  PRListItem,
+  PRDetail,
 };
 
 @Route('api/projects')
@@ -44,7 +51,7 @@ export class ProjectsController extends Controller {
    * @param id Project UUID
    */
   @Get('{id}')
-  @Response<ErrorResponse>(404, 'Project not found')
+  @Response<ErrorResponse>(HttpStatus.NOT_FOUND, 'Project not found')
   public async getProject(@Path() id: string): Promise<ProjectDetail> {
     return projectsService.findById(id);
   }
@@ -53,13 +60,16 @@ export class ProjectsController extends Controller {
    * Create a new project
    */
   @Post('/')
-  @SuccessResponse(201, 'Created')
-  @Response<ErrorResponse>(400, 'Validation error')
-  @Response<ErrorResponse>(422, 'Working directory does not exist')
+  @SuccessResponse(HttpStatus.CREATED, 'Created')
+  @Response<ErrorResponse>(HttpStatus.BAD_REQUEST, 'Validation error')
+  @Response<ErrorResponse>(
+    HttpStatus.UNPROCESSABLE_ENTITY,
+    'Working directory does not exist'
+  )
   public async createProject(
     @Body() body: CreateProjectBody
   ): Promise<Project> {
-    this.setStatus(201);
+    this.setStatus(HttpStatus.CREATED);
     return projectsService.create(body);
   }
 
@@ -68,9 +78,12 @@ export class ProjectsController extends Controller {
    * @param id Project UUID
    */
   @Patch('{id}')
-  @Response<ErrorResponse>(400, 'Validation error')
-  @Response<ErrorResponse>(404, 'Project not found')
-  @Response<ErrorResponse>(422, 'Working directory does not exist')
+  @Response<ErrorResponse>(HttpStatus.BAD_REQUEST, 'Validation error')
+  @Response<ErrorResponse>(HttpStatus.NOT_FOUND, 'Project not found')
+  @Response<ErrorResponse>(
+    HttpStatus.UNPROCESSABLE_ENTITY,
+    'Working directory does not exist'
+  )
   public async updateProject(
     @Path() id: string,
     @Body() body: UpdateProjectBody
@@ -83,10 +96,77 @@ export class ProjectsController extends Controller {
    * @param id Project UUID
    */
   @Delete('{id}')
-  @SuccessResponse(204, 'No Content')
-  @Response<ErrorResponse>(404, 'Project not found')
+  @SuccessResponse(HttpStatus.NO_CONTENT, 'No Content')
+  @Response<ErrorResponse>(HttpStatus.NOT_FOUND, 'Project not found')
   public async deleteProject(@Path() id: string): Promise<void> {
-    this.setStatus(204);
+    this.setStatus(HttpStatus.NO_CONTENT);
     await projectsService.remove(id);
+  }
+
+  /**
+   * Get list of pull requests for a project
+   * @param projectId Project UUID
+   */
+  @Get('{projectId}/prs')
+  @Response<ErrorResponse>(HttpStatus.BAD_REQUEST, 'Invalid remote URL')
+  @Response<ErrorResponse>(HttpStatus.NOT_FOUND, 'Project not found')
+  @Response<ErrorResponse>(
+    HttpStatus.UNPROCESSABLE_ENTITY,
+    'Project does not have a configured Git remote'
+  )
+  @Response<ErrorResponse>(
+    HttpStatus.SERVICE_UNAVAILABLE,
+    'GitHub CLI unavailable'
+  )
+  public async listProjectPRs(
+    @Path() projectId: string
+  ): Promise<PRListItem[]> {
+    const project = await projectsService.findById(projectId);
+
+    if (!project.gitInfo.remoteUrl) {
+      throw new AppError(
+        'Project does not have a configured Git remote',
+        HttpStatus.UNPROCESSABLE_ENTITY
+      );
+    }
+
+    const repoOwnerName = gitUtils.parseGitHubRepo(project.gitInfo.remoteUrl);
+    return pullRequestsService.fetchPRList(repoOwnerName);
+  }
+
+  /**
+   * Get detailed information for a specific pull request
+   * @param projectId Project UUID
+   * @param prNumber Pull request number
+   */
+  @Get('{projectId}/prs/{prNumber}')
+  @Response<ErrorResponse>(HttpStatus.BAD_REQUEST, 'Invalid remote URL')
+  @Response<ErrorResponse>(
+    HttpStatus.NOT_FOUND,
+    'Project or pull request not found'
+  )
+  @Response<ErrorResponse>(
+    HttpStatus.UNPROCESSABLE_ENTITY,
+    'Project does not have a configured Git remote'
+  )
+  @Response<ErrorResponse>(
+    HttpStatus.SERVICE_UNAVAILABLE,
+    'GitHub CLI unavailable'
+  )
+  public async getProjectPR(
+    @Path() projectId: string,
+    @Path() prNumber: number
+  ): Promise<PRDetail> {
+    const project = await projectsService.findById(projectId);
+
+    if (!project.gitInfo.remoteUrl) {
+      throw new AppError(
+        'Project does not have a configured Git remote',
+        HttpStatus.UNPROCESSABLE_ENTITY
+      );
+    }
+
+    const repoOwnerName = gitUtils.parseGitHubRepo(project.gitInfo.remoteUrl);
+    return pullRequestsService.fetchPRDetail(repoOwnerName, prNumber);
   }
 }

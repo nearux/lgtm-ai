@@ -77,6 +77,106 @@ const models: TsoaRoute.Models = {
         "additionalProperties": false,
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "PRAssignee": {
+        "dataType": "refObject",
+        "properties": {
+            "id": {"dataType":"string","required":true},
+            "login": {"dataType":"string","required":true},
+            "name": {"dataType":"string","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "PRAuthor": {
+        "dataType": "refObject",
+        "properties": {
+            "id": {"dataType":"string","required":true},
+            "login": {"dataType":"string","required":true},
+            "name": {"dataType":"string","required":true},
+            "is_bot": {"dataType":"boolean"},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "PRListItem": {
+        "dataType": "refObject",
+        "properties": {
+            "number": {"dataType":"double","required":true},
+            "title": {"dataType":"string","required":true},
+            "body": {"dataType":"string","required":true},
+            "assignees": {"dataType":"array","array":{"dataType":"refObject","ref":"PRAssignee"},"required":true},
+            "author": {"ref":"PRAuthor","required":true},
+            "createdAt": {"dataType":"string","required":true},
+            "updatedAt": {"dataType":"string","required":true},
+            "state": {"dataType":"string","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "PRComment": {
+        "dataType": "refObject",
+        "properties": {
+            "id": {"dataType":"string","required":true},
+            "author": {"ref":"PRAuthor","required":true},
+            "body": {"dataType":"string","required":true},
+            "createdAt": {"dataType":"string","required":true},
+            "updatedAt": {"dataType":"string","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "PRReview": {
+        "dataType": "refObject",
+        "properties": {
+            "id": {"dataType":"string","required":true},
+            "author": {"ref":"PRAuthor","required":true},
+            "state": {"dataType":"string","required":true},
+            "body": {"dataType":"string","required":true},
+            "submittedAt": {"dataType":"string","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "PRCommitAuthor": {
+        "dataType": "refObject",
+        "properties": {
+            "name": {"dataType":"string","required":true},
+            "email": {"dataType":"string","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "PRCommit": {
+        "dataType": "refObject",
+        "properties": {
+            "oid": {"dataType":"string","required":true},
+            "messageHeadline": {"dataType":"string","required":true},
+            "messageBody": {"dataType":"string","required":true},
+            "authoredDate": {"dataType":"string","required":true},
+            "committedDate": {"dataType":"string","required":true},
+            "authors": {"dataType":"array","array":{"dataType":"refObject","ref":"PRCommitAuthor"},"required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "PRDetail": {
+        "dataType": "refObject",
+        "properties": {
+            "number": {"dataType":"double","required":true},
+            "title": {"dataType":"string","required":true},
+            "body": {"dataType":"string","required":true},
+            "assignees": {"dataType":"array","array":{"dataType":"refObject","ref":"PRAssignee"},"required":true},
+            "author": {"ref":"PRAuthor","required":true},
+            "createdAt": {"dataType":"string","required":true},
+            "updatedAt": {"dataType":"string","required":true},
+            "state": {"dataType":"string","required":true},
+            "comments": {"dataType":"array","array":{"dataType":"refObject","ref":"PRComment"},"required":true},
+            "reviews": {"dataType":"array","array":{"dataType":"refObject","ref":"PRReview"},"required":true},
+            "commits": {"dataType":"array","array":{"dataType":"refObject","ref":"PRCommit"},"required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 };
 const templateService = new ExpressTemplateService(models, {"noImplicitAdditionalProperties":"throw-on-extras","bodyCoercion":true});
 
@@ -176,7 +276,7 @@ export function RegisterRoutes(app: Router) {
                 response,
                 next,
                 validatedArgs,
-                successStatus: 201,
+                successStatus: undefined,
               });
             } catch (err) {
                 return next(err);
@@ -237,7 +337,68 @@ export function RegisterRoutes(app: Router) {
                 response,
                 next,
                 validatedArgs,
-                successStatus: 204,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsProjectsController_listProjectPRs: Record<string, TsoaRoute.ParameterSchema> = {
+                projectId: {"in":"path","name":"projectId","required":true,"dataType":"string"},
+        };
+        app.get('/api/projects/:projectId/prs',
+            ...(fetchMiddlewares<RequestHandler>(ProjectsController)),
+            ...(fetchMiddlewares<RequestHandler>(ProjectsController.prototype.listProjectPRs)),
+
+            async function ProjectsController_listProjectPRs(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsProjectsController_listProjectPRs, request, response });
+
+                const controller = new ProjectsController();
+
+              await templateService.apiHandler({
+                methodName: 'listProjectPRs',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsProjectsController_getProjectPR: Record<string, TsoaRoute.ParameterSchema> = {
+                projectId: {"in":"path","name":"projectId","required":true,"dataType":"string"},
+                prNumber: {"in":"path","name":"prNumber","required":true,"dataType":"double"},
+        };
+        app.get('/api/projects/:projectId/prs/:prNumber',
+            ...(fetchMiddlewares<RequestHandler>(ProjectsController)),
+            ...(fetchMiddlewares<RequestHandler>(ProjectsController.prototype.getProjectPR)),
+
+            async function ProjectsController_getProjectPR(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsProjectsController_getProjectPR, request, response });
+
+                const controller = new ProjectsController();
+
+              await templateService.apiHandler({
+                methodName: 'getProjectPR',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
               });
             } catch (err) {
                 return next(err);

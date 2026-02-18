@@ -1,0 +1,77 @@
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import HttpStatus from 'http-status';
+import { AppError } from '../errors/AppError.js';
+import type { PRListItem, PRDetail } from '../types/pullRequests.js';
+
+const execAsync = promisify(exec);
+
+/**
+ * Fetch PR list using gh pr list
+ */
+export async function fetchPRList(
+  repoOwnerName: string
+): Promise<PRListItem[]> {
+  const command = `gh pr list --repo ${repoOwnerName} --json number,title,body,assignees,author,createdAt,updatedAt,state --limit 100`;
+
+  let stdout: string;
+
+  try {
+    const result = await execAsync(command);
+    stdout = result.stdout;
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    if (errorMessage.toLowerCase().includes('authentication')) {
+      throw new AppError(
+        'GitHub CLI is not available or authenticated',
+        HttpStatus.SERVICE_UNAVAILABLE
+      );
+    }
+
+    throw new AppError(
+      'Failed to fetch PR data from GitHub',
+      HttpStatus.INTERNAL_SERVER_ERROR
+    );
+  }
+
+  const prs = JSON.parse(stdout) as PRListItem[];
+  return prs;
+}
+
+/**
+ * Fetch PR detail with comments using gh pr view
+ */
+export async function fetchPRDetail(
+  repoOwnerName: string,
+  prNumber: number
+): Promise<PRDetail> {
+  const command = `gh pr view ${prNumber} --repo ${repoOwnerName} --json number,title,body,assignees,author,createdAt,updatedAt,state,comments,reviews,commits`;
+
+  let stdout: string;
+
+  try {
+    const result = await execAsync(command);
+    stdout = result.stdout;
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+
+    if (errorMessage.toLowerCase().includes('could not resolve')) {
+      throw new AppError('Pull request not found', HttpStatus.NOT_FOUND);
+    }
+
+    if (errorMessage.toLowerCase().includes('authentication')) {
+      throw new AppError(
+        'GitHub CLI is not available or authenticated',
+        HttpStatus.SERVICE_UNAVAILABLE
+      );
+    }
+
+    throw new AppError(
+      'Failed to fetch PR data from GitHub',
+      HttpStatus.INTERNAL_SERVER_ERROR
+    );
+  }
+
+  const pr = JSON.parse(stdout) as PRDetail;
+  return pr;
+}

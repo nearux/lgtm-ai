@@ -6,3 +6,6 @@ node_modules/
 # Prisma
 */generated/
 backend/.env
+
+# TSOA auto-generated swagger spec
+backend/public/swagger.json

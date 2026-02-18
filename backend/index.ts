@@ -1,17 +1,11 @@
 import express from 'express';
 import cors from 'cors';
-import swaggerUi from 'swagger-ui-express';
-import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { RegisterRoutes } from './routes.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const swaggerDocument = JSON.parse(
-  readFileSync(join(__dirname, 'public', 'swagger.json'), 'utf-8')
-);
-
 const app = express();
 const PORT = 5051;
 
@@ -22,13 +16,24 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok' });
 });
 
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+if (process.env.NODE_ENV !== 'production') {
+  const swaggerUi = await import('swagger-ui-express');
+  const { readFileSync } = await import('fs');
+  const swaggerDocument = JSON.parse(
+    readFileSync(join(__dirname, 'public', 'swagger.json'), 'utf-8')
+  );
+  app.use(
+    '/api-docs',
+    swaggerUi.default.serve,
+    swaggerUi.default.setup(swaggerDocument)
+  );
+  console.log(`📖 Swagger docs available at http://0.0.0.0:${PORT}/api-docs`);
+}
 
 RegisterRoutes(app);
 
 app.use(errorHandler);
 
-app.listen(PORT, () => {
-  console.log(`✅ Backend server running on http://localhost:${PORT}`);
-  console.log(`📖 Swagger docs available at http://localhost:${PORT}/api-docs`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`✅ Backend server running on http://0.0.0.0:${PORT}`);
 });
