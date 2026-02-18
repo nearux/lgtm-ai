@@ -1,6 +1,6 @@
-import path from 'path';
-import os from 'os';
-import { mkdirSync } from 'fs';
+import path from 'node:path';
+import os from 'node:os';
+import { mkdirSync } from 'node:fs';
 import { PrismaLibSql } from '@prisma/adapter-libsql';
 import { PrismaClient } from '@prisma/client';
 

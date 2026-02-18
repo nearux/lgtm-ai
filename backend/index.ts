@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 import { RegisterRoutes } from './routes.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 
@@ -18,7 +18,7 @@ app.get('/health', (_req, res) => {
 
 if (process.env.NODE_ENV !== 'production') {
   const swaggerUi = await import('swagger-ui-express');
-  const { readFileSync } = await import('fs');
+  const { readFileSync } = await import('node:fs');
   const swaggerDocument = JSON.parse(
     readFileSync(join(__dirname, 'public', 'swagger.json'), 'utf-8')
   );
