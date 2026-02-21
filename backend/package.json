@@ -5,6 +5,7 @@
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
+    "postinstall": "prisma generate",
     "tsoa": "tsoa spec && tsoa routes",
     "build": "npm run tsoa && tsc",
     "dev": "npm run tsoa && tsx watch index.ts",
