@@ -1,20 +1,108 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CreateProjectModal } from './components/CreateProjectModal';
+import { useAsync } from '../../shared/hooks/useAsync/useAsync';
+import {
+  getProjects,
+  createProject,
+  updateProject,
+  deleteProject,
+} from '../../shared/api';
+import { FullPageLoading } from '../../shared/components/Loading/Loading';
+import { FullPageError } from '../../shared/components/Error/Error';
+import { CreateProjectModal } from './components/CreateProjectModal/CreateProjectModal';
+import { EditProjectModal } from './components/EditProjectModal/EditProjectModal';
+import { DeleteProjectModal } from './components/DeleteProjectModal/DeleteProjectModal';
+import { ProjectCard } from './components/ProjectCard/ProjectCard';
+import { AddProjectCard } from './components/AddProjectCard/AddProjectCard';
+import type {
+  Project,
+  CreateProjectBody,
+  UpdateProjectBody,
+} from '../../shared/types/api';
 
 export const ProjectSelectPage = () => {
   const navigate = useNavigate();
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
+  const [deletingProject, setDeletingProject] = useState<Project | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const {
+    data: projects,
+    isLoading,
+    error,
+    refetch,
+  } = useAsync(getProjects, []);
 
   const handleProjectClick = (project: Project) => {
     navigate(`/projects/${project.id}/prs`);
   };
 
-  const handleCreateProject = (data: Omit<Project, 'id'>) => {
-    console.log('Create project:', data);
-    setIsModalOpen(false);
+  const handleEditClick = (e: React.MouseEvent, project: Project) => {
+    e.stopPropagation();
+    setEditingProject(project);
+    setSubmitError(null);
   };
+
+  const handleDeleteClick = (e: React.MouseEvent, project: Project) => {
+    e.stopPropagation();
+    setDeletingProject(project);
+  };
+
+  const handleDeleteProject = async () => {
+    if (!deletingProject) return;
+    setIsSubmitting(true);
+    try {
+      await deleteProject(deletingProject.id);
+      setDeletingProject(null);
+      refetch();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to delete project');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCreateProject = async (data: CreateProjectBody) => {
+    setIsSubmitting(true);
+    setSubmitError(null);
+    try {
+      await createProject(data);
+      setIsCreateModalOpen(false);
+      refetch();
+    } catch (err) {
+      setSubmitError(
+        err instanceof Error ? err.message : 'Failed to create project'
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleUpdateProject = async (id: string, data: UpdateProjectBody) => {
+    setIsSubmitting(true);
+    setSubmitError(null);
+    try {
+      await updateProject(id, data);
+      setEditingProject(null);
+      refetch();
+    } catch (err) {
+      setSubmitError(
+        err instanceof Error ? err.message : 'Failed to update project'
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (isLoading) {
+    return <FullPageLoading />;
+  }
+
+  if (error) {
+    return <FullPageError message={error} onRetry={refetch} />;
+  }
 
   return (
     <div className="mx-auto max-w-6xl p-8">
@@ -26,63 +114,41 @@ export const ProjectSelectPage = () => {
       </header>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {mockProjects.map((project) => (
-          <button
+        {projects?.map((project) => (
+          <ProjectCard
             key={project.id}
-            className="flex cursor-pointer flex-col items-center gap-3 rounded-xl border border-gray-200 bg-white p-6 text-center transition-all hover:-translate-y-0.5 hover:border-indigo-500 hover:shadow-lg"
+            project={project}
             onClick={() => handleProjectClick(project)}
-          >
-            <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-gray-100 text-gray-800">
-              <svg
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                width="32"
-                height="32"
-              >
-                <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-semibold text-gray-900">
-              {project.name}
-            </h3>
-            <span className="text-sm text-gray-500">
-              {project.owner}/{project.repo}
-            </span>
-          </button>
+            onEdit={(e) => handleEditClick(e, project)}
+            onDelete={(e) => handleDeleteClick(e, project)}
+          />
         ))}
 
-        <button
-          className="flex cursor-pointer flex-col items-center gap-3 rounded-xl border border-dashed border-gray-300 bg-gray-50 p-6 text-center transition-all hover:-translate-y-0.5 hover:border-indigo-500 hover:bg-white hover:shadow-lg"
-          onClick={() => setIsModalOpen(true)}
-        >
-          <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-gray-200 text-3xl text-indigo-500">
-            +
-          </div>
-          <h3 className="text-xl font-semibold text-gray-900">Add Project</h3>
-          <span className="text-sm text-gray-500">
-            Connect a GitHub repository
-          </span>
-        </button>
+        <AddProjectCard onClick={() => setIsCreateModalOpen(true)} />
       </div>
 
       <CreateProjectModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
         onSubmit={handleCreateProject}
+        isSubmitting={isSubmitting}
+        error={submitError}
+      />
+
+      <EditProjectModal
+        project={editingProject}
+        onClose={() => setEditingProject(null)}
+        onSubmit={handleUpdateProject}
+        isSubmitting={isSubmitting}
+        error={submitError}
+      />
+
+      <DeleteProjectModal
+        project={deletingProject}
+        isSubmitting={isSubmitting}
+        onClose={() => setDeletingProject(null)}
+        onConfirm={handleDeleteProject}
       />
     </div>
   );
 };
-
-// TODO: Edit Type & type define location
-interface Project {
-  id: string;
-  name: string;
-  owner: string;
-  repo: string;
-}
-
-const mockProjects: Project[] = [
-  { id: '1', name: 'lgtm-ai', owner: 'pmh', repo: 'lgtm-ai' },
-  { id: '2', name: 'my-app', owner: 'pmh', repo: 'my-app' },
-];
