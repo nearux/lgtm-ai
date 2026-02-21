@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { projectsMutation, projectsQuery } from '@/shared/api';
-import type { Project, UpdateProjectBody } from '@/shared/types';
+import { projectsMutation, projectsQuery } from '@/shared/apis';
+import type { Project, UpdateProjectBody } from '@lgtmai/backend/types';
 
 interface Props {
   isOpen: boolean;

@@ -1,8 +1,8 @@
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useSuspenseQuery } from '@tanstack/react-query';
-import { projectsQuery, prsQuery } from '@/shared/api';
+import { projectsQuery, prsQuery } from '@/shared/apis';
 import { PRTable } from './components/PRTable/PRTable';
-import type { PRListItem } from '@/shared/types';
+import type { PRListItem } from '@lgtmai/backend/types';
 
 export const PRListPage = () => {
   const { projectId } = useParams<{ projectId: string }>();

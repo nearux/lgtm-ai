@@ -1,4 +1,4 @@
-import type { ErrorResponse } from '../types/api';
+import type { ErrorResponse } from '@lgtmai/backend/types';
 
 export class ApiClientError extends Error {
   constructor(

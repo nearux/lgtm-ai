@@ -1,5 +1,5 @@
 import { formatDateTime } from '@/shared/utils';
-import type { PRReview } from '@/shared/types';
+import type { PRReview } from '@lgtmai/backend/types';
 
 interface Props {
   reviews: PRReview[];

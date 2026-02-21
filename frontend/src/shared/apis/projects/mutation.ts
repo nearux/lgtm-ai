@@ -4,7 +4,7 @@ import type {
   Project,
   CreateProjectBody,
   UpdateProjectBody,
-} from '@/shared/types';
+} from '@lgtmai/backend/types';
 
 export const projectsMutation = {
   create: () =>

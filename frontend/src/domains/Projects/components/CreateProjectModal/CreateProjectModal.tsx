@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { projectsMutation, projectsQuery } from '@/shared/api';
+import { projectsMutation, projectsQuery } from '@/shared/apis';
 import type { CreateProjectBody } from '@lgtmai/backend/types';
 
 interface Props {

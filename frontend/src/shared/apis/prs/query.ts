@@ -1,7 +1,7 @@
 import { queryOptions } from '@tanstack/react-query';
 import { apiGet } from '../client';
 import { prsQueryKey } from './queryKey';
-import type { PRListItem, PRDetail } from '@/shared/types';
+import type { PRListItem, PRDetail } from '@lgtmai/backend/types';
 
 export const prsQuery = {
   list: (projectId: string) =>

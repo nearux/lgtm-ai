@@ -1,5 +1,5 @@
 import { formatDateTime } from '@/shared/utils';
-import type { PRComment } from '@/shared/types';
+import type { PRComment } from '@lgtmai/backend/types';
 
 interface Props {
   comments: PRComment[];

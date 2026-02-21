@@ -1,5 +1,5 @@
 import { formatDate } from '@/shared/utils';
-import type { PRCommit } from '@/shared/types';
+import type { PRCommit } from '@lgtmai/backend/types';
 
 interface Props {
   commits: PRCommit[];

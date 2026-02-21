@@ -1,6 +1,6 @@
 import { useParams } from 'react-router-dom';
 import { useSuspenseQuery } from '@tanstack/react-query';
-import { projectsQuery, prsQuery } from '@/shared/api';
+import { projectsQuery, prsQuery } from '@/shared/apis';
 import { parseGitHubUrl, linkifyIssueReferences } from '@/shared/utils';
 import { PRHeader } from './components/PRHeader/PRHeader';
 import { PRDescription } from './components/PRDescription/PRDescription';

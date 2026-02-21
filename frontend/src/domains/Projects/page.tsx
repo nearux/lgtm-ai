@@ -1,13 +1,13 @@
 import { useNavigate } from 'react-router-dom';
 import { useSuspenseQuery } from '@tanstack/react-query';
-import { projectsQuery } from '@/shared/api';
+import { projectsQuery } from '@/shared/apis';
 import { useOverlay } from '@/shared/hooks';
 import { CreateProjectModal } from './components/CreateProjectModal/CreateProjectModal';
 import { EditProjectModal } from './components/EditProjectModal/EditProjectModal';
 import { DeleteProjectModal } from './components/DeleteProjectModal/DeleteProjectModal';
 import { ProjectCard } from './components/ProjectCard/ProjectCard';
 import { AddProjectCard } from './components/AddProjectCard/AddProjectCard';
-import type { Project } from '@/shared/types';
+import type { Project } from '@lgtmai/backend/types';
 
 export const ProjectSelectPage = () => {
   const navigate = useNavigate();

@@ -1,6 +1,6 @@
 import { formatDate } from '@/shared/utils';
 import { StatusBadge } from '../StatusBadge/StatusBadge';
-import type { PRListItem } from '@/shared/types';
+import type { PRListItem } from '@lgtmai/backend/types';
 
 interface Props {
   prs: PRListItem[];

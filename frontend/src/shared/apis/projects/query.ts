@@ -1,7 +1,7 @@
 import { queryOptions } from '@tanstack/react-query';
 import { apiGet } from '../client';
 import { projectsQueryKey } from './queryKey';
-import type { Project, ProjectDetail } from '@/shared/types';
+import type { Project, ProjectDetail } from '@lgtmai/backend/types';
 
 export const projectsQuery = {
   list: () =>
