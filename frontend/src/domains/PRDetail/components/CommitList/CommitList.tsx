@@ -1,5 +1,5 @@
-import { formatDate } from '../../../../shared/utils/date/date';
-import type { PRCommit } from '../../../../shared/types/api';
+import { formatDate } from '@/shared/utils';
+import type { PRCommit } from '@/shared/types';
 
 interface Props {
   commits: PRCommit[];

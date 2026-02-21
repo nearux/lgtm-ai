@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { formatDate } from '../../../../shared/utils/date/date';
-import type { PRDetail } from '../../../../shared/types/api';
+import { formatDate } from '@/shared/utils';
+import type { PRDetail } from '@/shared/types';
 
 interface Props {
   projectId: string;

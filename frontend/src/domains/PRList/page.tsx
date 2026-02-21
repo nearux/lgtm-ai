@@ -1,10 +1,9 @@
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { useAsync } from '../../shared/hooks/useAsync/useAsync';
-import { getPRs, getProject } from '../../shared/api';
-import { FullPageLoading } from '../../shared/components/Loading/Loading';
-import { FullPageError } from '../../shared/components/Error/Error';
+import { useAsync } from '@/shared/hooks';
+import { getPRs, getProject } from '@/shared/api';
+import { FullPageLoading, FullPageError } from '@/shared/components';
 import { PRTable } from './components/PRTable/PRTable';
-import type { PRListItem } from '../../shared/types/api';
+import type { PRListItem } from '@/shared/types';
 
 export const PRListPage = () => {
   const { projectId } = useParams<{ projectId: string }>();

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { CreateProjectBody } from '../../../../shared/types/api';
+import type { CreateProjectBody } from '@/shared/types';
 
 interface Props {
   isOpen: boolean;

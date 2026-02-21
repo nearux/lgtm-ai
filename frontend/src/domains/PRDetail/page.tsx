@@ -1,12 +1,8 @@
 import { useParams } from 'react-router-dom';
-import { useAsync } from '../../shared/hooks/useAsync/useAsync';
-import { getPRDetail, getProject } from '../../shared/api';
-import { FullPageLoading } from '../../shared/components/Loading/Loading';
-import { FullPageError } from '../../shared/components/Error/Error';
-import {
-  parseGitHubUrl,
-  linkifyIssueReferences,
-} from '../../shared/utils/github/github';
+import { useAsync } from '@/shared/hooks';
+import { getPRDetail, getProject } from '@/shared/api';
+import { FullPageLoading, FullPageError } from '@/shared/components';
+import { parseGitHubUrl, linkifyIssueReferences } from '@/shared/utils';
 import { PRHeader } from './components/PRHeader/PRHeader';
 import { PRDescription } from './components/PRDescription/PRDescription';
 import { ReviewList } from './components/ReviewList/ReviewList';

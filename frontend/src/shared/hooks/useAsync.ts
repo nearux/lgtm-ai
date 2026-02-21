@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ApiClientError } from '../../api/client';
+import { ApiClientError } from '../api/client';
 
 export interface AsyncState<T> {
   data: T | null;

@@ -1,5 +1,5 @@
-import { formatDateTime } from '../../../../shared/utils/date/date';
-import type { PRComment } from '../../../../shared/types/api';
+import { formatDateTime } from '@/shared/utils';
+import type { PRComment } from '@/shared/types';
 
 interface Props {
   comments: PRComment[];

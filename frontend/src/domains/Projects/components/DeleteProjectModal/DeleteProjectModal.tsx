@@ -1,4 +1,4 @@
-import type { Project } from '../../../../shared/types/api';
+import type { Project } from '@/shared/types';
 
 interface Props {
   project: Project | null;

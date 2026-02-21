@@ -1,6 +1,6 @@
-import { formatDate } from '../../../../shared/utils/date/date';
+import { formatDate } from '@/shared/utils';
 import { StatusBadge } from '../StatusBadge/StatusBadge';
-import type { PRListItem } from '../../../../shared/types/api';
+import type { PRListItem } from '@/shared/types';
 
 interface Props {
   prs: PRListItem[];

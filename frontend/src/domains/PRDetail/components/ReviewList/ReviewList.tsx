@@ -1,5 +1,5 @@
-import { formatDateTime } from '../../../../shared/utils/date/date';
-import type { PRReview } from '../../../../shared/types/api';
+import { formatDateTime } from '@/shared/utils';
+import type { PRReview } from '@/shared/types';
 
 interface Props {
   reviews: PRReview[];

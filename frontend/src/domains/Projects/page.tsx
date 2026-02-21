@@ -1,14 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAsync } from '../../shared/hooks/useAsync/useAsync';
+import { useAsync } from '@/shared/hooks';
 import {
   getProjects,
   createProject,
   updateProject,
   deleteProject,
-} from '../../shared/api';
-import { FullPageLoading } from '../../shared/components/Loading/Loading';
-import { FullPageError } from '../../shared/components/Error/Error';
+} from '@/shared/api';
+import { FullPageLoading, FullPageError } from '@/shared/components';
 import { CreateProjectModal } from './components/CreateProjectModal/CreateProjectModal';
 import { EditProjectModal } from './components/EditProjectModal/EditProjectModal';
 import { DeleteProjectModal } from './components/DeleteProjectModal/DeleteProjectModal';
@@ -18,7 +17,7 @@ import type {
   Project,
   CreateProjectBody,
   UpdateProjectBody,
-} from '../../shared/types/api';
+} from '@/shared/types';
 
 export const ProjectSelectPage = () => {
   const navigate = useNavigate();

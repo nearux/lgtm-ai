@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import type { Project, UpdateProjectBody } from '../../../../shared/types/api';
+import type { Project, UpdateProjectBody } from '@/shared/types';
 
 interface Props {
   project: Project | null;

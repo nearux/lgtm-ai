@@ -13,4 +13,4 @@ export type {
   PRCommitAuthor,
   PRCommit,
   PRDetail,
-} from '@lgtmai/backend/types';
+} from './api';
