@@ -7,19 +7,14 @@
   "bin": {
     "lgtmai": "./bin/lgtmai.js"
   },
-  "workspaces": [
-    "cli",
-    "backend",
-    "frontend"
-  ],
   "scripts": {
-    "build": "npm run build -w cli && npm run build -w backend && npm run build -w frontend",
-    "dev": "npm run dev -w backend & npm run dev -w frontend",
+    "build": "pnpm --filter @lgtmai/cli build && pnpm --filter @lgtmai/backend build && pnpm --filter frontend build",
+    "dev": "pnpm --parallel --filter '@lgtmai/backend' --filter 'frontend' run dev",
     "start": "node bin/lgtmai.js",
-    "test": "npm run test --workspaces --if-present",
-    "lint": "npm run lint --workspaces --if-present",
-    "lint:fix": "npm run lint:fix --workspaces --if-present",
-    "prepublishOnly": "npm run build"
+    "test": "pnpm --filter '*' --if-present run test",
+    "lint": "pnpm --filter '*' --if-present run lint",
+    "lint:fix": "pnpm --filter '*' --if-present run lint:fix",
+    "prepublishOnly": "pnpm run build"
   },
   "keywords": [
     "cli",
@@ -42,7 +37,8 @@
     "bin"
   ],
   "engines": {
-    "node": ">=18"
+    "node": ">=18",
+    "pnpm": ">=9"
   },
   "devDependencies": {
     "prettier": "^3.8.1",
