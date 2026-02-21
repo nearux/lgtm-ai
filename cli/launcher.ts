@@ -9,13 +9,11 @@ export async function launchServers(): Promise<void> {
 
   const backend = spawn('node', ['backend/dist/index.js'], {
     stdio: 'inherit',
-    shell: true,
   });
   processes.push(backend);
 
-  const frontend = spawn('npm', ['run', 'preview', '-w', 'frontend'], {
+  const frontend = spawn('pnpm', ['--filter', 'frontend', 'run', 'preview'], {
     stdio: 'inherit',
-    shell: true,
   });
   processes.push(frontend);
 

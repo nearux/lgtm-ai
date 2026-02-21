@@ -1,22 +1,22 @@
 # Project Overview
 
-LGTM AI automates PR review application using Claude Code. This is an npm workspaces monorepo with three packages: `cli`, `backend`, `frontend`.
+LGTM AI automates PR review application using Claude Code. This is a pnpm workspaces monorepo with three packages: `cli`, `backend`, `frontend`.
 
 # Common Commands
 
 ```bash
 # Build all workspaces
-npm run build
+pnpm run build
 
 # Development (backend + frontend with file watching)
-npm run dev
+pnpm run dev
 
 # Run CLI from source
-npm start
+pnpm start
 
 # Build and run specific workspace
-npm run build -w cli
-npm run dev -w backend
+pnpm --filter @lgtmai/cli build
+pnpm --filter @lgtmai/backend dev
 ```
 
 # Architecture
