@@ -1,7 +1,6 @@
 import { useParams } from 'react-router-dom';
-import { useAsync } from '@/shared/hooks';
-import { getPRDetail, getProject } from '@/shared/api';
-import { FullPageLoading, FullPageError } from '@/shared/components';
+import { useSuspenseQuery } from '@tanstack/react-query';
+import { projectsQuery, prsQuery } from '@/shared/api';
 import { parseGitHubUrl, linkifyIssueReferences } from '@/shared/utils';
 import { PRHeader } from './components/PRHeader/PRHeader';
 import { PRDescription } from './components/PRDescription/PRDescription';
@@ -15,40 +14,21 @@ export const PRDetailPage = () => {
     prNumber: string;
   }>();
 
-  const { data: project } = useAsync(() => getProject(projectId!), [projectId]);
-
-  const {
-    data: pr,
-    isLoading,
-    error,
-    refetch,
-  } = useAsync(
-    () => getPRDetail(projectId!, Number(prNumber)),
-    [projectId, prNumber]
+  const { data: project } = useSuspenseQuery(projectsQuery.detail(projectId!));
+  const { data: pr } = useSuspenseQuery(
+    prsQuery.detail(projectId!, Number(prNumber))
   );
 
-  const githubBaseUrl = parseGitHubUrl(project?.gitInfo.remoteUrl ?? null);
-  const linkedBody = pr?.body
+  const githubBaseUrl = parseGitHubUrl(project.gitInfo.remoteUrl);
+  const linkedBody = pr.body
     ? linkifyIssueReferences(pr.body, githubBaseUrl)
     : '';
-
-  if (isLoading) {
-    return <FullPageLoading />;
-  }
-
-  if (error) {
-    return <FullPageError message={error} onRetry={refetch} />;
-  }
-
-  if (!pr) {
-    return null;
-  }
 
   return (
     <div className="mx-auto max-w-6xl p-8">
       <PRHeader
         projectId={projectId!}
-        projectName={project?.name}
+        projectName={project.name}
         prNumber={prNumber!}
         pr={pr}
       />

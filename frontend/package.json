@@ -32,6 +32,8 @@
   "dependencies": {
     "@lgtmai/backend": "workspace:*",
     "@tailwindcss/typography": "^0.5.19",
-    "react-markdown": "^10.1.0"
+    "@tanstack/react-query": "^5.90.21",
+    "react-markdown": "^10.1.0",
+    "sonner": "^2.0.7"
   }
 }

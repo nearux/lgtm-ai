@@ -1,3 +1,3 @@
-export * from './client';
-export * from './projects';
-export * from './pullRequests';
+export { ApiClientError } from './client';
+export { projectsQuery, projectsMutation } from './projects';
+export { prsQuery } from './prs';

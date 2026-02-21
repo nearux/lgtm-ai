@@ -1,7 +1,6 @@
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { useAsync } from '@/shared/hooks';
-import { getPRs, getProject } from '@/shared/api';
-import { FullPageLoading, FullPageError } from '@/shared/components';
+import { useSuspenseQuery } from '@tanstack/react-query';
+import { projectsQuery, prsQuery } from '@/shared/api';
 import { PRTable } from './components/PRTable/PRTable';
 import type { PRListItem } from '@/shared/types';
 
@@ -9,31 +8,12 @@ export const PRListPage = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
 
-  const {
-    data: project,
-    isLoading: projectLoading,
-    error: projectError,
-  } = useAsync(() => getProject(projectId!), [projectId]);
-
-  const {
-    data: prs,
-    isLoading: prsLoading,
-    error: prsError,
-    refetch,
-  } = useAsync(() => getPRs(projectId!), [projectId]);
+  const { data: project } = useSuspenseQuery(projectsQuery.detail(projectId!));
+  const { data: prs } = useSuspenseQuery(prsQuery.list(projectId!));
 
   const handlePRClick = (pr: PRListItem) => {
     navigate(`/projects/${projectId}/prs/${pr.number}`);
   };
-
-  if (projectLoading || prsLoading) {
-    return <FullPageLoading />;
-  }
-
-  const error = projectError || prsError;
-  if (error) {
-    return <FullPageError message={error} onRetry={refetch} />;
-  }
 
   return (
     <div className="mx-auto max-w-6xl p-8">
@@ -43,7 +23,7 @@ export const PRListPage = () => {
             Projects
           </Link>
           <span>/</span>
-          <span className="text-gray-900">{project?.name}</span>
+          <span className="text-gray-900">{project.name}</span>
         </div>
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold text-gray-900">Pull Requests</h1>
@@ -56,7 +36,7 @@ export const PRListPage = () => {
         </div>
       </header>
 
-      <PRTable prs={prs ?? []} onPRClick={handlePRClick} />
+      <PRTable prs={prs} onPRClick={handlePRClick} />
     </div>
   );
 };
