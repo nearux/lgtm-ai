@@ -16,6 +16,7 @@
     "build": "npm run build -w cli && npm run build -w backend && npm run build -w frontend",
     "dev": "npm run dev -w backend & npm run dev -w frontend",
     "start": "node bin/lgtmai.js",
+    "test": "npm run test --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
     "lint:fix": "npm run lint:fix --workspaces --if-present",
     "prepublishOnly": "npm run build"

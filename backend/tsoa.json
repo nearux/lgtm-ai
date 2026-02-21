@@ -1,0 +1,22 @@
+{
+  "entryFile": "index.ts",
+  "noImplicitAdditionalProperties": "throw-on-extras",
+  "controllerPathGlobs": ["controllers/**/*Controller.ts"],
+  "spec": {
+    "outputDirectory": "public",
+    "specVersion": 3,
+    "name": "LGTM AI API",
+    "description": "API documentation for LGTM AI backend",
+    "version": "0.0.1",
+    "contact": {
+      "name": "LGTM AI"
+    },
+    "host": "localhost:5051",
+    "schemes": ["http"]
+  },
+  "routes": {
+    "routesDir": ".",
+    "middleware": "express",
+    "esm": true
+  }
+}
