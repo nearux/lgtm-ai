@@ -2,3 +2,11 @@ node_modules/
 */dist/
 *.log
 .DS_Store
+
+# Prisma
+*/generated/
+backend/.env
+
+# TSOA auto-generated files
+backend/public/swagger.json
+backend/routes.ts
