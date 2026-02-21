@@ -17,6 +17,8 @@
     "dev": "npm run dev -w backend & npm run dev -w frontend",
     "start": "node bin/lgtmai.js",
     "test": "npm run test -w backend",
+    "lint": "npm run lint --workspaces --if-present",
+    "lint:fix": "npm run lint:fix --workspaces --if-present",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
@@ -43,6 +45,7 @@
     "node": ">=18"
   },
   "devDependencies": {
-    "prettier": "^3.8.1"
+    "prettier": "^3.8.1",
+    "prettier-plugin-tailwindcss": "^0.7.2"
   }
 }
