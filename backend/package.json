@@ -4,6 +4,13 @@
   "private": true,
   "type": "module",
   "main": "dist/index.js",
+  "exports": {
+    ".": "./dist/index.js",
+    "./types": {
+      "types": "./types/index.ts",
+      "import": "./dist/types/index.js"
+    }
+  },
   "scripts": {
     "postinstall": "prisma generate",
     "tsoa": "tsoa spec && tsoa routes",
