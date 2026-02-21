@@ -41,6 +41,8 @@
     "pnpm": ">=9"
   },
   "devDependencies": {
+    "babel-plugin-react-compiler": "^1.0.0",
+    "frontend": "2.0.0-alpha.4",
     "prettier": "^3.8.1",
     "prettier-plugin-tailwindcss": "^0.7.2"
   }
