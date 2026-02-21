@@ -1,13 +1,22 @@
 import { formatDate } from '@/shared/utils';
 import { StatusBadge } from '../StatusBadge/StatusBadge';
 import type { PRListItem } from '@lgtmai/backend/types';
+import { useSuspenseQuery } from '@tanstack/react-query';
+import { prsQuery } from '@/shared/apis';
+import { useNavigate } from 'react-router-dom';
 
 interface Props {
-  prs: PRListItem[];
-  onPRClick: (pr: PRListItem) => void;
+  projectId: string;
 }
 
-export const PRTable = ({ prs, onPRClick }: Props) => {
+export const PRTable = ({ projectId }: Props) => {
+  const navigate = useNavigate();
+  const { data: prs } = useSuspenseQuery(prsQuery.list(projectId));
+
+  const handlePRClick = (pr: PRListItem) => {
+    navigate(`/projects/${projectId}/prs/${pr.number}`);
+  };
+
   if (prs.length === 0) {
     return (
       <div className="rounded-xl border border-gray-200 bg-white p-12 text-center">
@@ -43,7 +52,7 @@ export const PRTable = ({ prs, onPRClick }: Props) => {
             <tr
               key={pr.number}
               className="cursor-pointer border-b border-gray-100 transition-colors hover:bg-gray-50"
-              onClick={() => onPRClick(pr)}
+              onClick={() => handlePRClick(pr)}
             >
               <td className="px-6 py-4 text-sm text-gray-500">#{pr.number}</td>
               <td className="px-6 py-4">

@@ -3,7 +3,7 @@ interface Props {
   onRetry?: () => void;
 }
 
-export const ErrorMessage = ({ message, onRetry }: Props) => (
+export const CommonErrorFallback = ({ message, onRetry }: Props) => (
   <div className="flex flex-col items-center justify-center p-8">
     <div className="mb-4 text-red-500">
       <svg
@@ -29,11 +29,5 @@ export const ErrorMessage = ({ message, onRetry }: Props) => (
         Try Again
       </button>
     )}
-  </div>
-);
-
-export const FullPageError = ({ message, onRetry }: Props) => (
-  <div className="flex h-screen items-center justify-center">
-    <ErrorMessage message={message} onRetry={onRetry} />
   </div>
 );

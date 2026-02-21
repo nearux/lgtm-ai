@@ -1,3 +1,2 @@
-export { Loading, FullPageLoading } from './Loading';
-export { ErrorMessage, FullPageError } from './Error';
-export { AsyncBoundary, FullPageAsyncBoundary } from './AsyncBoundary';
+export { ErrorBoundary } from './ErrorBoundary/ErrorBoundary';
+export { AsyncBoundary } from './AsyncBoundary/AsyncBoundary';
