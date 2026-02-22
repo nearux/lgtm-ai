@@ -14,7 +14,7 @@
   "scripts": {
     "postinstall": "prisma generate",
     "build": "tsoa routes && tsc",
-    "dev": "prisma migrate dev && tsoa spec && tsoa routes && tsx watch index.ts",
+    "dev": "prisma migrate dev && tsoa spec && tsoa routes && (tsx watch index.ts || true)",
     "start": "prisma migrate deploy && node dist/index.js",
     "lint": "eslint .",
     "test": "vitest run",
