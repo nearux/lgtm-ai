@@ -8,6 +8,7 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 5050,
+    open: true,
     proxy: {
       '/api': {
         target: 'http://localhost:5051',
@@ -18,6 +19,7 @@ export default defineConfig({
   preview: {
     host: '0.0.0.0',
     port: 5050,
+    open: true,
     proxy: {
       '/api': {
         target: 'http://localhost:5051',
