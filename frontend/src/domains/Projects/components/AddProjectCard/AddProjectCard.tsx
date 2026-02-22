@@ -1,12 +1,13 @@
-interface Props {
-  onClick: () => void;
-}
+import type { ButtonHTMLAttributes } from 'react';
 
-export const AddProjectCard = ({ onClick }: Props) => {
+type Props = ButtonHTMLAttributes<HTMLButtonElement>;
+
+export const AddProjectCard = ({ className = '', ...props }: Props) => {
   return (
     <button
-      className="flex cursor-pointer flex-col items-center gap-3 rounded-xl border border-dashed border-gray-300 bg-gray-50 p-6 text-center transition-all hover:-translate-y-0.5 hover:border-indigo-500 hover:bg-white hover:shadow-lg"
-      onClick={onClick}
+      type="button"
+      className={`flex cursor-pointer flex-col items-center gap-3 rounded-xl border border-dashed border-gray-300 bg-gray-50 p-6 text-center transition-all hover:-translate-y-0.5 hover:border-indigo-500 hover:bg-white hover:shadow-lg ${className}`}
+      {...props}
     >
       <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-gray-200 text-3xl text-indigo-500">
         +
