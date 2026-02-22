@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import {
   Folder,
@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { fsQuery } from '@/shared/apis';
 import { Button, IconButton, Spinner } from '@/shared/components';
+import { cn } from '@/shared/lib';
 
 interface Props {
   initialPath?: string;
@@ -21,21 +22,28 @@ export const FolderBrowser = ({ initialPath, onSelect, onCancel }: Props) => {
   const [currentPath, setCurrentPath] = useState<string | undefined>(
     initialPath
   );
+  const [isPending, startTransition] = useTransition();
 
   const { data } = useSuspenseQuery(fsQuery.browse(currentPath));
 
   const handleNavigate = (path: string) => {
-    setCurrentPath(path);
+    startTransition(() => {
+      setCurrentPath(path);
+    });
   };
 
   const handleGoUp = () => {
     if (data.parent) {
-      setCurrentPath(data.parent);
+      startTransition(() => {
+        setCurrentPath(data.parent ?? undefined);
+      });
     }
   };
 
   const handleGoHome = () => {
-    setCurrentPath(undefined);
+    startTransition(() => {
+      setCurrentPath(undefined);
+    });
   };
 
   const handleSelect = () => {
@@ -72,9 +80,13 @@ export const FolderBrowser = ({ initialPath, onSelect, onCancel }: Props) => {
                 <button
                   type="button"
                   onClick={() => handleNavigate(segmentPath)}
-                  className={`rounded px-1 whitespace-nowrap hover:bg-gray-100 ${
-                    isLast ? 'font-medium text-gray-900' : 'text-gray-600'
-                  }`}
+                  className={cn(
+                    'rounded px-1 whitespace-nowrap hover:bg-gray-100',
+                    {
+                      'font-medium text-gray-900': isLast,
+                      'text-gray-600': !isLast,
+                    }
+                  )}
                 >
                   {segment}
                 </button>
@@ -85,7 +97,11 @@ export const FolderBrowser = ({ initialPath, onSelect, onCancel }: Props) => {
       </div>
 
       {/* Directory list */}
-      <div className="flex-1 overflow-y-auto">
+      <div
+        className={cn('flex-1 overflow-y-auto transition-opacity', {
+          'pointer-events-none opacity-50': isPending,
+        })}
+      >
         {data.entries.length === 0 ? (
           <div className="flex h-full items-center justify-center text-sm text-gray-500">
             No subdirectories
