@@ -7,7 +7,7 @@ export async function launchServers(): Promise<void> {
 
   const backend = spawn('node', ['backend/dist/index.js'], {
     stdio: 'inherit',
-    env: { ...process.env, NODE_ENV: 'production' },
+    env: { ...process.env, NODE_ENV: process.env.NODE_ENV ?? 'production' },
   });
   processes.push(backend);
 
