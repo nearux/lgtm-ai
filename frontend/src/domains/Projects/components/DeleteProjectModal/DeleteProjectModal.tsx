@@ -6,11 +6,10 @@ import type { Project } from '@lgtmai/backend/types';
 interface Props {
   isOpen: boolean;
   close: () => void;
-  exit: () => void;
   project: Project;
 }
 
-export const DeleteProjectModal = ({ isOpen, close, exit, project }: Props) => {
+export const DeleteProjectModal = ({ isOpen, close, project }: Props) => {
   const { mutate, isPending } = useMutation({
     ...projectsMutation.delete(),
     meta: {
@@ -32,14 +31,7 @@ export const DeleteProjectModal = ({ isOpen, close, exit, project }: Props) => {
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onTransitionEnd={(e) => {
-        if (e.target === e.currentTarget && !isOpen) {
-          exit();
-        }
-      }}
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
         <h2 className="mb-2 text-xl font-bold text-gray-900">Delete Project</h2>
         <p className="mb-6 text-gray-600">

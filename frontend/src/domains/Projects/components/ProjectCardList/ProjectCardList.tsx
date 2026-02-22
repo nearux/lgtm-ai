@@ -20,13 +20,8 @@ export const ProjectCardList = () => {
   const handleEditClick = (e: React.MouseEvent, project: Project) => {
     e.stopPropagation();
     overlay.open(
-      ({ isOpen, close, exit }) => (
-        <EditProjectModal
-          isOpen={isOpen}
-          close={close}
-          exit={exit}
-          project={project}
-        />
+      ({ isOpen, close }) => (
+        <EditProjectModal isOpen={isOpen} close={close} project={project} />
       ),
       'edit-project'
     );
@@ -35,13 +30,8 @@ export const ProjectCardList = () => {
   const handleDeleteClick = (e: React.MouseEvent, project: Project) => {
     e.stopPropagation();
     overlay.open(
-      ({ isOpen, close, exit }) => (
-        <DeleteProjectModal
-          isOpen={isOpen}
-          close={close}
-          exit={exit}
-          project={project}
-        />
+      ({ isOpen, close }) => (
+        <DeleteProjectModal isOpen={isOpen} close={close} project={project} />
       ),
       'delete-project'
     );

@@ -9,8 +9,8 @@ export const ProjectSelectPage = () => {
 
   const handleAddClick = () => {
     overlay.open(
-      ({ isOpen, close, exit }) => (
-        <CreateProjectModal isOpen={isOpen} close={close} exit={exit} />
+      ({ isOpen, close }) => (
+        <CreateProjectModal isOpen={isOpen} close={close} />
       ),
       'create-project'
     );

@@ -7,10 +7,9 @@ import type { CreateProjectBody } from '@lgtmai/backend/types';
 interface Props {
   isOpen: boolean;
   close: () => void;
-  exit: () => void;
 }
 
-export const CreateProjectModal = ({ isOpen, close, exit }: Props) => {
+export const CreateProjectModal = ({ isOpen, close }: Props) => {
   const [form, setForm] = useState<CreateProjectBody>({
     name: '',
     working_dir: '',
@@ -35,6 +34,11 @@ export const CreateProjectModal = ({ isOpen, close, exit }: Props) => {
 
   const handleClose = () => {
     if (isPending) return;
+    setForm({
+      name: '',
+      working_dir: '',
+      description: '',
+    });
     close();
   };
 
@@ -47,24 +51,8 @@ export const CreateProjectModal = ({ isOpen, close, exit }: Props) => {
     });
   };
 
-  const handleExited = () => {
-    setForm({
-      name: '',
-      working_dir: '',
-      description: '',
-    });
-    exit();
-  };
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onTransitionEnd={(e) => {
-        if (e.target === e.currentTarget && !isOpen) {
-          handleExited();
-        }
-      }}
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
         <div className="mb-6 flex items-center justify-between">
           <h2 className="text-2xl font-bold text-gray-900">Add New Project</h2>

@@ -7,11 +7,10 @@ import type { Project, UpdateProjectBody } from '@lgtmai/backend/types';
 interface Props {
   isOpen: boolean;
   close: () => void;
-  exit: () => void;
   project: Project;
 }
 
-export const EditProjectModal = ({ isOpen, close, exit, project }: Props) => {
+export const EditProjectModal = ({ isOpen, close, project }: Props) => {
   const [form, setForm] = useState<UpdateProjectBody>({
     name: project.name,
     working_dir: project.working_dir,
@@ -52,14 +51,7 @@ export const EditProjectModal = ({ isOpen, close, exit, project }: Props) => {
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onTransitionEnd={(e) => {
-        if (e.target === e.currentTarget && !isOpen) {
-          exit();
-        }
-      }}
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
         <div className="mb-6 flex items-center justify-between">
           <h2 className="text-2xl font-bold text-gray-900">Edit Project</h2>
