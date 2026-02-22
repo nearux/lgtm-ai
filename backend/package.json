@@ -8,8 +8,8 @@
     "postinstall": "prisma generate",
     "tsoa": "tsoa spec && tsoa routes",
     "build": "npm run tsoa && tsc",
-    "dev": "npm run tsoa && tsx watch index.ts",
-    "start": "node dist/index.js",
+    "dev": "prisma db push && npm run tsoa && tsx watch index.ts",
+    "start": "prisma migrate deploy && node dist/index.js",
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest"
