@@ -7,6 +7,7 @@ import {
   useScrollLock,
   useFocusTrap,
 } from '../../hooks';
+import { IconButton } from '../IconButton/IconButton';
 
 interface Props {
   isOpen: boolean;
@@ -55,14 +56,9 @@ export const Modal = ({
           <h2 id={titleId} className="text-2xl font-bold text-gray-900">
             {title}
           </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close modal"
-            className="flex h-8 w-8 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100"
-          >
+          <IconButton onClick={onClose} aria-label="Close modal">
             <X className="h-5 w-5" aria-hidden="true" />
-          </button>
+          </IconButton>
         </div>
 
         <div>{children}</div>
