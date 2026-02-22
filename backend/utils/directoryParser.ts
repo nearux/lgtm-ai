@@ -15,7 +15,12 @@ export class DirectoryParser {
    */
   private parseEntries(): DirectoryEntry[] {
     return this.dirents
-      .filter((entry) => entry.isDirectory() && !entry.name.startsWith('.'))
+      .filter(
+        (entry) =>
+          entry.isDirectory() &&
+          !entry.isSymbolicLink() &&
+          !entry.name.startsWith('.')
+      )
       .map((entry) => ({
         name: entry.name,
         path: path.join(this.targetPath, entry.name),

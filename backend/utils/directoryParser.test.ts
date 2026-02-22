@@ -2,7 +2,15 @@ import { describe, it, expect } from 'vitest';
 import type { Dirent } from 'node:fs';
 import { DirectoryParser } from './directoryParser.js';
 
-function makeDirent({ name, isDir }: { name: string; isDir: boolean }): Dirent {
+function makeDirent({
+  name,
+  isDir,
+  isSymlink = false,
+}: {
+  name: string;
+  isDir: boolean;
+  isSymlink?: boolean;
+}): Dirent {
   return {
     name,
     isDirectory: () => isDir,
@@ -11,7 +19,7 @@ function makeDirent({ name, isDir }: { name: string; isDir: boolean }): Dirent {
     isCharacterDevice: () => false,
     isFIFO: () => false,
     isSocket: () => false,
-    isSymbolicLink: () => false,
+    isSymbolicLink: () => isSymlink,
     path: '',
     parentPath: '',
   } as unknown as Dirent;
@@ -27,6 +35,17 @@ describe('DirectoryParser', () => {
       ];
       const result = new DirectoryParser('/base', dirents).parse();
       expect(result.entries).toEqual([{ name: 'src', path: '/base/src' }]);
+    });
+
+    it('should exclude symbolic links even if they appear as directories', () => {
+      const dirents = [
+        makeDirent({ name: 'real-dir', isDir: true }),
+        makeDirent({ name: 'symlink-dir', isDir: true, isSymlink: true }),
+      ];
+      const result = new DirectoryParser('/base', dirents).parse();
+      expect(result.entries).toEqual([
+        { name: 'real-dir', path: '/base/real-dir' },
+      ]);
     });
 
     it('should exclude hidden directories starting with "."', () => {
