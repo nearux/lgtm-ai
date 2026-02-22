@@ -1,3 +1,4 @@
+import Markdown from 'react-markdown';
 import { formatDateTime } from '@/shared/utils';
 import type { PRComment } from '@lgtmai/backend/types';
 
@@ -31,9 +32,9 @@ export const CommentList = ({ comments }: Props) => {
                   {formatDateTime(comment.createdAt)}
                 </span>
               </div>
-              <p className="whitespace-pre-wrap text-gray-700">
-                {comment.body}
-              </p>
+              <div className="prose prose-gray max-w-none">
+                <Markdown>{comment.body}</Markdown>
+              </div>
             </div>
           ))}
         </div>

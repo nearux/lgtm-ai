@@ -1,3 +1,4 @@
+import Markdown from 'react-markdown';
 import { formatDateTime } from '@/shared/utils';
 import type { PRReview } from '@lgtmai/backend/types';
 
@@ -62,9 +63,9 @@ export const ReviewList = ({ reviews }: Props) => {
                 </span>
               </div>
               {review.body && (
-                <p className="whitespace-pre-wrap text-gray-700">
-                  {review.body}
-                </p>
+                <div className="prose prose-gray max-w-none">
+                  <Markdown>{review.body}</Markdown>
+                </div>
               )}
             </div>
           ))}

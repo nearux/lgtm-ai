@@ -29,7 +29,7 @@ export const OverlayController = function OverlayController({
   }, [handleOverlayClose]);
 
   useEffect(() => {
-    // NOTE: requestAnimationFrame이 없으면 가끔 Open 애니메이션이 실행되지 않는다.
+    // NOTE: Without requestAnimationFrame, the open animation sometimes doesn't run.
     requestAnimationFrame(() => {
       setIsOpenOverlay(true);
     });

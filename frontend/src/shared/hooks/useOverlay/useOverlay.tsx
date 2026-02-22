@@ -12,7 +12,7 @@ interface UseOverlayOptions {
 const DEFAULT_OVERLAY_ID = 'default-overlay-id';
 
 /**
- * Modal과 같은 오버레이를 열고 닫을 수 있는 hook입니다.
+ * A hook for opening and closing overlays such as modals.
  *
  * @example
  * ```tsx
@@ -22,21 +22,21 @@ const DEFAULT_OVERLAY_ID = 'default-overlay-id';
  * ```
  *
  * `overlay.open(overlayElement, id?)`
- * - 오버레이를 새롭게 mount 합니다. 같은 ID를 가지는 오버레이가 이미 열려있는 경우 대체합니다.
+ * - Mounts a new overlay. Replaces an existing overlay if one with the same ID is already open.
  * - overlayElement: ({ isOpen, close }) => React.ReactNode
- * - id: 오버레이의 고유 ID (default: DEFAULT_OVERLAY_ID)
+ * - id: Unique ID for the overlay (default: DEFAULT_OVERLAY_ID)
  *
  * `overlay.close(id)`
- * - 해당 ID의 오버레이를 닫습니다.
+ * - Closes the overlay with the given ID.
  *
  * `overlay.exit(id)`
- * - 해당 ID의 오버레이를 unmount 합니다.
+ * - Unmounts the overlay with the given ID.
  *
- * NOTE: `close`를 호출해도 오버레이가 unmount되는 것은 아닙니다.
- * `overlay.exit`을 호출해서 명시적으로 unmount 할 수 있고,
- * `useOverlay`가 unmount될 때, open했던 모든 오버레이를 자동으로 unmount합니다.
+ * NOTE: Calling `close` does not unmount the overlay.
+ * You can explicitly unmount it by calling `overlay.exit`,
+ * and when `useOverlay` unmounts, all opened overlays are automatically unmounted.
  *
- * fork from https://github.com/toss/slash/tree/main/packages/react/use-overlay
+ * Forked from https://github.com/toss/slash/tree/main/packages/react/use-overlay
  */
 export function useOverlay(options: UseOverlayOptions = {}) {
   const context = useContext(OverlayContext);
