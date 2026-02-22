@@ -11,6 +11,7 @@ import {
 import { fsQuery } from '@/shared/apis';
 import { Button, IconButton, Spinner } from '@/shared/components';
 import { cn } from '@/shared/lib';
+import { parsePathSegments, buildPathFromSegments } from '@/shared/utils';
 
 interface Props {
   initialPath?: string;
@@ -50,7 +51,7 @@ export const FolderBrowser = ({ initialPath, onSelect, onCancel }: Props) => {
     onSelect(data.path);
   };
 
-  const pathSegments = data.path.split('/').filter(Boolean);
+  const pathSegments = parsePathSegments(data.path);
 
   return (
     <div className="flex h-80 flex-col rounded-lg border border-gray-200 bg-white">
@@ -69,8 +70,7 @@ export const FolderBrowser = ({ initialPath, onSelect, onCancel }: Props) => {
         <div className="flex flex-1 items-center gap-1 overflow-x-auto text-sm">
           <span className="text-gray-400">/</span>
           {pathSegments.map((segment, index) => {
-            const segmentPath =
-              '/' + pathSegments.slice(0, index + 1).join('/');
+            const segmentPath = buildPathFromSegments(pathSegments, index);
             const isLast = index === pathSegments.length - 1;
             return (
               <div key={segmentPath} className="flex items-center gap-1">
