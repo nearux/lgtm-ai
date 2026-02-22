@@ -6,10 +6,22 @@ import type { BrowseResponse } from '../types/fileSystem.js';
 import HttpStatus from 'http-status';
 import { DirectoryParser } from '../utils/directoryParser.js';
 
-const BLOCKED_PATHS = ['/etc', '/bin', '/sbin', '/dev'];
+const BLOCKED_PATHS = [
+  '/etc',
+  '/bin',
+  '/sbin',
+  '/dev',
+  '/sys',
+  '/proc',
+  '/root',
+  '/boot',
+];
 
 function isBlocked(absPath: string): boolean {
-  return BLOCKED_PATHS.some((blocked) => absPath === blocked);
+  return BLOCKED_PATHS.some(
+    (blocked) =>
+      absPath === blocked || absPath.startsWith(path.join(blocked, path.sep))
+  );
 }
 
 export function browse(rawPath?: string): BrowseResponse {
