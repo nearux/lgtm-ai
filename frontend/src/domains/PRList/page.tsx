@@ -1,5 +1,5 @@
 import { Link, useParams } from 'react-router-dom';
-import { AsyncBoundary } from '@/shared/components';
+import { AsyncBoundary, Button } from '@/shared/components';
 import { useQuery } from '@tanstack/react-query';
 import { projectsQuery } from '@/shared/apis';
 import { PRTable } from './components/PRTable/PRTable';
@@ -29,12 +29,7 @@ export const PRListPage = () => {
         </div>
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold text-gray-900">Pull Requests</h1>
-          <button
-            type="button"
-            className="rounded-lg bg-indigo-500 px-4 py-2 text-white transition-colors hover:bg-indigo-600"
-          >
-            Review All Pending
-          </button>
+          <Button>Review All Pending</Button>
         </div>
       </header>
       <AsyncBoundary>
