@@ -1,2 +1,3 @@
 **/*.md
 backend/routes.ts
+pnpm-lock.yaml
