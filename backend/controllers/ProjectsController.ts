@@ -34,7 +34,7 @@ import type {
   UpdateProjectBody,
   ErrorResponse,
 } from '../types/projects.js';
-import type { PRListItem, PRDetail } from '../types/pullRequests.js';
+import type { PRListItem, PRDetail, PRState } from '../types/pullRequests.js';
 
 export type {
   Project,
@@ -119,6 +119,7 @@ export class ProjectsController extends Controller {
    * @param projectId Project UUID
    * @param page Page number (1-based)
    * @param limit Results per page (max 100)
+   * @param state PR state filter: open, closed, or all (default: open)
    */
   @Get('{projectId}/prs')
   @Response<ErrorResponse>(HttpStatus.BAD_REQUEST, 'Invalid remote URL')
@@ -134,7 +135,8 @@ export class ProjectsController extends Controller {
   public async listProjectPRs(
     @Path() projectId: string,
     @Query() page?: number,
-    @Query() limit?: number
+    @Query() limit?: number,
+    @Query() state?: PRState
   ): Promise<PRListItem[]> {
     const project = await projectsService.findById(parseUUID(projectId));
 
@@ -146,7 +148,11 @@ export class ProjectsController extends Controller {
     }
 
     const repoOwnerName = gitUtils.parseGitHubRepo(project.gitInfo.remoteUrl);
-    return pullRequestsService.fetchPRList(repoOwnerName, { page, limit });
+    return pullRequestsService.fetchPRList(repoOwnerName, {
+      page,
+      limit,
+      state,
+    });
   }
 
   /**
