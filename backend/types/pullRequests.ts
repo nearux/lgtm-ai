@@ -16,6 +16,8 @@ export type GitHubPullRequest = {
   state: string;
 };
 
+export type PRState = 'open' | 'closed' | 'all';
+
 export interface PRAuthor {
   id: string;
   login: string;
