@@ -9,7 +9,7 @@
   },
   "scripts": {
     "build": "pnpm --filter @lgtmai/cli build && pnpm --filter @lgtmai/backend build && pnpm --filter frontend build",
-    "dev": "pnpm --parallel --filter '@lgtmai/backend' --filter 'frontend' run dev",
+    "dev": "concurrently --kill-others-on-fail false \"pnpm --filter '@lgtmai/backend' run dev\" \"wait-on http://localhost:5051/health && pnpm --filter 'frontend' run dev\"",
     "start": "node bin/lgtmai.js",
     "test": "pnpm --filter '*' --if-present run test",
     "lint": "pnpm --filter '*' --if-present run lint",
@@ -41,7 +41,9 @@
     "pnpm": ">=9"
   },
   "devDependencies": {
+    "concurrently": "^9.2.1",
     "prettier": "^3.8.1",
-    "prettier-plugin-tailwindcss": "^0.7.2"
+    "prettier-plugin-tailwindcss": "^0.7.2",
+    "wait-on": "^9.0.4"
   }
 }

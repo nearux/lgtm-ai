@@ -6,6 +6,7 @@ import { AppError } from '../errors/AppError.js';
 import type {
   PRListItem,
   PRDetail,
+  PRState,
   GitHubPullRequest,
 } from '../types/pullRequests.js';
 import { PRListItemDto } from '../dtos/pullRequestsDto.js';
@@ -36,12 +37,21 @@ function normalizePositiveInt(
   return clamp(Math.trunc(value), { min: 1 });
 }
 
+const VALID_PR_STATES: PRState[] = ['open', 'closed', 'all'];
+
+function normalizePRState(state: string | undefined): PRState {
+  if (state && VALID_PR_STATES.includes(state as PRState)) {
+    return state as PRState;
+  }
+  return 'open';
+}
+
 /**
  * Fetch PR list using GitHub API via gh
  */
 export async function fetchPRList(
   repoOwnerName: string,
-  options: { page?: number; limit?: number } = {}
+  options: { page?: number; limit?: number; state?: PRState } = {}
 ): Promise<PRListItem[]> {
   validateRepoOwnerName(repoOwnerName);
 
@@ -49,7 +59,8 @@ export async function fetchPRList(
   const limit = clamp(normalizePositiveInt(options.limit, DEFAULT_LIMIT), {
     max: MAX_LIMIT,
   });
-  const apiPath = `repos/${repoOwnerName}/pulls?per_page=${limit}&page=${page}&state=open`;
+  const state = normalizePRState(options.state);
+  const apiPath = `repos/${repoOwnerName}/pulls?per_page=${limit}&page=${page}&state=${state}`;
 
   let stdout: string;
 

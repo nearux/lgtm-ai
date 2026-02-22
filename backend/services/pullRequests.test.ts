@@ -111,6 +111,48 @@ describe('pullRequests service', () => {
       ]);
     });
 
+    it('should pass state=closed option', async () => {
+      mockExecAsync.mockResolvedValue({
+        stdout: JSON.stringify(mockApiPRListData),
+        stderr: '',
+      });
+
+      await fetchPRList('owner/repo', { state: 'closed' });
+
+      expect(mockExecAsync).toHaveBeenCalledWith('gh', [
+        'api',
+        'repos/owner/repo/pulls?per_page=100&page=1&state=closed',
+      ]);
+    });
+
+    it('should pass state=all option', async () => {
+      mockExecAsync.mockResolvedValue({
+        stdout: JSON.stringify(mockApiPRListData),
+        stderr: '',
+      });
+
+      await fetchPRList('owner/repo', { state: 'all' });
+
+      expect(mockExecAsync).toHaveBeenCalledWith('gh', [
+        'api',
+        'repos/owner/repo/pulls?per_page=100&page=1&state=all',
+      ]);
+    });
+
+    it('should default to state=open for invalid state value', async () => {
+      mockExecAsync.mockResolvedValue({
+        stdout: JSON.stringify(mockApiPRListData),
+        stderr: '',
+      });
+
+      await fetchPRList('owner/repo', { state: 'invalid' as never });
+
+      expect(mockExecAsync).toHaveBeenCalledWith('gh', [
+        'api',
+        'repos/owner/repo/pulls?per_page=100&page=1&state=open',
+      ]);
+    });
+
     it('should return empty array when no PRs exist', async () => {
       mockExecAsync.mockResolvedValue({
         stdout: JSON.stringify([]),
