@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { Folder } from 'lucide-react';
 import { projectsMutation, projectsQuery } from '@/shared/apis';
-import { Modal, Input, Button } from '@/shared/components';
+import { Modal, Input, Button, AsyncBoundary } from '@/shared/components';
 import type { Project, UpdateProjectBody } from '@lgtmai/backend/types';
+import { FolderBrowser } from '../FolderBrowser/FolderBrowser';
 
 interface Props {
   isOpen: boolean;
@@ -17,6 +19,7 @@ export const EditProjectModal = ({ isOpen, close, project }: Props) => {
     working_dir: project.working_dir,
     description: project.description ?? '',
   });
+  const [showBrowser, setShowBrowser] = useState(false);
 
   const { mutate, isPending } = useMutation({
     ...projectsMutation.update(),
@@ -34,6 +37,7 @@ export const EditProjectModal = ({ isOpen, close, project }: Props) => {
 
   const handleClose = () => {
     if (isPending) return;
+    setShowBrowser(false);
     close();
   };
 
@@ -49,6 +53,33 @@ export const EditProjectModal = ({ isOpen, close, project }: Props) => {
     });
   };
 
+  const handleFolderSelect = (path: string) => {
+    setForm((prev) => ({ ...prev, working_dir: path }));
+    setShowBrowser(false);
+  };
+
+  if (showBrowser) {
+    return (
+      <Modal
+        isOpen={isOpen}
+        onClose={handleClose}
+        title="Select Working Directory"
+        size="lg"
+      >
+        <AsyncBoundary
+          pending={<FolderBrowser.Fallback />}
+          rejected={(props) => <FolderBrowser.ErrorFallback {...props} />}
+        >
+          <FolderBrowser
+            initialPath={form.working_dir || undefined}
+            onSelect={handleFolderSelect}
+            onCancel={() => setShowBrowser(false)}
+          />
+        </AsyncBoundary>
+      </Modal>
+    );
+  }
+
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="Edit Project">
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -60,16 +91,32 @@ export const EditProjectModal = ({ isOpen, close, project }: Props) => {
           required
           disabled={isPending}
         />
-        <Input
-          label="Working Directory"
-          value={form.working_dir}
-          onChange={handleChange('working_dir')}
-          placeholder="/Users/you/projects/my-repo"
-          description="Absolute path to a local Git repository"
-          className="font-mono text-sm"
-          required
-          disabled={isPending}
-        />
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-gray-700">
+            Working Directory
+          </label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={form.working_dir}
+              readOnly
+              placeholder="Select a folder..."
+              className="flex-1 rounded-lg border border-gray-300 px-3 py-2 font-mono text-sm text-gray-700 focus:border-indigo-500 focus:outline-none"
+            />
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setShowBrowser(true)}
+              disabled={isPending}
+            >
+              <Folder className="h-4 w-4" />
+              Browse
+            </Button>
+          </div>
+          <p className="mt-1 text-sm text-gray-500">
+            Select a local Git repository folder
+          </p>
+        </div>
         <Input
           label="Description (optional)"
           value={form.description}
@@ -87,7 +134,12 @@ export const EditProjectModal = ({ isOpen, close, project }: Props) => {
           >
             Cancel
           </Button>
-          <Button type="submit" loading={isPending} className="flex-1">
+          <Button
+            type="submit"
+            loading={isPending}
+            disabled={!form.working_dir}
+            className="flex-1"
+          >
             {isPending ? 'Saving...' : 'Save Changes'}
           </Button>
         </div>
