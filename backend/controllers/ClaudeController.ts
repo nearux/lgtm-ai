@@ -16,10 +16,13 @@ export class ClaudeController extends Controller {
    * Execute Claude Code CLI and stream output as Server-Sent Events.
    *
    * SSE event types:
-   * - `data`   – parsed assistant text from stdout
-   * - `stderr` – raw stderr output
-   * - `done`   – process exited successfully (data: exit code)
-   * - `error`  – process exited with non-zero code or failed to spawn
+   * - `text`          – parsed assistant text from stdout
+   * - `tool_start`    – tool call started (data: JSON { toolId, toolName })
+   * - `tool_complete` – tool call completed with input (data: JSON { toolId, toolName, input })
+   * - `tool_result`   – tool execution result (data: JSON { toolId, content, isError })
+   * - `stderr`        – raw stderr output
+   * - `done`          – process exited successfully (data: exit code)
+   * - `error`         – process exited with non-zero code or failed to spawn
    */
   @Post('/execute')
   @Produces('text/event-stream')
@@ -40,7 +43,16 @@ export class ClaudeController extends Controller {
 
     const stream = new ClaudeProcess(body.prompt, body.workingDir);
 
-    stream.on('data', (chunk) => sendEvent('data', chunk));
+    stream.on('text', (chunk) => sendEvent('text', chunk));
+    stream.on('tool_start', (toolId, toolName) =>
+      sendEvent('tool_start', JSON.stringify({ toolId, toolName }))
+    );
+    stream.on('tool_complete', (toolId, toolName, input) =>
+      sendEvent('tool_complete', JSON.stringify({ toolId, toolName, input }))
+    );
+    stream.on('tool_result', (toolId, content, isError) =>
+      sendEvent('tool_result', JSON.stringify({ toolId, content, isError }))
+    );
     stream.on('stderr', (chunk) => sendEvent('stderr', chunk));
     stream.on('done', (code) => {
       sendEvent('done', String(code));

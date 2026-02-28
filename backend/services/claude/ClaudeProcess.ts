@@ -4,10 +4,13 @@ import { LineBuffer } from './lineBuffer.js';
 import { parseStreamJsonLine } from './streamJsonParser.js';
 
 export interface ClaudeStreamEvents {
-  data: [chunk: string];
+  text: [chunk: string];
   stderr: [chunk: string];
   done: [exitCode: number];
   error: [message: string];
+  tool_start: [toolId: string, toolName: string];
+  tool_complete: [toolId: string, toolName: string, input: unknown];
+  tool_result: [toolId: string, content: string, isError: boolean];
 }
 
 /**
@@ -17,9 +20,12 @@ export interface ClaudeStreamEvents {
  * management via `abort()`.
  *
  * Emitted events:
- *  - `data`  – extracted text from an assistant message
- *  - `done`  – process exited cleanly (payload: exit code)
- *  - `error` – spawn failure or non-zero exit (payload: message)
+ *  - `data`          – extracted text from an assistant message
+ *  - `tool_start`    – a tool call has started (toolId, toolName)
+ *  - `tool_complete` – a tool call has completed with input (toolId, toolName, input)
+ *  - `tool_result`   – tool execution result received (toolId, content, isError)
+ *  - `done`          – process exited cleanly (payload: exit code)
+ *  - `error`         – spawn failure or non-zero exit (payload: message)
  */
 export class ClaudeProcess extends EventEmitter<ClaudeStreamEvents> {
   private readonly childProcess: ChildProcess | null = null;
@@ -87,8 +93,26 @@ export class ClaudeProcess extends EventEmitter<ClaudeStreamEvents> {
 
   private emitParsedLine(line: string): void {
     const result = parseStreamJsonLine(line);
-    if (result) {
-      this.emit('data', result.text);
+    if (!result) return;
+
+    switch (result.kind) {
+      case 'text':
+        this.emit('text', result.text);
+        break;
+      case 'tool_start':
+        this.emit('tool_start', result.toolId, result.toolName);
+        break;
+      case 'tool_complete':
+        this.emit(
+          'tool_complete',
+          result.toolId,
+          result.toolName,
+          result.input
+        );
+        break;
+      case 'tool_result':
+        this.emit('tool_result', result.toolId, result.content, result.isError);
+        break;
     }
   }
 }
