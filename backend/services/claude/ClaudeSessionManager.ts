@@ -1,6 +1,7 @@
 import type WebSocket from 'ws';
 import { ClaudeProcess } from './ClaudeProcess.js';
 import { WebSocketSender } from './WebSocketSender.js';
+import type { ClaudeExecuteOptions } from '../../types/claude.js';
 
 export class ClaudeSessionManager {
   private processes = new Map<string, ClaudeProcess>();
@@ -10,7 +11,12 @@ export class ClaudeSessionManager {
     this.sender = new WebSocketSender(ws);
   }
 
-  execute(requestId: string, prompt: string, workingDir: string): void {
+  execute(
+    requestId: string,
+    prompt: string,
+    workingDir: string,
+    options: ClaudeExecuteOptions = {}
+  ): void {
     const { sender } = this;
     if (this.processes.has(requestId)) {
       sender.send({
@@ -30,7 +36,7 @@ export class ClaudeSessionManager {
       return;
     }
 
-    const proc = new ClaudeProcess(prompt, workingDir);
+    const proc = new ClaudeProcess(prompt, workingDir, options);
     this.processes.set(requestId, proc);
 
     proc.on('text', (chunk) => sender.send({ type: 'text', requestId, chunk }));

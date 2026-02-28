@@ -1,6 +1,6 @@
 import type WebSocket from 'ws';
 import { ClaudeSessionManager } from '../services/claude/ClaudeSessionManager.js';
-import type { WsClientMessage } from '../types/websocket.js';
+import type { WsClientMessage } from '../types/claude.js';
 
 export function handleClaudeWebSocket(ws: WebSocket): void {
   const manager = new ClaudeSessionManager(ws);
@@ -22,8 +22,8 @@ export function handleClaudeWebSocket(ws: WebSocket): void {
     }
 
     if (msg.type === 'execute') {
-      const { requestId, prompt, workingDir } = msg;
-      manager.execute(requestId, prompt, workingDir);
+      const { requestId, prompt, workingDir, options } = msg;
+      manager.execute(requestId, prompt, workingDir, options);
       return;
     }
 

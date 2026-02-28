@@ -2,6 +2,8 @@ import { spawn, type ChildProcess } from 'node:child_process';
 import { EventEmitter } from 'node:events';
 import { LineBuffer } from './lineBuffer.js';
 import { parseStreamJsonLine } from './streamJsonParser.js';
+import { ClaudeArgsBuilder } from './ClaudeArgsBuilder.js';
+import type { ClaudeExecuteOptions } from '../../types/claude.js';
 
 export interface ClaudeStreamEvents {
   text: [chunk: string];
@@ -29,22 +31,21 @@ export class ClaudeProcess extends EventEmitter<ClaudeStreamEvents> {
   private readonly childProcess: ChildProcess | null = null;
   private readonly lineBuffer = new LineBuffer();
 
-  constructor(prompt: string, workingDir: string) {
+  constructor(
+    prompt: string,
+    workingDir: string,
+    options: ClaudeExecuteOptions = {}
+  ) {
     super();
+
+    const args = new ClaudeArgsBuilder(prompt).withOptions(options).build();
 
     let child: ChildProcess;
     try {
-      child = spawn(
-        'claude',
-        [
-          '-p',
-          prompt,
-          '--output-format=stream-json',
-          '--verbose',
-          '--include-partial-messages',
-        ],
-        { cwd: workingDir, stdio: ['ignore', 'pipe', 'pipe'] }
-      );
+      child = spawn('claude', args, {
+        cwd: workingDir,
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       // Emit asynchronously so callers can attach listeners first

@@ -1,10 +1,23 @@
 // ── Client → Server ──────────────────────────────────────────────────
 
+export type ClaudeMode =
+  | 'default'
+  | 'acceptEdits'
+  | 'plan'
+  | 'bypassPermissions';
+
+export interface ClaudeExecuteOptions {
+  dangerouslySkipPermissions?: boolean;
+  permissionMode?: ClaudeMode;
+  model?: string;
+}
+
 export interface WsExecuteMessage {
   type: 'execute';
   requestId: string;
   prompt: string;
   workingDir: string;
+  options?: ClaudeExecuteOptions;
 }
 
 export interface WsAbortMessage {

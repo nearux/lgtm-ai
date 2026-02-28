@@ -1,6 +1,6 @@
 import type WebSocket from 'ws';
 import { WebSocket as WsWebSocket } from 'ws';
-import type { WsServerMessage } from '../../types/websocket.js';
+import type { WsServerMessage } from '../../types/claude.js';
 
 export class WebSocketSender {
   constructor(private readonly ws: WebSocket) {}
