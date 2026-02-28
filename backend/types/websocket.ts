@@ -22,15 +22,8 @@ export interface WsTextEvent {
   chunk: string;
 }
 
-export interface WsToolStartEvent {
-  type: 'tool_start';
-  requestId: string;
-  toolId: string;
-  toolName: string;
-}
-
-export interface WsToolCompleteEvent {
-  type: 'tool_complete';
+export interface WsToolMessageEvent {
+  type: 'tool_message';
   requestId: string;
   toolId: string;
   toolName: string;
@@ -65,8 +58,7 @@ export interface WsErrorEvent {
 
 export type WsServerMessage =
   | WsTextEvent
-  | WsToolStartEvent
-  | WsToolCompleteEvent
+  | WsToolMessageEvent
   | WsToolResultEvent
   | WsStderrEvent
   | WsDoneEvent

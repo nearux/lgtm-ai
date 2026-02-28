@@ -34,11 +34,8 @@ export class ClaudeSessionManager {
     this.processes.set(requestId, proc);
 
     proc.on('text', (chunk) => sender.send({ type: 'text', requestId, chunk }));
-    proc.on('tool_start', (toolId, toolName) =>
-      sender.send({ type: 'tool_start', requestId, toolId, toolName })
-    );
-    proc.on('tool_complete', (toolId, toolName, input) =>
-      sender.send({ type: 'tool_complete', requestId, toolId, toolName, input })
+    proc.on('tool_message', (toolId, toolName, input) =>
+      sender.send({ type: 'tool_message', requestId, toolId, toolName, input })
     );
     proc.on('tool_result', (toolId, content, isError) =>
       sender.send({ type: 'tool_result', requestId, toolId, content, isError })
