@@ -1,9 +1,12 @@
 import express from 'express';
 import cors from 'cors';
+import { createServer } from 'node:http';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { WebSocketServer } from 'ws';
 import { RegisterRoutes } from './routes.js';
 import { errorHandler } from './middlewares/errorHandler.js';
+import { handleClaudeWebSocket } from './controllers/ClaudeWSController.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -35,6 +38,22 @@ RegisterRoutes(app);
 
 app.use(errorHandler);
 
-app.listen(PORT, '0.0.0.0', () => {
+const httpServer = createServer(app);
+
+const claudeWss = new WebSocketServer({ noServer: true });
+claudeWss.on('connection', handleClaudeWebSocket);
+
+httpServer.on('upgrade', (req, socket, head) => {
+  if (req.url === '/api/claude/execute') {
+    claudeWss.handleUpgrade(req, socket, head, (ws) => {
+      claudeWss.emit('connection', ws, req);
+    });
+  } else {
+    socket.destroy();
+  }
+});
+
+httpServer.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ Backend server running on http://0.0.0.0:${PORT}`);
+  console.log(`🔌 WebSocket endpoint: ws://0.0.0.0:${PORT}/api/claude/execute`);
 });
