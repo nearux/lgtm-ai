@@ -1,6 +1,6 @@
 import { Controller, Route, Post, Body, Tags, Request, Produces } from 'tsoa';
 import type * as express from 'express';
-import { executeClaudeStream } from '../services/claude.js';
+import { ClaudeProcess } from '../services/claude/ClaudeProcess.js';
 
 export interface ExecuteClaudeBody {
   /** The prompt to send to Claude Code CLI */
@@ -16,9 +16,10 @@ export class ClaudeController extends Controller {
    * Execute Claude Code CLI and stream output as Server-Sent Events.
    *
    * SSE event types:
-   * - `data`  – a chunk of stdout/stderr output
-   * - `done`  – process exited successfully (data: exit code)
-   * - `error` – process exited with non-zero code or failed to spawn
+   * - `data`   – parsed assistant text from stdout
+   * - `stderr` – raw stderr output
+   * - `done`   – process exited successfully (data: exit code)
+   * - `error`  – process exited with non-zero code or failed to spawn
    */
   @Post('/execute')
   @Produces('text/event-stream')
@@ -37,9 +38,10 @@ export class ClaudeController extends Controller {
       res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
     };
 
-    const stream = executeClaudeStream(body.prompt, body.workingDir);
+    const stream = new ClaudeProcess(body.prompt, body.workingDir);
 
     stream.on('data', (chunk) => sendEvent('data', chunk));
+    stream.on('stderr', (chunk) => sendEvent('stderr', chunk));
     stream.on('done', (code) => {
       sendEvent('done', String(code));
       res.end();
