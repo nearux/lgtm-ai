@@ -31,11 +31,7 @@ export class ClaudeProcess extends EventEmitter<ClaudeStreamEvents> {
   private readonly childProcess: ChildProcess | null = null;
   private readonly lineBuffer = new LineBuffer();
 
-  constructor(
-    prompt: string,
-    workingDir: string,
-    options: ClaudeExecuteOptions = {}
-  ) {
+  constructor(workingDir: string, options: ClaudeExecuteOptions = {}) {
     super();
 
     const args = new ClaudeArgsBuilder().withOptions(options).build();
@@ -57,12 +53,6 @@ export class ClaudeProcess extends EventEmitter<ClaudeStreamEvents> {
 
     this.childProcess = child;
 
-    const stdinMessage = JSON.stringify({
-      type: 'user',
-      message: { role: 'user', content: prompt },
-    });
-    child.stdin!.write(stdinMessage + '\n');
-
     child.stdout!.on('data', (chunk: Buffer) => this.handleChunk(chunk));
     child.stderr!.on('data', (chunk: Buffer) =>
       this.emit('stderr', chunk.toString())
@@ -71,6 +61,17 @@ export class ClaudeProcess extends EventEmitter<ClaudeStreamEvents> {
       this.emit('error', `Process error: ${err.message}`)
     );
     child.on('close', (code) => this.handleClose(code));
+  }
+
+  sendPrompt(prompt: string): void {
+    this.writeJson({
+      type: 'user',
+      message: { role: 'user', content: prompt },
+    });
+  }
+
+  private writeJson(value: unknown): void {
+    this.childProcess?.stdin!.write(JSON.stringify(value) + '\n');
   }
 
   abort(): void {

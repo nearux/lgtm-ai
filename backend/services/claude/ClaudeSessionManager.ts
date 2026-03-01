@@ -36,8 +36,9 @@ export class ClaudeSessionManager {
       return;
     }
 
-    const proc = new ClaudeProcess(prompt, workingDir, options);
+    const proc = new ClaudeProcess(workingDir, options);
     this.processes.set(requestId, proc);
+    proc.sendPrompt(prompt);
 
     proc.on('text', (chunk) => sender.send({ type: 'text', requestId, chunk }));
     proc.on('tool_message', (toolId, toolName, input) =>
