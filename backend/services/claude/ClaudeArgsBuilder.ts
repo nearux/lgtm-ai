@@ -3,12 +3,11 @@ import type { ClaudeExecuteOptions } from '../../types/claude.js';
 export class ClaudeArgsBuilder {
   private readonly args: string[];
 
-  constructor(prompt: string) {
+  constructor() {
     this.args = [
-      '-p',
-      prompt,
-      '--output-format=stream-json',
       '--verbose',
+      '--input-format=stream-json',
+      '--output-format=stream-json',
       '--include-partial-messages',
     ];
   }

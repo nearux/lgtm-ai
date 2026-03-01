@@ -38,13 +38,13 @@ export class ClaudeProcess extends EventEmitter<ClaudeStreamEvents> {
   ) {
     super();
 
-    const args = new ClaudeArgsBuilder(prompt).withOptions(options).build();
+    const args = new ClaudeArgsBuilder().withOptions(options).build();
 
     let child: ChildProcess;
     try {
       child = spawn('claude', args, {
         cwd: workingDir,
-        stdio: ['ignore', 'pipe', 'pipe'],
+        stdio: ['pipe', 'pipe', 'pipe'],
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -56,6 +56,12 @@ export class ClaudeProcess extends EventEmitter<ClaudeStreamEvents> {
     }
 
     this.childProcess = child;
+
+    const stdinMessage = JSON.stringify({
+      type: 'user',
+      message: { role: 'user', content: prompt },
+    });
+    child.stdin!.write(stdinMessage + '\n');
 
     child.stdout!.on('data', (chunk: Buffer) => this.handleChunk(chunk));
     child.stderr!.on('data', (chunk: Buffer) =>
