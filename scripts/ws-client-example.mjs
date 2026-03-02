@@ -105,6 +105,29 @@ ws.on('message', (rawData) => {
       );
       break;
 
+    case 'approval_request':
+      console.log(
+        '\n',
+        `[approval_request] approvalRequestId=${msg.approvalRequestId} toolName=${msg.toolName}`,
+        '\n  input:',
+        JSON.stringify(msg.input, null, 2)
+      );
+      console.log('  → Auto-approving in 5 seconds…');
+      setTimeout(() => {
+        /** @type {import('../backend/types/claude.js').WsApprovalResponseMessage} */
+        const approvalResponse = {
+          type: 'approval_response',
+          requestId: msg.requestId,
+          approvalRequestId: msg.approvalRequestId,
+          behavior: 'allow',
+        };
+        ws.send(JSON.stringify(approvalResponse));
+        console.log(
+          `  → [sent] approval_response allow (approvalRequestId=${msg.approvalRequestId})`
+        );
+      }, 5000);
+      break;
+
     case 'stderr':
       process.stderr.write(`[stderr] ${msg.chunk}`);
       break;

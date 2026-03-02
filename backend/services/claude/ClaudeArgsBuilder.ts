@@ -17,10 +17,6 @@ export class ClaudeArgsBuilder {
       this.args.push('--dangerously-skip-permissions');
     }
 
-    if (options.permissionMode && options.permissionMode !== 'default') {
-      this.args.push(`--permission-mode=${options.permissionMode}`);
-    }
-
     if (options.model) {
       this.args.push(`--model=${options.model}`);
     }

@@ -25,7 +25,19 @@ export interface WsAbortMessage {
   requestId: string;
 }
 
-export type WsClientMessage = WsExecuteMessage | WsAbortMessage;
+export interface WsApprovalResponseMessage {
+  type: 'approval_response';
+  requestId: string;
+  approvalRequestId: string;
+  behavior: 'allow' | 'deny';
+  message?: string;
+  updatedInput?: unknown;
+}
+
+export type WsClientMessage =
+  | WsExecuteMessage
+  | WsAbortMessage
+  | WsApprovalResponseMessage;
 
 // ── Server → Client ──────────────────────────────────────────────────
 
@@ -69,10 +81,20 @@ export interface WsErrorEvent {
   message: string;
 }
 
+export interface WsApprovalRequestEvent {
+  type: 'approval_request';
+  requestId: string;
+  approvalRequestId: string;
+  toolUseId: string;
+  toolName: string;
+  input: unknown;
+}
+
 export type WsServerMessage =
   | WsTextEvent
   | WsToolMessageEvent
   | WsToolResultEvent
   | WsStderrEvent
   | WsDoneEvent
-  | WsErrorEvent;
+  | WsErrorEvent
+  | WsApprovalRequestEvent;

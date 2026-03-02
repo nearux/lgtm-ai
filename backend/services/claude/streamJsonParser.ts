@@ -15,7 +15,14 @@ export type ParsedStreamEvent =
   | { kind: 'text'; text: string }
   | { kind: 'tool_start'; toolId: string; toolName: string }
   | { kind: 'tool_complete'; toolId: string; toolName: string; input: unknown }
-  | { kind: 'tool_result'; toolId: string; content: string; isError: boolean };
+  | { kind: 'tool_result'; toolId: string; content: string; isError: boolean }
+  | {
+      kind: 'hook_callback';
+      requestId: string;
+      toolUseId: string;
+      toolName: string;
+      input: unknown;
+    };
 
 export function parseStreamJsonLine(line: string): ParsedStreamEvent | null {
   if (!line.trim()) return null;
@@ -104,6 +111,24 @@ export function parseStreamJsonLine(line: string): ParsedStreamEvent | null {
             isError: isError === true,
           };
         }
+      }
+    }
+  }
+
+  // Control requests from Claude
+  if (parsed['type'] === 'control_request') {
+    const requestId = parsed['request_id'];
+    const request = parsed['request'] as Record<string, unknown> | undefined;
+    if (typeof requestId !== 'string') return null;
+
+    // hook_callback: PreToolUse hook fired — respond directly with allow/deny
+    if (request?.['subtype'] === 'hook_callback') {
+      const input = request['input'] as Record<string, unknown> | undefined;
+      const toolUseId = input?.['tool_use_id'];
+      const toolName = input?.['tool_name'];
+      const toolInput = input?.['tool_input'];
+      if (typeof toolUseId === 'string' && typeof toolName === 'string') {
+        return { kind: 'hook_callback', requestId, toolUseId, toolName, input: toolInput };
       }
     }
   }

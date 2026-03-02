@@ -38,6 +38,8 @@ export class ClaudeSessionManager {
 
     const proc = new ClaudeProcess(workingDir, options);
     this.processes.set(requestId, proc);
+    proc.sendInitialize(requestId);
+    proc.sendPermissionMode(options.permissionMode ?? 'default');
     proc.sendPrompt(prompt);
 
     proc.on('text', (chunk) => sender.send({ type: 'text', requestId, chunk }));
@@ -46,6 +48,18 @@ export class ClaudeSessionManager {
     );
     proc.on('tool_result', (toolId, content, isError) =>
       sender.send({ type: 'tool_result', requestId, toolId, content, isError })
+    );
+    proc.on(
+      'approval_request',
+      (approvalRequestId, toolUseId, toolName, input) =>
+        sender.send({
+          type: 'approval_request',
+          requestId,
+          approvalRequestId,
+          toolUseId,
+          toolName,
+          input,
+        })
     );
     proc.on('stderr', (chunk) =>
       sender.send({ type: 'stderr', requestId, chunk })
@@ -58,6 +72,23 @@ export class ClaudeSessionManager {
       sender.send({ type: 'error', requestId, message });
       this.processes.delete(requestId);
     });
+  }
+
+  respondToApproval(
+    requestId: string,
+    approvalRequestId: string,
+    behavior: 'allow' | 'deny',
+    message?: string,
+    updatedInput?: unknown
+  ): void {
+    this.processes
+      .get(requestId)
+      ?.sendApprovalResponse(
+        approvalRequestId,
+        behavior,
+        message,
+        updatedInput
+      );
   }
 
   abort(requestId: string): void {

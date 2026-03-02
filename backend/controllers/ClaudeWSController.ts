@@ -27,6 +27,19 @@ export function handleClaudeWebSocket(ws: WebSocket): void {
       return;
     }
 
+    if (msg.type === 'approval_response') {
+      const { requestId, approvalRequestId, behavior, message, updatedInput } =
+        msg;
+      manager.respondToApproval(
+        requestId,
+        approvalRequestId,
+        behavior,
+        message,
+        updatedInput
+      );
+      return;
+    }
+
     ws.send(
       JSON.stringify({
         type: 'error',

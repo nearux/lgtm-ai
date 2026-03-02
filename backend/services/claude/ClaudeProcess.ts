@@ -1,5 +1,6 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { EventEmitter } from 'node:events';
+import { randomUUID } from 'node:crypto';
 import { LineBuffer } from './lineBuffer.js';
 import { parseStreamJsonLine } from './streamJsonParser.js';
 import { ClaudeArgsBuilder } from './ClaudeArgsBuilder.js';
@@ -12,6 +13,12 @@ export interface ClaudeStreamEvents {
   error: [message: string];
   tool_message: [toolId: string, toolName: string, input: unknown];
   tool_result: [toolId: string, content: string, isError: boolean];
+  approval_request: [
+    approvalRequestId: string,
+    toolUseId: string,
+    toolName: string,
+    input: unknown,
+  ];
 }
 
 /**
@@ -63,10 +70,72 @@ export class ClaudeProcess extends EventEmitter<ClaudeStreamEvents> {
     child.on('close', (code) => this.handleClose(code));
   }
 
+  sendInitialize(requestId: string): void {
+    this.writeJson({
+      type: 'control_request',
+      request_id: requestId,
+      request: {
+        subtype: 'initialize',
+        hooks: {
+          PreToolUse: [
+            {
+              matcher: '^(?!(Glob|Grep|Read|Task|TodoWrite)$).*',
+              hookCallbackIds: ['tool_approval'],
+            },
+          ],
+        },
+      },
+    });
+  }
+
+  sendPermissionMode(
+    mode: 'default' | 'acceptEdits' | 'plan' | 'bypassPermissions'
+  ): void {
+    this.writeJson({
+      type: 'control_request',
+      request_id: randomUUID(),
+      request: { subtype: 'set_permission_mode', mode },
+    });
+  }
+
   sendPrompt(prompt: string): void {
     this.writeJson({
       type: 'user',
       message: { role: 'user', content: prompt },
+    });
+  }
+
+  sendApprovalResponse(
+    approvalRequestId: string,
+    behavior: 'allow' | 'deny',
+    message?: string,
+    updatedInput?: unknown
+  ): void {
+    const hookOutput =
+      behavior === 'allow'
+        ? {
+            hookSpecificOutput: {
+              hookEventName: 'PreToolUse',
+              permissionDecision: 'allow',
+              permissionDecisionReason: 'Approved by user',
+              ...(updatedInput !== undefined && { updatedInput }),
+            },
+          }
+        : {
+            hookSpecificOutput: {
+              hookEventName: 'PreToolUse',
+              permissionDecision: 'deny',
+              permissionDecisionReason: message ?? 'Denied by user',
+            },
+          };
+
+    this.writeJson({
+      type: 'control_response',
+      response: {
+        subtype: 'success',
+        request_id: approvalRequestId,
+        response: hookOutput,
+      },
     });
   }
 
@@ -110,6 +179,15 @@ export class ClaudeProcess extends EventEmitter<ClaudeStreamEvents> {
         break;
       case 'tool_result':
         this.emit('tool_result', result.toolId, result.content, result.isError);
+        break;
+      case 'hook_callback':
+        this.emit(
+          'approval_request',
+          result.requestId,
+          result.toolUseId,
+          result.toolName,
+          result.input
+        );
         break;
     }
   }
