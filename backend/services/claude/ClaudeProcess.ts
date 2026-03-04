@@ -19,6 +19,12 @@ export interface ClaudeStreamEvents {
     toolName: string,
     input: unknown,
   ];
+  plan_approval_request: [
+    approvalRequestId: string,
+    toolUseId: string,
+    toolName: string,
+    input: unknown,
+  ];
 }
 
 /**
@@ -70,19 +76,33 @@ export class ClaudeProcess extends EventEmitter<ClaudeStreamEvents> {
     child.on('close', (code) => this.handleClose(code));
   }
 
-  sendInitialize(requestId: string): void {
+  sendInitialize(requestId: string, mode?: string): void {
+    const preToolUseHooks =
+      mode === 'plan'
+        ? [
+            {
+              matcher: '^ExitPlanMode$',
+              hookCallbackIds: ['tool_approval'],
+            },
+            {
+              matcher: '^(?!ExitPlanMode$).*',
+              hookCallbackIds: ['auto_approve'],
+            },
+          ]
+        : [
+            {
+              matcher: '^(?!(Glob|Grep|Read|Task|TodoWrite)$).*',
+              hookCallbackIds: ['tool_approval'],
+            },
+          ];
+
     this.writeJson({
       type: 'control_request',
       request_id: requestId,
       request: {
         subtype: 'initialize',
         hooks: {
-          PreToolUse: [
-            {
-              matcher: '^(?!(Glob|Grep|Read|Task|TodoWrite)$).*',
-              hookCallbackIds: ['tool_approval'],
-            },
-          ],
+          PreToolUse: preToolUseHooks,
         },
       },
     });
@@ -109,7 +129,8 @@ export class ClaudeProcess extends EventEmitter<ClaudeStreamEvents> {
     approvalRequestId: string,
     behavior: 'allow' | 'deny',
     message?: string,
-    updatedInput?: unknown
+    updatedInput?: unknown,
+    isExitPlanMode = false
   ): void {
     const hookOutput =
       behavior === 'allow'
@@ -119,6 +140,15 @@ export class ClaudeProcess extends EventEmitter<ClaudeStreamEvents> {
               permissionDecision: 'allow',
               permissionDecisionReason: 'Approved by user',
               ...(updatedInput !== undefined && { updatedInput }),
+              ...(isExitPlanMode && {
+                updatedPermissions: [
+                  {
+                    type: 'setMode',
+                    mode: 'bypassPermissions',
+                    destination: 'session',
+                  },
+                ],
+              }),
             },
           }
         : {
@@ -135,6 +165,34 @@ export class ClaudeProcess extends EventEmitter<ClaudeStreamEvents> {
         subtype: 'success',
         request_id: approvalRequestId,
         response: hookOutput,
+      },
+    });
+  }
+
+  sendPlanApprovalResponse(
+    approvalRequestId: string,
+    behavior: 'allow' | 'deny',
+    message?: string,
+    updatedInput?: unknown
+  ): void {
+    const response =
+      behavior === 'allow'
+        ? {
+            behavior: 'allow',
+            updatedInput: updatedInput ?? {},
+          }
+        : {
+            behavior: 'deny',
+            message: message ?? 'Denied by user',
+            interrupt: false,
+          };
+
+    this.writeJson({
+      type: 'control_response',
+      response: {
+        subtype: 'success',
+        request_id: approvalRequestId,
+        response,
       },
     });
   }
@@ -181,8 +239,42 @@ export class ClaudeProcess extends EventEmitter<ClaudeStreamEvents> {
         this.emit('tool_result', result.toolId, result.content, result.isError);
         break;
       case 'hook_callback':
+        console.log(
+          `[process] hook_callback: callbackId=${result.callbackId} toolName=${result.toolName}`
+        );
+        if (result.callbackId === 'auto_approve') {
+          this.writeJson({
+            type: 'control_response',
+            response: {
+              subtype: 'success',
+              request_id: result.requestId,
+              response: {
+                hookSpecificOutput: {
+                  hookEventName: 'PreToolUse',
+                  permissionDecision: 'allow',
+                  permissionDecisionReason: 'Auto-approved',
+                },
+              },
+            },
+          });
+        } else if (result.callbackId === 'tool_approval') {
+          this.emit(
+            'approval_request',
+            result.requestId,
+            result.toolUseId,
+            result.toolName,
+            result.input
+          );
+        } else {
+          console.warn(`Unknown callbackId: ${result.callbackId}`);
+        }
+        break;
+      case 'can_use_tool':
+        console.log(
+          `[process] can_use_tool: toolName=${result.toolName} toolUseId=${result.toolUseId}`
+        );
         this.emit(
-          'approval_request',
+          'plan_approval_request',
           result.requestId,
           result.toolUseId,
           result.toolName,

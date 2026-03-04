@@ -34,10 +34,20 @@ export interface WsApprovalResponseMessage {
   updatedInput?: unknown;
 }
 
+export interface WsPlanApprovalResponseMessage {
+  type: 'plan_approval_response';
+  requestId: string;
+  approvalRequestId: string;
+  behavior: 'allow' | 'deny';
+  message?: string;
+  updatedInput?: unknown;
+}
+
 export type WsClientMessage =
   | WsExecuteMessage
   | WsAbortMessage
-  | WsApprovalResponseMessage;
+  | WsApprovalResponseMessage
+  | WsPlanApprovalResponseMessage;
 
 // ── Server → Client ──────────────────────────────────────────────────
 
@@ -90,6 +100,15 @@ export interface WsApprovalRequestEvent {
   input: unknown;
 }
 
+export interface WsPlanApprovalRequestEvent {
+  type: 'plan_approval_request';
+  requestId: string;
+  approvalRequestId: string;
+  toolUseId: string;
+  toolName: string;
+  input: unknown;
+}
+
 export type WsServerMessage =
   | WsTextEvent
   | WsToolMessageEvent
@@ -97,4 +116,5 @@ export type WsServerMessage =
   | WsStderrEvent
   | WsDoneEvent
   | WsErrorEvent
-  | WsApprovalRequestEvent;
+  | WsApprovalRequestEvent
+  | WsPlanApprovalRequestEvent;

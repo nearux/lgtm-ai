@@ -5,6 +5,7 @@ import type { ClaudeExecuteOptions } from '../../types/claude.js';
 
 export class ClaudeSessionManager {
   private processes = new Map<string, ClaudeProcess>();
+  private exitPlanModeRequestIds = new Set<string>();
   private sender: WebSocketSender;
 
   constructor(ws: WebSocket) {
@@ -38,7 +39,7 @@ export class ClaudeSessionManager {
 
     const proc = new ClaudeProcess(workingDir, options);
     this.processes.set(requestId, proc);
-    proc.sendInitialize(requestId);
+    proc.sendInitialize(requestId, options.permissionMode);
     proc.sendPermissionMode(options.permissionMode ?? 'default');
     proc.sendPrompt(prompt);
 
@@ -51,7 +52,9 @@ export class ClaudeSessionManager {
     );
     proc.on(
       'approval_request',
-      (approvalRequestId, toolUseId, toolName, input) =>
+      (approvalRequestId, toolUseId, toolName, input) => {
+        if (toolName === 'ExitPlanMode')
+          this.exitPlanModeRequestIds.add(approvalRequestId);
         sender.send({
           type: 'approval_request',
           requestId,
@@ -59,7 +62,21 @@ export class ClaudeSessionManager {
           toolUseId,
           toolName,
           input,
-        })
+        });
+      }
+    );
+    proc.on(
+      'plan_approval_request',
+      (approvalRequestId, toolUseId, toolName, input) => {
+        sender.send({
+          type: 'plan_approval_request',
+          requestId,
+          approvalRequestId,
+          toolUseId,
+          toolName,
+          input,
+        });
+      }
     );
     proc.on('stderr', (chunk) =>
       sender.send({ type: 'stderr', requestId, chunk })
@@ -74,21 +91,44 @@ export class ClaudeSessionManager {
     });
   }
 
-  respondToApproval(
+  respondToToolApproval(
     requestId: string,
     approvalRequestId: string,
     behavior: 'allow' | 'deny',
     message?: string,
     updatedInput?: unknown
   ): void {
-    this.processes
-      .get(requestId)
-      ?.sendApprovalResponse(
-        approvalRequestId,
-        behavior,
-        message,
-        updatedInput
-      );
+    const proc = this.processes.get(requestId);
+    if (!proc) return;
+
+    const isExitPlanMode =
+      this.exitPlanModeRequestIds.delete(approvalRequestId);
+
+    proc.sendApprovalResponse(
+      approvalRequestId,
+      behavior,
+      message,
+      updatedInput,
+      isExitPlanMode
+    );
+  }
+
+  respondToPlanApproval(
+    requestId: string,
+    approvalRequestId: string,
+    behavior: 'allow' | 'deny',
+    message?: string,
+    updatedInput?: unknown
+  ): void {
+    const proc = this.processes.get(requestId);
+    if (!proc) return;
+
+    proc.sendPlanApprovalResponse(
+      approvalRequestId,
+      behavior,
+      message,
+      updatedInput
+    );
   }
 
   abort(requestId: string): void {

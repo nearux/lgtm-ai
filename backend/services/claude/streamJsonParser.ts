@@ -19,6 +19,14 @@ export type ParsedStreamEvent =
   | {
       kind: 'hook_callback';
       requestId: string;
+      callbackId: string;
+      toolUseId: string;
+      toolName: string;
+      input: unknown;
+    }
+  | {
+      kind: 'can_use_tool';
+      requestId: string;
       toolUseId: string;
       toolName: string;
       input: unknown;
@@ -121,14 +129,38 @@ export function parseStreamJsonLine(line: string): ParsedStreamEvent | null {
     const request = parsed['request'] as Record<string, unknown> | undefined;
     if (typeof requestId !== 'string') return null;
 
+    // can_use_tool: SDK escalated from hook "ask" decision
+    if (request?.['subtype'] === 'can_use_tool') {
+      const toolUseId = request['tool_use_id'];
+      const toolName = request['tool_name'];
+      const toolInput = request['input'];
+      if (typeof toolUseId === 'string' && typeof toolName === 'string') {
+        return {
+          kind: 'can_use_tool',
+          requestId,
+          toolUseId,
+          toolName,
+          input: toolInput,
+        };
+      }
+    }
+
     // hook_callback: PreToolUse hook fired — respond directly with allow/deny
     if (request?.['subtype'] === 'hook_callback') {
+      const callbackId = request['callback_id'];
       const input = request['input'] as Record<string, unknown> | undefined;
       const toolUseId = input?.['tool_use_id'];
       const toolName = input?.['tool_name'];
       const toolInput = input?.['tool_input'];
       if (typeof toolUseId === 'string' && typeof toolName === 'string') {
-        return { kind: 'hook_callback', requestId, toolUseId, toolName, input: toolInput };
+        return {
+          kind: 'hook_callback',
+          requestId,
+          callbackId: typeof callbackId === 'string' ? callbackId : '',
+          toolUseId,
+          toolName,
+          input: toolInput,
+        };
       }
     }
   }

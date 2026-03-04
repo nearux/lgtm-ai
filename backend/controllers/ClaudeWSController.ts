@@ -30,7 +30,20 @@ export function handleClaudeWebSocket(ws: WebSocket): void {
     if (msg.type === 'approval_response') {
       const { requestId, approvalRequestId, behavior, message, updatedInput } =
         msg;
-      manager.respondToApproval(
+      manager.respondToToolApproval(
+        requestId,
+        approvalRequestId,
+        behavior,
+        message,
+        updatedInput
+      );
+      return;
+    }
+
+    if (msg.type === 'plan_approval_response') {
+      const { requestId, approvalRequestId, behavior, message, updatedInput } =
+        msg;
+      manager.respondToPlanApproval(
         requestId,
         approvalRequestId,
         behavior,
