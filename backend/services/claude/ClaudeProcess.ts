@@ -46,6 +46,7 @@ export interface ClaudeStreamEvents {
 export class ClaudeProcess extends EventEmitter<ClaudeStreamEvents> {
   private readonly childProcess: ChildProcess | null = null;
   private readonly lineBuffer = new LineBuffer();
+  private errored = false;
 
   constructor(workingDir: string, options: ClaudeExecuteOptions = {}) {
     super();
@@ -73,9 +74,10 @@ export class ClaudeProcess extends EventEmitter<ClaudeStreamEvents> {
     child.stderr!.on('data', (chunk: Buffer) =>
       this.emit('stderr', chunk.toString())
     );
-    child.on('error', (err) =>
-      this.emit('error', `Process error: ${err.message}`)
-    );
+    child.on('error', (err) => {
+      this.errored = true;
+      this.emit('error', `Process error: ${err.message}`);
+    });
     child.on('close', (code) => this.handleClose(code));
   }
 
@@ -221,6 +223,9 @@ export class ClaudeProcess extends EventEmitter<ClaudeStreamEvents> {
       this.emitParsedLine(remaining);
     }
 
+    if (this.errored) {
+      return;
+    }
     if (code === 0 || code === null) {
       this.emit('done', code ?? 0);
     } else {
