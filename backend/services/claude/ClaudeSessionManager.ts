@@ -39,8 +39,8 @@ export class ClaudeSessionManager {
 
     const proc = new ClaudeProcess(workingDir, options);
     this.processes.set(requestId, proc);
-    proc.sendInitialize(requestId, options.permissionMode);
-    proc.sendPermissionMode(options.permissionMode ?? 'default');
+    proc.sendInitialize(requestId, options.executionMode);
+    proc.sendPermissionMode(options.executionMode ?? 'default');
     proc.sendPrompt(prompt);
 
     proc.on('text', (chunk) => sender.send({ type: 'text', requestId, chunk }));

@@ -4,7 +4,10 @@ import { randomUUID } from 'node:crypto';
 import { LineBuffer } from './lineBuffer.js';
 import { parseStreamJsonLine } from './streamJsonParser.js';
 import { ClaudeArgsBuilder } from './ClaudeArgsBuilder.js';
-import type { ClaudeExecuteOptions } from '../../types/claude.js';
+import type {
+  ClaudeExecuteOptions,
+  ClaudeExecutionMode,
+} from '../../types/claude.js';
 
 export interface ClaudeStreamEvents {
   text: [chunk: string];
@@ -77,24 +80,41 @@ export class ClaudeProcess extends EventEmitter<ClaudeStreamEvents> {
   }
 
   sendInitialize(requestId: string, mode?: string): void {
-    const preToolUseHooks =
-      mode === 'plan'
-        ? [
-            {
-              matcher: '^ExitPlanMode$',
-              hookCallbackIds: ['tool_approval'],
-            },
-            {
-              matcher: '^(?!ExitPlanMode$).*',
-              hookCallbackIds: ['auto_approve'],
-            },
-          ]
-        : [
-            {
-              matcher: '^(?!(Glob|Grep|Read|Task|TodoWrite)$).*',
-              hookCallbackIds: ['tool_approval'],
-            },
-          ];
+    let preToolUseHooks: { matcher: string; hookCallbackIds: string[] }[];
+    switch (mode) {
+      case 'plan':
+        preToolUseHooks = [
+          {
+            matcher: '^ExitPlanMode$',
+            hookCallbackIds: ['tool_approval'],
+          },
+          {
+            matcher: '^(?!ExitPlanMode$).*',
+            hookCallbackIds: ['auto_approve'],
+          },
+        ];
+        break;
+      case 'acceptEdits':
+        preToolUseHooks = [
+          {
+            matcher: '^Bash$',
+            hookCallbackIds: ['tool_approval'],
+          },
+        ];
+        break;
+      case 'bypassPermissions':
+        preToolUseHooks = [];
+        break;
+      case 'default':
+      default:
+        preToolUseHooks = [
+          {
+            matcher: '^(?!(Glob|Grep|Read|Task|TodoWrite)$).*',
+            hookCallbackIds: ['tool_approval'],
+          },
+        ];
+        break;
+    }
 
     this.writeJson({
       type: 'control_request',
@@ -108,9 +128,7 @@ export class ClaudeProcess extends EventEmitter<ClaudeStreamEvents> {
     });
   }
 
-  sendPermissionMode(
-    mode: 'default' | 'acceptEdits' | 'plan' | 'bypassPermissions'
-  ): void {
+  sendPermissionMode(mode: ClaudeExecutionMode): void {
     this.writeJson({
       type: 'control_request',
       request_id: randomUUID(),

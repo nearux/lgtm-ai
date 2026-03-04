@@ -1,14 +1,13 @@
 // ── Client → Server ──────────────────────────────────────────────────
 
-export type ClaudeMode =
+export type ClaudeExecutionMode =
   | 'default'
   | 'acceptEdits'
-  | 'plan'
-  | 'bypassPermissions';
+  | 'bypassPermissions'
+  | 'plan';
 
 export interface ClaudeExecuteOptions {
-  dangerouslySkipPermissions?: boolean;
-  permissionMode?: ClaudeMode;
+  executionMode?: ClaudeExecutionMode;
   model?: string;
 }
 

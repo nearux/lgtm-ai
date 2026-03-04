@@ -15,18 +15,15 @@ export class ClaudeArgsBuilder {
   }
 
   withOptions(options: ClaudeExecuteOptions): this {
-    if (options.dangerouslySkipPermissions) {
+    if (options.executionMode === 'bypassPermissions') {
       this.args.push('--dangerously-skip-permissions');
-    } else if (
-      options.permissionMode === 'plan' ||
-      options.permissionMode === 'acceptEdits'
-    ) {
+    } else if (options.executionMode === 'plan') {
       // enables hooks to return a JSON PermissionResult,
       // which is required to dynamically update permission mode at runtime
       this.args.push('--permission-prompt-tool=stdio');
       this.args.push('--permission-mode=bypassPermissions');
-    } else if (options.permissionMode) {
-      this.args.push(`--permission-mode=${options.permissionMode}`);
+    } else if (options.executionMode === 'acceptEdits') {
+      this.args.push(`--permission-mode=${options.executionMode}`);
     }
 
     if (options.model) {

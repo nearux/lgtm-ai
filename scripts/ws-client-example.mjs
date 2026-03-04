@@ -7,14 +7,13 @@
  *
  * Options:
  *   --model <model>              Claude model to use (e.g. claude-opus-4-5)
- *   --permission-mode <mode>     Permission mode: default | acceptEdits | plan | bypassPermissions
- *   --skip-permissions           Dangerously skip permission checks
+ *   --execution-mode <mode>      Execution mode: default | acceptEdits | bypassPermissions | plan
  *
  * Examples:
  *   node scripts/ws-client-example.mjs /tmp "List files in this directory"
  *   node scripts/ws-client-example.mjs /tmp "List files" --model claude-opus-4-5
- *   node scripts/ws-client-example.mjs /tmp "List files" --permission-mode acceptEdits
- *   node scripts/ws-client-example.mjs /tmp "List files" --skip-permissions
+ *   node scripts/ws-client-example.mjs /tmp "List files" --execution-mode acceptEdits
+ *   node scripts/ws-client-example.mjs /tmp "List files" --execution-mode bypassPermissions
  */
 
 import { WebSocket } from 'ws';
@@ -30,10 +29,8 @@ const args = process.argv.slice(2);
 for (let i = 0; i < args.length; i++) {
   if (args[i] === '--model') {
     flags.model = args[++i];
-  } else if (args[i] === '--permission-mode') {
-    flags.permissionMode = args[++i];
-  } else if (args[i] === '--skip-permissions') {
-    flags.dangerouslySkipPermissions = true;
+  } else if (args[i] === '--execution-mode') {
+    flags.executionMode = args[++i];
   } else {
     positional.push(args[i]);
   }
@@ -48,17 +45,15 @@ const requestId = randomUUID();
 /** @type {import('../backend/types/claude.js').ClaudeExecuteOptions} */
 const options = {};
 if (flags.model) options.model = flags.model;
-if (flags.permissionMode) options.permissionMode = flags.permissionMode;
-if (flags.dangerouslySkipPermissions) options.dangerouslySkipPermissions = true;
+if (flags.executionMode) options.executionMode = flags.executionMode;
 
 console.log(`Connecting to ${WS_URL}`);
 console.log(`requestId      : ${requestId}`);
 console.log(`workingDir     : ${workingDir}`);
 console.log(`prompt         : ${prompt}`);
 if (options.model) console.log(`model          : ${options.model}`);
-if (options.permissionMode)
-  console.log(`permissionMode : ${options.permissionMode}`);
-if (options.dangerouslySkipPermissions) console.log(`skipPermissions: true`);
+if (options.executionMode)
+  console.log(`executionMode  : ${options.executionMode}`);
 console.log('─'.repeat(60));
 
 const ws = new WebSocket(WS_URL);
