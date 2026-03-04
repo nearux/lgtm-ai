@@ -128,6 +128,28 @@ ws.on('message', (rawData) => {
       }, 5000);
       break;
 
+    case 'plan_approval_request':
+      console.log(
+        '\n',
+        `[plan_approval_request] approvalRequestId=${msg.approvalRequestId} toolName=${msg.toolName}`,
+        '\n  input:',
+        JSON.stringify(msg.input, null, 2)
+      );
+      console.log('  → Auto-approving in 5 seconds…');
+      setTimeout(() => {
+        const approvalResponse = {
+          type: 'plan_approval_response',
+          requestId: msg.requestId,
+          approvalRequestId: msg.approvalRequestId,
+          behavior: 'allow',
+        };
+        ws.send(JSON.stringify(approvalResponse));
+        console.log(
+          `  → [sent] plan_approval_response allow (approvalRequestId=${msg.approvalRequestId})`
+        );
+      }, 5000);
+      break;
+
     case 'stderr':
       process.stderr.write(`[stderr] ${msg.chunk}`);
       break;
