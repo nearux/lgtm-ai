@@ -5,7 +5,6 @@ import type { ClaudeExecuteOptions } from '../../types/claude.js';
 
 export class ClaudeSessionManager {
   private processes = new Map<string, ClaudeProcess>();
-  private exitPlanModeRequestIds = new Set<string>();
   private sender: WebSocketSender;
 
   constructor(ws: WebSocket) {
@@ -53,8 +52,6 @@ export class ClaudeSessionManager {
     proc.on(
       'approval_request',
       (approvalRequestId, toolUseId, toolName, input) => {
-        if (toolName === 'ExitPlanMode')
-          this.exitPlanModeRequestIds.add(approvalRequestId);
         sender.send({
           type: 'approval_request',
           requestId,
@@ -101,15 +98,11 @@ export class ClaudeSessionManager {
     const proc = this.processes.get(requestId);
     if (!proc) return;
 
-    const isExitPlanMode =
-      this.exitPlanModeRequestIds.delete(approvalRequestId);
-
     proc.sendApprovalResponse(
       approvalRequestId,
       behavior,
       message,
-      updatedInput,
-      isExitPlanMode
+      updatedInput
     );
   }
 

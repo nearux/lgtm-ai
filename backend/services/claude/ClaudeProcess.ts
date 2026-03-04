@@ -85,11 +85,7 @@ export class ClaudeProcess extends EventEmitter<ClaudeStreamEvents> {
       case 'plan':
         preToolUseHooks = [
           {
-            matcher: '^ExitPlanMode$',
-            hookCallbackIds: ['tool_approval'],
-          },
-          {
-            matcher: '^(?!ExitPlanMode$).*',
+            matcher: '*',
             hookCallbackIds: ['auto_approve'],
           },
         ];
@@ -147,8 +143,7 @@ export class ClaudeProcess extends EventEmitter<ClaudeStreamEvents> {
     approvalRequestId: string,
     behavior: 'allow' | 'deny',
     message?: string,
-    updatedInput?: unknown,
-    isExitPlanMode = false
+    updatedInput?: unknown
   ): void {
     const hookOutput =
       behavior === 'allow'
@@ -158,15 +153,6 @@ export class ClaudeProcess extends EventEmitter<ClaudeStreamEvents> {
               permissionDecision: 'allow',
               permissionDecisionReason: 'Approved by user',
               ...(updatedInput !== undefined && { updatedInput }),
-              ...(isExitPlanMode && {
-                updatedPermissions: [
-                  {
-                    type: 'setMode',
-                    mode: 'bypassPermissions',
-                    destination: 'session',
-                  },
-                ],
-              }),
             },
           }
         : {
