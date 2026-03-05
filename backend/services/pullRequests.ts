@@ -148,11 +148,32 @@ async function fetchReviewInlineComments(
   prNumber: number,
   reviewIds: string[]
 ): Promise<Map<string, GhReviewInlineComment[]>> {
+  const hasNodeIds = reviewIds.some((id) => id.startsWith('PRR_'));
+  let reviewsList: Array<{ id: number; node_id: string }> = [];
+  if (hasNodeIds) {
+    try {
+      const { stdout } = await execFileAsync('gh', [
+        'api',
+        `repos/${repoOwnerName}/pulls/${prNumber}/reviews`,
+      ]);
+      reviewsList = JSON.parse(stdout);
+    } catch (err) {
+      console.error(
+        `[fetchReviewInlineComments] Failed to fetch reviews list for PR #${prNumber}:`,
+        err
+      );
+    }
+  }
+
   const entries = await Promise.all(
     reviewIds.map(async (reviewId) => {
-      const numericId = reviewId.startsWith('PRR_')
-        ? await resolveReviewNodeId(repoOwnerName, prNumber, reviewId)
-        : reviewId;
+      let numericId: string | null;
+      if (reviewId.startsWith('PRR_')) {
+        const match = reviewsList.find((r) => r.node_id === reviewId);
+        numericId = match ? String(match.id) : null;
+      } else {
+        numericId = reviewId;
+      }
 
       if (!numericId) return [reviewId, [] as GhReviewInlineComment[]] as const;
 
@@ -175,29 +196,4 @@ async function fetchReviewInlineComments(
     })
   );
   return new Map(entries);
-}
-
-async function resolveReviewNodeId(
-  repoOwnerName: string,
-  prNumber: number,
-  nodeId: string
-): Promise<string | null> {
-  try {
-    const { stdout } = await execFileAsync('gh', [
-      'api',
-      `repos/${repoOwnerName}/pulls/${prNumber}/reviews`,
-    ]);
-    const reviews = JSON.parse(stdout) as Array<{
-      id: number;
-      node_id: string;
-    }>;
-    const match = reviews.find((r) => r.node_id === nodeId);
-    return match ? String(match.id) : null;
-  } catch (err) {
-    console.error(
-      `[resolveReviewNodeId] Failed to resolve nodeId "${nodeId}" for PR #${prNumber}:`,
-      err
-    );
-    return null;
-  }
 }
