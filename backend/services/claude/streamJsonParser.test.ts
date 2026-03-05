@@ -238,14 +238,48 @@ describe('parseStreamJsonLine', () => {
     });
   });
 
-  describe('non-stream_event JSON types', () => {
-    it('returns null for a result type message', () => {
+  describe('result message', () => {
+    it('returns result event for a success result message', () => {
       const line = JSON.stringify({
         type: 'result',
         subtype: 'success',
-        result: 'done',
+        cost_usd: 0.01,
+        is_error: false,
+        num_turns: 1,
+        result: 'Task completed successfully.',
       });
-      expect(parseStreamJsonLine(line)).toBeNull();
+      expect(parseStreamJsonLine(line)).toEqual({
+        kind: 'result',
+        result: 'Task completed successfully.',
+        isError: false,
+      });
+    });
+
+    it('returns result event with isError=true for an error result', () => {
+      const line = JSON.stringify({
+        type: 'result',
+        subtype: 'error_during_execution',
+        is_error: true,
+        result: '',
+      });
+      expect(parseStreamJsonLine(line)).toEqual({
+        kind: 'result',
+        result: '',
+        isError: true,
+      });
+    });
+
+    it('returns result event with empty string when result field is missing', () => {
+      const line = JSON.stringify({
+        type: 'result',
+        subtype: 'success',
+        is_error: false,
+      });
+      expect(parseStreamJsonLine(line)).toEqual({
+        kind: 'result',
+        result: '',
+        isError: false,
+      });
     });
   });
 });
