@@ -3,19 +3,24 @@ name: Publish to npm
 on:
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish (e.g., 0.0.4, patch, minor, major)'
+        required: true
+        type: string
 
 jobs:
   publish:
     runs-on: ubuntu-latest
-    # Only run if CI passes
-    needs: []
 
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 2
 
-      - name: Check if version changed
+      - name: Check if version changed (auto mode)
+        if: github.event_name == 'push'
         id: version-check
         run: |
           CURRENT_VERSION=$(node -p "require('./package.json').version")
@@ -34,14 +39,25 @@ jobs:
             echo "Version unchanged: $CURRENT_VERSION"
           fi
 
+      - name: Should publish
+        id: should-publish
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "publish=true" >> $GITHUB_OUTPUT
+          elif [ "${{ steps.version-check.outputs.changed }}" == "true" ]; then
+            echo "publish=true" >> $GITHUB_OUTPUT
+          else
+            echo "publish=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Setup pnpm
-        if: steps.version-check.outputs.changed == 'true'
+        if: steps.should-publish.outputs.publish == 'true'
         uses: pnpm/action-setup@v4
         with:
           version: 9
 
       - name: Setup Node.js
-        if: steps.version-check.outputs.changed == 'true'
+        if: steps.should-publish.outputs.publish == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -49,19 +65,41 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
 
       - name: Install dependencies
-        if: steps.version-check.outputs.changed == 'true'
+        if: steps.should-publish.outputs.publish == 'true'
         run: pnpm install
 
+      - name: Bump version (manual mode)
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          VERSION="${{ inputs.version }}"
+          if [[ "$VERSION" =~ ^(patch|minor|major)$ ]]; then
+            npm version $VERSION --no-git-tag-version
+          else
+            npm version $VERSION --no-git-tag-version --allow-same-version
+          fi
+          NEW_VERSION=$(node -p "require('./package.json').version")
+          echo "Publishing version: $NEW_VERSION"
+
       - name: Build
-        if: steps.version-check.outputs.changed == 'true'
+        if: steps.should-publish.outputs.publish == 'true'
         run: pnpm run build
 
       - name: Publish to npm
-        if: steps.version-check.outputs.changed == 'true'
+        if: steps.should-publish.outputs.publish == 'true'
         run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
+      - name: Commit version bump (manual mode)
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          NEW_VERSION=$(node -p "require('./package.json').version")
+          git add package.json
+          git commit -m "chore: bump version to $NEW_VERSION"
+          git push
+
       - name: Skip publish
-        if: steps.version-check.outputs.changed == 'false'
+        if: steps.should-publish.outputs.publish == 'false'
         run: echo "Skipping publish - version unchanged"
