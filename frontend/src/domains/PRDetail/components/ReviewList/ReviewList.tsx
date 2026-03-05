@@ -68,7 +68,7 @@ export const ReviewList = ({ reviews }: Props) => {
                   <Markdown>{review.body}</Markdown>
                 </div>
               )}
-              {review.inlineComments && review.inlineComments.length > 0 && (
+              {review.inlineComments.length > 0 && (
                 <div className="mt-3 space-y-2">
                   {review.inlineComments.map((comment) => (
                     <div
