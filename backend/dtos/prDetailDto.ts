@@ -57,7 +57,7 @@ export class PRDetailDto implements PRDetail {
         author: GhAuthorDto.fromGh(c.author),
         body: c.body,
         createdAt: c.createdAt,
-        updatedAt: c.createdAt,
+        updatedAt: c.updatedAt,
       })),
       reviews: raw.reviews.map(
         (r): PRReview => ({

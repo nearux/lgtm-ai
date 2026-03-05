@@ -36,6 +36,7 @@ export type GhPRComment = {
   author: GhPRAuthor;
   body: string;
   createdAt: string;
+  updatedAt: string;
 };
 
 export type GhPRReview = {
