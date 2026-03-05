@@ -82,6 +82,7 @@ export interface WsDoneEvent {
   type: 'done';
   requestId: string;
   exitCode: number;
+  result: string;
 }
 
 export interface WsErrorEvent {

@@ -12,7 +12,7 @@ import type {
 export interface ClaudeStreamEvents {
   text: [chunk: string];
   stderr: [chunk: string];
-  done: [exitCode: number];
+  done: [exitCode: number, result: string];
   error: [message: string];
   tool_message: [toolId: string, toolName: string, input: unknown];
   tool_result: [toolId: string, content: string, isError: boolean];
@@ -47,6 +47,7 @@ export class ClaudeProcess extends EventEmitter<ClaudeStreamEvents> {
   private readonly childProcess: ChildProcess | null = null;
   private readonly lineBuffer = new LineBuffer();
   private errored = false;
+  private resultReceived = false;
 
   constructor(workingDir: string, options: ClaudeExecuteOptions = {}) {
     super();
@@ -212,7 +213,8 @@ export class ClaudeProcess extends EventEmitter<ClaudeStreamEvents> {
   }
 
   private handleChunk(chunk: Buffer): void {
-    for (const line of this.lineBuffer.push(chunk.toString())) {
+    const raw = chunk.toString();
+    for (const line of this.lineBuffer.push(raw)) {
       this.emitParsedLine(line);
     }
   }
@@ -226,10 +228,21 @@ export class ClaudeProcess extends EventEmitter<ClaudeStreamEvents> {
     if (this.errored) {
       return;
     }
-    if (code === 0 || code === null) {
-      this.emit('done', code ?? 0);
-    } else {
+
+    const exitCode = code ?? 0;
+    const isAbnormalExit = code !== 0 && code !== null;
+
+    if (this.resultReceived) {
+      if (isAbnormalExit) {
+        this.emit('error', `Process exited with code ${code} after completion`);
+      }
+      return;
+    }
+
+    if (isAbnormalExit) {
       this.emit('error', `Process exited with code ${code}`);
+    } else {
+      this.emit('done', exitCode, '');
     }
   }
 
@@ -248,9 +261,6 @@ export class ClaudeProcess extends EventEmitter<ClaudeStreamEvents> {
         this.emit('tool_result', result.toolId, result.content, result.isError);
         break;
       case 'hook_callback':
-        console.log(
-          `[process] hook_callback: callbackId=${result.callbackId} toolName=${result.toolName}`
-        );
         if (result.callbackId === 'auto_approve') {
           this.writeJson({
             type: 'control_response',
@@ -289,6 +299,10 @@ export class ClaudeProcess extends EventEmitter<ClaudeStreamEvents> {
           result.toolName,
           result.input
         );
+        break;
+      case 'result':
+        this.resultReceived = true;
+        this.emit('done', 0, result.result);
         break;
     }
   }

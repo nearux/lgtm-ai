@@ -152,7 +152,7 @@ ws.on('message', (rawData) => {
     case 'done':
       console.log(`\n\n[done] exitCode: ${msg.exitCode}`);
       ws.close();
-      break;
+      process.exit(msg.exitCode ?? 0);
 
     case 'error':
       console.error(`\n[error] ${msg.message}`);
