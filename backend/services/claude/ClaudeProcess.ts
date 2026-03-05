@@ -228,13 +228,21 @@ export class ClaudeProcess extends EventEmitter<ClaudeStreamEvents> {
     if (this.errored) {
       return;
     }
+
+    const exitCode = code ?? 0;
+    const isAbnormalExit = code !== 0 && code !== null;
+
     if (this.resultReceived) {
+      if (isAbnormalExit) {
+        this.emit('error', `Process exited with code ${code} after completion`);
+      }
       return;
     }
-    if (code === 0 || code === null) {
-      this.emit('done', code ?? 0, '');
-    } else {
+
+    if (isAbnormalExit) {
       this.emit('error', `Process exited with code ${code}`);
+    } else {
+      this.emit('done', exitCode, '');
     }
   }
 
