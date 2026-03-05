@@ -8,8 +8,11 @@ import type {
   PRDetail,
   PRState,
   GitHubPullRequest,
+  GhPRDetail,
+  GhReviewInlineComment,
 } from '../types/pullRequests.js';
 import { PRListItemDto } from '../dtos/pullRequestsDto.js';
+import { PRDetailDto } from '../dtos/prDetailDto.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -131,6 +134,70 @@ export async function fetchPRDetail(
     );
   }
 
-  const pr = JSON.parse(stdout) as PRDetail;
-  return pr;
+  const raw = JSON.parse(stdout) as GhPRDetail;
+  const inlineCommentsByReview = await fetchReviewInlineComments(
+    repoOwnerName,
+    prNumber,
+    raw.reviews.map((r) => r.id)
+  );
+  return PRDetailDto.fromGh(raw, inlineCommentsByReview);
+}
+
+async function fetchReviewInlineComments(
+  repoOwnerName: string,
+  prNumber: number,
+  reviewIds: string[]
+): Promise<Map<string, GhReviewInlineComment[]>> {
+  const entries = await Promise.all(
+    reviewIds.map(async (reviewId) => {
+      const numericId = reviewId.startsWith('PRR_')
+        ? await resolveReviewNodeId(repoOwnerName, prNumber, reviewId)
+        : reviewId;
+
+      if (!numericId) return [reviewId, [] as GhReviewInlineComment[]] as const;
+
+      try {
+        const { stdout } = await execFileAsync('gh', [
+          'api',
+          `repos/${repoOwnerName}/pulls/${prNumber}/reviews/${numericId}/comments`,
+        ]);
+        return [
+          reviewId,
+          JSON.parse(stdout) as GhReviewInlineComment[],
+        ] as const;
+      } catch (err) {
+        console.error(
+          `[fetchReviewInlineComments] Failed to fetch comments for reviewId "${reviewId}" (numericId: ${numericId}):`,
+          err
+        );
+        return [reviewId, [] as GhReviewInlineComment[]] as const;
+      }
+    })
+  );
+  return new Map(entries);
+}
+
+async function resolveReviewNodeId(
+  repoOwnerName: string,
+  prNumber: number,
+  nodeId: string
+): Promise<string | null> {
+  try {
+    const { stdout } = await execFileAsync('gh', [
+      'api',
+      `repos/${repoOwnerName}/pulls/${prNumber}/reviews`,
+    ]);
+    const reviews = JSON.parse(stdout) as Array<{
+      id: number;
+      node_id: string;
+    }>;
+    const match = reviews.find((r) => r.node_id === nodeId);
+    return match ? String(match.id) : null;
+  } catch (err) {
+    console.error(
+      `[resolveReviewNodeId] Failed to resolve nodeId "${nodeId}" for PR #${prNumber}:`,
+      err
+    );
+    return null;
+  }
 }
