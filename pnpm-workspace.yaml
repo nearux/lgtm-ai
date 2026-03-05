@@ -2,3 +2,4 @@ packages:
   - 'cli'
   - 'backend'
   - 'frontend'
+  - 'scripts'

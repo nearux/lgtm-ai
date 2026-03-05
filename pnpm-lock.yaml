@@ -4,6 +4,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  signal-exit: 3.0.7
+
 importers:
 
   .:
@@ -197,6 +200,12 @@ importers:
       vitest:
         specifier: ^4.0.18
         version: 4.0.18(@types/node@20.19.33)(jiti@2.6.1)(lightningcss@1.31.1)(tsx@4.21.0)(yaml@2.8.2)
+
+  scripts:
+    dependencies:
+      ws:
+        specifier: ^8.19.0
+        version: 8.19.0
 
 packages:
 
@@ -2690,10 +2699,6 @@ packages:
   signal-exit@3.0.7:
     resolution: {integrity: sha512-wnD2ZE+l+SPC/uoS0vXeE9L1+0wuaMqKlfz9AMUo38JsyLSBWSFcHR1Rri62LZc12vLr1gb3jl7iwQhgwpAbGQ==}
 
-  signal-exit@4.1.0:
-    resolution: {integrity: sha512-bzyZ1e88w9O1iNJbKnOlvYTrWPDl46O1bG0D3XInv+9tkPrxrN8jUUTiFlDkkmKWgn1M6CfIA13SuGqOa9Korw==}
-    engines: {node: '>=14'}
-
   sonner@2.0.7:
     resolution: {integrity: sha512-W6ZN4p58k8aDKA4XPcx2hpIQXBRAgyiWVkYhT7CvK6D3iAu7xjvVyhQHg2/iaKJZ1XVJ4r7XuwGL+WGEK37i9w==}
     peerDependencies:
@@ -4784,7 +4789,7 @@ snapshots:
   foreground-child@3.3.1:
     dependencies:
       cross-spawn: 7.0.6
-      signal-exit: 4.1.0
+      signal-exit: 3.0.7
 
   form-data@4.0.5:
     dependencies:
@@ -5800,8 +5805,6 @@ snapshots:
   siginfo@2.0.0: {}
 
   signal-exit@3.0.7: {}
-
-  signal-exit@4.1.0: {}
 
   sonner@2.0.7(react-dom@19.2.4(react@19.2.4))(react@19.2.4):
     dependencies:

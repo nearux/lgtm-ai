@@ -40,6 +40,11 @@
     "node": ">=18",
     "pnpm": ">=9"
   },
+  "pnpm": {
+    "overrides": {
+      "signal-exit": "3.0.7"
+    }
+  },
   "devDependencies": {
     "concurrently": "^9.2.1",
     "prettier": "^3.8.1",
