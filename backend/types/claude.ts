@@ -84,7 +84,7 @@ export interface WsDoneEvent {
   requestId: string;
   exitCode: number;
   result: string;
-  sessionId: string;
+  sessionId: string | undefined;
 }
 
 export interface WsErrorEvent {

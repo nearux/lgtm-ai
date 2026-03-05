@@ -16,7 +16,12 @@ export type ParsedStreamEvent =
   | { kind: 'tool_start'; toolId: string; toolName: string }
   | { kind: 'tool_complete'; toolId: string; toolName: string; input: unknown }
   | { kind: 'tool_result'; toolId: string; content: string; isError: boolean }
-  | { kind: 'result'; result: string; sessionId: string; isError: boolean }
+  | {
+      kind: 'result';
+      result: string;
+      sessionId: string | undefined;
+      isError: boolean;
+    }
   | {
       kind: 'hook_callback';
       requestId: string;
@@ -132,7 +137,7 @@ export function parseStreamJsonLine(line: string): ParsedStreamEvent | null {
     return {
       kind: 'result',
       result: typeof result === 'string' ? result : '',
-      sessionId: typeof sessionId === 'string' ? sessionId : '',
+      sessionId: typeof sessionId === 'string' ? sessionId : undefined,
       isError: isError === true,
     };
   }

@@ -12,7 +12,7 @@ import type {
 export interface ClaudeStreamEvents {
   text: [chunk: string];
   stderr: [chunk: string];
-  done: [exitCode: number, result: string, sessionId: string];
+  done: [exitCode: number, result: string, sessionId: string | undefined];
   error: [message: string];
   tool_message: [toolId: string, toolName: string, input: unknown];
   tool_result: [toolId: string, content: string, isError: boolean];
@@ -245,7 +245,7 @@ export class ClaudeProcess extends EventEmitter<ClaudeStreamEvents> {
     if (isAbnormalExit) {
       this.emit('error', `Process exited with code ${code}`);
     } else {
-      this.emit('done', exitCode, '', '');
+      this.emit('done', exitCode, '', undefined);
     }
   }
 
