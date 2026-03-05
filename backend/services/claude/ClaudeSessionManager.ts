@@ -3,8 +3,16 @@ import { ClaudeProcess } from './ClaudeProcess.js';
 import { WebSocketSender } from './WebSocketSender.js';
 import type { ClaudeExecuteOptions } from '../../types/claude.js';
 
+export interface SessionMetadata {
+  sessionId: string;
+  prompt: string;
+  workingDir: string;
+  timestamp: number;
+}
+
 export class ClaudeSessionManager {
   private processes = new Map<string, ClaudeProcess>();
+  private sessions = new Map<string, SessionMetadata>();
   private sender: WebSocketSender;
 
   constructor(ws: WebSocket) {
@@ -78,8 +86,16 @@ export class ClaudeSessionManager {
     proc.on('stderr', (chunk) =>
       sender.send({ type: 'stderr', requestId, chunk })
     );
-    proc.on('done', (exitCode, result) => {
-      sender.send({ type: 'done', requestId, exitCode, result });
+    proc.on('done', (exitCode, result, sessionId) => {
+      if (sessionId) {
+        this.sessions.set(requestId, {
+          sessionId,
+          prompt,
+          workingDir,
+          timestamp: Date.now(),
+        });
+      }
+      sender.send({ type: 'done', requestId, exitCode, result, sessionId });
       this.processes.delete(requestId);
     });
     proc.on('error', (message) => {

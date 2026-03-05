@@ -8,12 +8,14 @@
  * Options:
  *   --model <model>              Claude model to use (e.g. claude-opus-4-5)
  *   --execution-mode <mode>      Execution mode: default | acceptEdits | bypassPermissions | plan
+ *   --session-id <id>            Resume a previous Claude session
  *
  * Examples:
  *   node scripts/ws-client-example.mjs /tmp "List files in this directory"
  *   node scripts/ws-client-example.mjs /tmp "List files" --model claude-opus-4-5
  *   node scripts/ws-client-example.mjs /tmp "List files" --execution-mode acceptEdits
  *   node scripts/ws-client-example.mjs /tmp "List files" --execution-mode bypassPermissions
+ *   node scripts/ws-client-example.mjs /tmp "Continue previous task" --session-id <sessionId>
  */
 
 import { WebSocket } from 'ws';
@@ -31,6 +33,8 @@ for (let i = 0; i < args.length; i++) {
     flags.model = args[++i];
   } else if (args[i] === '--execution-mode') {
     flags.executionMode = args[++i];
+  } else if (args[i] === '--session-id') {
+    flags.sessionId = args[++i];
   } else {
     positional.push(args[i]);
   }
@@ -46,6 +50,7 @@ const requestId = randomUUID();
 const options = {};
 if (flags.model) options.model = flags.model;
 if (flags.executionMode) options.executionMode = flags.executionMode;
+if (flags.sessionId) options.sessionId = flags.sessionId;
 
 console.log(`Connecting to ${WS_URL}`);
 console.log(`requestId      : ${requestId}`);
@@ -54,6 +59,7 @@ console.log(`prompt         : ${prompt}`);
 if (options.model) console.log(`model          : ${options.model}`);
 if (options.executionMode)
   console.log(`executionMode  : ${options.executionMode}`);
+if (options.sessionId) console.log(`sessionId      : ${options.sessionId}`);
 console.log('─'.repeat(60));
 
 const ws = new WebSocket(WS_URL);
@@ -151,6 +157,7 @@ ws.on('message', (rawData) => {
 
     case 'done':
       console.log(`\n\n[done] exitCode: ${msg.exitCode}`);
+      if (msg.sessionId) console.log(`[done] sessionId: ${msg.sessionId}`);
       ws.close();
       process.exit(msg.exitCode ?? 0);
 

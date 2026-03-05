@@ -12,7 +12,7 @@ import type {
 export interface ClaudeStreamEvents {
   text: [chunk: string];
   stderr: [chunk: string];
-  done: [exitCode: number, result: string];
+  done: [exitCode: number, result: string, sessionId: string];
   error: [message: string];
   tool_message: [toolId: string, toolName: string, input: unknown];
   tool_result: [toolId: string, content: string, isError: boolean];
@@ -56,9 +56,12 @@ export class ClaudeProcess extends EventEmitter<ClaudeStreamEvents> {
 
     let child: ChildProcess;
     try {
+      const env = { ...process.env };
+      delete env['CLAUDECODE'];
       child = spawn('claude', args, {
         cwd: workingDir,
         stdio: ['pipe', 'pipe', 'pipe'],
+        env,
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -242,7 +245,7 @@ export class ClaudeProcess extends EventEmitter<ClaudeStreamEvents> {
     if (isAbnormalExit) {
       this.emit('error', `Process exited with code ${code}`);
     } else {
-      this.emit('done', exitCode, '');
+      this.emit('done', exitCode, '', '');
     }
   }
 
@@ -302,7 +305,7 @@ export class ClaudeProcess extends EventEmitter<ClaudeStreamEvents> {
         break;
       case 'result':
         this.resultReceived = true;
-        this.emit('done', 0, result.result);
+        this.emit('done', 0, result.result, result.sessionId);
         break;
     }
   }

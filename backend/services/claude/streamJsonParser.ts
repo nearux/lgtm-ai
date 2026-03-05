@@ -16,7 +16,7 @@ export type ParsedStreamEvent =
   | { kind: 'tool_start'; toolId: string; toolName: string }
   | { kind: 'tool_complete'; toolId: string; toolName: string; input: unknown }
   | { kind: 'tool_result'; toolId: string; content: string; isError: boolean }
-  | { kind: 'result'; result: string; isError: boolean }
+  | { kind: 'result'; result: string; sessionId: string; isError: boolean }
   | {
       kind: 'hook_callback';
       requestId: string;
@@ -127,10 +127,12 @@ export function parseStreamJsonLine(line: string): ParsedStreamEvent | null {
   // Response completion: result message emitted when a turn finishes
   if (parsed['type'] === 'result') {
     const result = parsed['result'];
+    const sessionId = parsed['session_id'];
     const isError = parsed['is_error'];
     return {
       kind: 'result',
       result: typeof result === 'string' ? result : '',
+      sessionId: typeof sessionId === 'string' ? sessionId : '',
       isError: isError === true,
     };
   }
