@@ -36,7 +36,11 @@ export const PRDetailContent = ({ projectId, prNumber }: Props) => {
 
       {linkedBody && <PRDescription body={linkedBody} />}
 
-      <ReviewList reviews={pr.reviews} />
+      <ReviewList
+        reviews={pr.reviews}
+        workingDir={project.working_dir}
+        prNumber={pr.number}
+      />
       <CommentList comments={pr.comments} />
       <CommitList commits={pr.commits} />
     </>
