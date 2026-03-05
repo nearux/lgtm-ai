@@ -1,15 +1,30 @@
 import { queryOptions } from '@tanstack/react-query';
 import { apiGet } from '../client';
 import { prsQueryKey } from './queryKey';
-import type { PRListItem, PRDetail } from '@lgtmai/backend/types';
+import type { PRListItem, PRDetail, PRState } from '@lgtmai/backend/types';
 
 export const prsQuery = {
-  list: (projectId: string, origin?: string) =>
+  list: (
+    projectId: string,
+    params?: {
+      state: PRState;
+      page: number;
+      limit: number;
+      origin?: string;
+    }
+  ) =>
     queryOptions<PRListItem[]>({
-      queryKey: prsQueryKey.all(projectId, origin),
+      queryKey: prsQueryKey.all(projectId, params),
       queryFn: () => {
-        const params = origin ? `?origin=${encodeURIComponent(origin)}` : '';
-        return apiGet<PRListItem[]>(`/api/projects/${projectId}/prs${params}`);
+        const searchParams = new URLSearchParams();
+        if (params?.state) searchParams.set('state', params.state);
+        if (params?.page) searchParams.set('page', String(params.page));
+        if (params?.limit) searchParams.set('limit', String(params.limit));
+        if (params?.origin) searchParams.set('origin', params.origin);
+        const query = searchParams.toString();
+        return apiGet<PRListItem[]>(
+          `/api/projects/${projectId}/prs${query ? `?${query}` : ''}`
+        );
       },
     }),
 
