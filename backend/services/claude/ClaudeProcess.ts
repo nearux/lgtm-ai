@@ -214,7 +214,6 @@ export class ClaudeProcess extends EventEmitter<ClaudeStreamEvents> {
 
   private handleChunk(chunk: Buffer): void {
     const raw = chunk.toString();
-    process.stderr.write(`[claude:stdout] ${raw}`);
     for (const line of this.lineBuffer.push(raw)) {
       this.emitParsedLine(line);
     }
