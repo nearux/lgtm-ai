@@ -1,6 +1,7 @@
 import Markdown from 'react-markdown';
 import { formatDateTime } from '@/shared/utils';
 import type { PRReview } from '@lgtmai/backend/types';
+import { DiffHunk } from './components/DiffHunk/DiffHunk';
 
 interface Props {
   reviews: PRReview[];
@@ -65,6 +66,34 @@ export const ReviewList = ({ reviews }: Props) => {
               {review.body && (
                 <div className="prose prose-gray max-w-none">
                   <Markdown>{review.body}</Markdown>
+                </div>
+              )}
+              {review.inlineComments.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  {review.inlineComments.map((comment) => (
+                    <div
+                      key={comment.id}
+                      className="rounded-lg border border-gray-200 bg-white text-sm"
+                    >
+                      <div className="flex items-center gap-2 border-b border-gray-100 px-3 py-2">
+                        <code className="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-700">
+                          {comment.path}
+                        </code>
+                        <span className="text-xs text-gray-500">
+                          {comment.author.login}
+                        </span>
+                      </div>
+                      {comment.diffHunk && (
+                        <DiffHunk
+                          diffHunk={comment.diffHunk}
+                          filePath={comment.path}
+                        />
+                      )}
+                      <div className="prose prose-gray max-w-none px-3 py-2 text-sm">
+                        <Markdown>{comment.body}</Markdown>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
