@@ -1,11 +1,15 @@
 #!/usr/bin/env node
 
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { checkGitHubCLI } from './validators/check-gh.js';
 import { checkClaudeCLI } from './validators/check-claude.js';
 import { launchServers } from './launcher.js';
 import { INSTALL_MESSAGES, AUTH_MESSAGES } from './utils/messages.js';
 
-const VERSION = '0.0.1';
+const { version: VERSION } = JSON.parse(
+  readFileSync(join(__dirname, '../../package.json'), 'utf-8')
+);
 
 function displayBanner(): void {
   console.log(`
