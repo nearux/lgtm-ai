@@ -78,8 +78,8 @@ export class ClaudeSessionManager {
     proc.on('stderr', (chunk) =>
       sender.send({ type: 'stderr', requestId, chunk })
     );
-    proc.on('done', (exitCode, result) => {
-      sender.send({ type: 'done', requestId, exitCode, result });
+    proc.on('done', (exitCode, result, sessionId) => {
+      sender.send({ type: 'done', requestId, exitCode, result, sessionId });
       this.processes.delete(requestId);
     });
     proc.on('error', (message) => {

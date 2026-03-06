@@ -9,6 +9,7 @@ export type ClaudeExecutionMode =
 export interface ClaudeExecuteOptions {
   executionMode?: ClaudeExecutionMode;
   model?: string;
+  sessionId?: string;
 }
 
 export interface WsExecuteMessage {
@@ -83,6 +84,7 @@ export interface WsDoneEvent {
   requestId: string;
   exitCode: number;
   result: string;
+  sessionId?: string;
 }
 
 export interface WsErrorEvent {

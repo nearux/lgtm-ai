@@ -30,6 +30,10 @@ export class ClaudeArgsBuilder {
       this.args.push(`--model=${options.model}`);
     }
 
+    if (options.sessionId) {
+      this.args.push(`--resume=${options.sessionId}`);
+    }
+
     return this;
   }
 
