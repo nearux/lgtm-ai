@@ -19,11 +19,9 @@ await build({
   banner: {
     js: [
       'import { createRequire } from "module";',
-      'import { fileURLToPath } from "url";',
-      'import { dirname } from "path";',
       'const require = createRequire(import.meta.url);',
-      'const __filename = fileURLToPath(import.meta.url);',
-      'const __dirname = dirname(__filename);',
+      'const __filename = new URL(import.meta.url).pathname;',
+      'const __dirname = __filename.slice(0, __filename.lastIndexOf("/"));',
     ].join('\n'),
   },
 });
