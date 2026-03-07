@@ -45,6 +45,11 @@
       "signal-exit": "3.0.7"
     }
   },
+  "dependencies": {
+    "@libsql/client": "^0.17.0",
+    "@prisma/adapter-libsql": "^7.4.0",
+    "@prisma/client": "^7.4.0"
+  },
   "devDependencies": {
     "concurrently": "^9.2.1",
     "prettier": "^3.8.1",

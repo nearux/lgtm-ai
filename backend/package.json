@@ -13,7 +13,7 @@
   },
   "scripts": {
     "postinstall": "prisma generate",
-    "build": "tsoa routes && tsc",
+    "build": "tsoa routes && node esbuild.config.mjs",
     "dev": "prisma migrate dev && tsoa spec && tsoa routes && (tsx watch index.ts || true)",
     "start": "prisma migrate deploy && node dist/index.js",
     "lint": "eslint .",
@@ -40,6 +40,7 @@
     "@types/node": "^18.19.0",
     "@types/swagger-ui-express": "^4.1.8",
     "@types/ws": "^8.18.1",
+    "esbuild": "^0.27.3",
     "eslint": "^9.39.2",
     "globals": "^17.3.0",
     "prisma": "^7.4.0",
