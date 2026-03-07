@@ -3,6 +3,7 @@ import cors from 'cors';
 import { createServer } from 'node:http';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { existsSync } from 'node:fs';
 import { WebSocketServer } from 'ws';
 import { RegisterRoutes } from './routes.js';
 import { errorHandler } from './middlewares/errorHandler.js';
@@ -35,6 +36,16 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 RegisterRoutes(app);
+
+// Serve frontend static files in production
+const frontendDist = join(__dirname, '../../frontend/dist');
+if (existsSync(frontendDist)) {
+  app.use(express.static(frontendDist));
+  // SPA fallback: serve index.html for any non-API route
+  app.get('*', (_req, res) => {
+    res.sendFile(join(frontendDist, 'index.html'));
+  });
+}
 
 app.use(errorHandler);
 

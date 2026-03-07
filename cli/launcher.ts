@@ -1,5 +1,6 @@
 import { spawn, ChildProcess } from 'node:child_process';
 import { join } from 'node:path';
+import { FRONTEND_URL } from './utils/ports.js';
 
 export async function launchServers(): Promise<void> {
   console.log('\n🚀 Starting servers...\n');
@@ -13,12 +14,11 @@ export async function launchServers(): Promise<void> {
   });
   processes.push(backend);
 
-  const viteBin = join(__dirname, '../../frontend/node_modules/.bin/vite');
-  const frontendRoot = join(__dirname, '../../frontend');
-  const frontend = spawn(viteBin, ['preview', frontendRoot], {
-    stdio: 'inherit',
-  });
-  processes.push(frontend);
+  // Wait for backend to be ready, then open browser
+  setTimeout(async () => {
+    const { default: open } = await import('open');
+    open(FRONTEND_URL);
+  }, 2000);
 
   const cleanup = () => {
     console.log('\n\n🛑 Shutting down servers...');
