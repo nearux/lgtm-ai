@@ -15,10 +15,9 @@ export const PRListPage = () => {
   });
 
   const remotes = project?.gitInfo.remotes ?? [];
-  const defaultOrigin =
-    remotes.find((r) => r.name === 'origin')?.name ??
-    remotes[0]?.name ??
-    'origin';
+  const defaultOrigin = remotes.some((r) => r.name === 'origin')
+    ? 'origin'
+    : (remotes[0]?.name ?? 'origin');
 
   const selectedOrigin = searchParams.get('origin') ?? defaultOrigin;
 
