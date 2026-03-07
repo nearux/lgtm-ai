@@ -6,3 +6,4 @@ export { Input } from './Input/Input';
 export { Badge } from './Badge/Badge';
 export { Spinner } from './Spinner/Spinner';
 export { Modal } from './Modal/Modal';
+export { Select } from './Select/Select';

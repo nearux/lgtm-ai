@@ -7,11 +7,12 @@ import { useNavigate } from 'react-router-dom';
 
 interface Props {
   projectId: string;
+  origin: string;
 }
 
-export const PRTable = ({ projectId }: Props) => {
+export const PRTable = ({ projectId, origin }: Props) => {
   const navigate = useNavigate();
-  const { data: prs } = useSuspenseQuery(prsQuery.list(projectId));
+  const { data: prs } = useSuspenseQuery(prsQuery.list(projectId, origin));
 
   const handlePRClick = (pr: PRListItem) => {
     navigate(`/projects/${projectId}/prs/${pr.number}`);
