@@ -1,9 +1,10 @@
 import { formatDate } from '@/shared/utils';
 import { StatusBadge } from '../StatusBadge/StatusBadge';
 import type { PRListItem } from '@lgtmai/backend/types';
-import { useSuspenseQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { prsQuery } from '@/shared/apis';
 import { useNavigate } from 'react-router-dom';
+import { Spinner } from '@/shared/components';
 
 interface Props {
   projectId: string;
@@ -12,12 +13,22 @@ interface Props {
 
 export const PRTable = ({ projectId, origin }: Props) => {
   const navigate = useNavigate();
-  const { data: prs } = useSuspenseQuery(prsQuery.list(projectId, origin));
+  const { data: prs } = useQuery({
+    ...prsQuery.list(projectId, origin),
+  });
 
   const handlePRClick = (pr: PRListItem) => {
     const params = origin ? `?origin=${encodeURIComponent(origin)}` : '';
     navigate(`/projects/${projectId}/prs/${pr.number}${params}`);
   };
+
+  if (!prs) {
+    return (
+      <div className="flex h-40 items-center justify-center">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
 
   if (prs.length === 0) {
     return (
