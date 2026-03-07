@@ -32,8 +32,8 @@
     "url": "https://github.com/nearux/lgtm-ai"
   },
   "files": [
-    "cli/dist",
-    "backend/dist",
+    "cli/dist/index.js",
+    "backend/dist/index.js",
     "backend/prisma/schema.prisma",
     "frontend/dist",
     "bin"
