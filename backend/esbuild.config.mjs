@@ -15,8 +15,6 @@ await build({
     '@prisma/client',
     '@prisma/adapter-libsql',
     '@libsql/client',
-    // swagger-ui-express is only used in dev mode
-    'swagger-ui-express',
   ],
   banner: {
     js: [
