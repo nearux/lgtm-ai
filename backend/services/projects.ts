@@ -5,6 +5,8 @@ import { existsSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import prisma from '../prismaClient.js';
 import { AppError } from '../errors/AppError.js';
+import { ProjectGitRemoteDto } from '../dtos/projectGitInfoDto.js';
+import { GitHubRepoDto } from '../dtos/gitHubRepoDto.js';
 import type {
   Project,
   ProjectDetail,
@@ -19,14 +21,26 @@ async function getGitInfo(workingDir: string): Promise<ProjectGitInfo> {
   let remoteUrl: string | null = null;
   let currentBranch: string | null = null;
   let branches: string[] = [];
+  let remotes: Array<{ name: string; url: string }> = [];
 
   try {
     const result = await execFileAsync('git', ['remote', 'get-url', 'origin'], {
       cwd: workingDir,
     });
     remoteUrl = result.stdout.trim();
-  } catch {
+  } catch (error) {
+    console.error('[getGitInfo] Failed to resolve origin remote URL:', error);
     remoteUrl = null;
+  }
+
+  try {
+    const result = await execFileAsync('git', ['remote', '-v'], {
+      cwd: workingDir,
+    });
+    remotes = ProjectGitRemoteDto.fromGitRemoteList(result.stdout);
+  } catch (error) {
+    console.error('[getGitInfo] Failed to list git remotes:', error);
+    remotes = [];
   }
 
   try {
@@ -34,7 +48,8 @@ async function getGitInfo(workingDir: string): Promise<ProjectGitInfo> {
       cwd: workingDir,
     });
     currentBranch = result.stdout.trim() || null;
-  } catch {
+  } catch (error) {
+    console.error('[getGitInfo] Failed to get current branch:', error);
     currentBranch = null;
   }
 
@@ -45,11 +60,12 @@ async function getGitInfo(workingDir: string): Promise<ProjectGitInfo> {
       .split('\n')
       .map((line) => line.replace(/^\*?\s+/, '').trim())
       .filter((line) => line.length > 0);
-  } catch {
+  } catch (error) {
+    console.error('[getGitInfo] Failed to list branches:', error);
     branches = [];
   }
 
-  return { remoteUrl, currentBranch, branches };
+  return { remoteUrl, currentBranch, branches, remotes };
 }
 
 export async function create(input: CreateProjectBody): Promise<Project> {
@@ -123,4 +139,27 @@ export async function remove(id: string): Promise<void> {
   if (!existing) throw new AppError('Project not found', HttpStatus.NOT_FOUND);
 
   await prisma.project.delete({ where: { id } });
+}
+
+/**
+ * Resolves the GitHub "owner/repo" string for a project, using the specified
+ * remote name (defaults to "origin"). Throws an AppError on invalid input.
+ */
+export async function resolveGitHubRepo(
+  projectId: string,
+  remoteName: string
+): Promise<string> {
+  const project = await findById(projectId);
+  const selectedRemoteUrl =
+    project.gitInfo.remotes.find((remote) => remote.name === remoteName)?.url ??
+    (remoteName === 'origin' ? project.gitInfo.remoteUrl : null);
+
+  if (!selectedRemoteUrl) {
+    throw new AppError(
+      'Project does not have a configured Git remote',
+      HttpStatus.UNPROCESSABLE_ENTITY
+    );
+  }
+
+  return GitHubRepoDto.fromRemoteUrl(selectedRemoteUrl).toString();
 }
