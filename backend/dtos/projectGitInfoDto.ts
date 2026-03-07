@@ -25,7 +25,7 @@ export class ProjectGitRemoteDto implements ProjectGitRemote {
       })),
       sortBy((r) => (r.type === 'fetch' ? 0 : 1)),
       uniqueBy((r) => r.name),
-      map(({ name, url }) => new ProjectGitRemoteDto({ name, url })),
+      map(({ name, url }) => new ProjectGitRemoteDto({ name, url }))
     );
   }
 }
