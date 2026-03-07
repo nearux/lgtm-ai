@@ -10,17 +10,23 @@ import { CommitList } from '../CommitList/CommitList';
 interface Props {
   projectId: string;
   prNumber: string;
+  origin?: string;
 }
 
-export const PRDetailContent = ({ projectId, prNumber }: Props) => {
+export const PRDetailContent = ({ projectId, prNumber, origin }: Props) => {
   const [{ data: project }, { data: pr }] = useSuspenseQueries({
     queries: [
       projectsQuery.detail(projectId),
-      prsQuery.detail(projectId, Number(prNumber)),
+      prsQuery.detail(projectId, Number(prNumber), origin),
     ],
   });
 
-  const githubBaseUrl = parseGitHubUrl(project.gitInfo.remoteUrl);
+  const remote = project.gitInfo.remotes.find(
+    (r) => r.name === (origin ?? 'origin')
+  );
+  const githubBaseUrl = parseGitHubUrl(
+    remote?.url ?? project.gitInfo.remoteUrl
+  );
   const linkedBody = pr.body
     ? linkifyIssueReferences(pr.body, githubBaseUrl)
     : '';
@@ -32,6 +38,7 @@ export const PRDetailContent = ({ projectId, prNumber }: Props) => {
         projectName={project.name}
         prNumber={prNumber}
         pr={pr}
+        origin={origin}
       />
 
       {linkedBody && <PRDescription body={linkedBody} />}

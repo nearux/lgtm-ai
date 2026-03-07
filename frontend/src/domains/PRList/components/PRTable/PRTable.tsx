@@ -15,7 +15,8 @@ export const PRTable = ({ projectId, origin }: Props) => {
   const { data: prs } = useSuspenseQuery(prsQuery.list(projectId, origin));
 
   const handlePRClick = (pr: PRListItem) => {
-    navigate(`/projects/${projectId}/prs/${pr.number}`);
+    const params = origin ? `?origin=${encodeURIComponent(origin)}` : '';
+    navigate(`/projects/${projectId}/prs/${pr.number}${params}`);
   };
 
   if (prs.length === 0) {

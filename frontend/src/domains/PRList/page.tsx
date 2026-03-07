@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { AsyncBoundary, Select } from '@/shared/components';
 import { useQuery } from '@tanstack/react-query';
 import { projectsQuery } from '@/shared/apis';
@@ -7,6 +6,7 @@ import { PRTable } from './components/PRTable/PRTable';
 
 export const PRListPage = () => {
   const { projectId } = useParams<{ projectId: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const { data: project } = useQuery({
     ...projectsQuery.detail(projectId!),
@@ -20,7 +20,7 @@ export const PRListPage = () => {
     remotes[0]?.name ??
     'origin';
 
-  const [selectedOrigin, setSelectedOrigin] = useState(defaultOrigin);
+  const selectedOrigin = searchParams.get('origin') ?? defaultOrigin;
 
   if (!projectId) {
     return null;
@@ -44,7 +44,9 @@ export const PRListPage = () => {
                 label="Remote"
                 options={remotes.map((r) => ({ value: r.name, label: r.name }))}
                 value={selectedOrigin}
-                onChange={(e) => setSelectedOrigin(e.target.value)}
+                onChange={(e) =>
+                  setSearchParams({ origin: e.target.value }, { replace: true })
+                }
               />
             )}
           </div>

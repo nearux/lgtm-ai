@@ -13,10 +13,14 @@ export const prsQuery = {
       },
     }),
 
-  detail: (projectId: string, prNumber: number) =>
+  detail: (projectId: string, prNumber: number, origin?: string) =>
     queryOptions<PRDetail>({
-      queryKey: prsQueryKey.detail(projectId, prNumber),
-      queryFn: () =>
-        apiGet<PRDetail>(`/api/projects/${projectId}/prs/${prNumber}`),
+      queryKey: prsQueryKey.detail(projectId, prNumber, origin),
+      queryFn: () => {
+        const params = origin ? `?origin=${encodeURIComponent(origin)}` : '';
+        return apiGet<PRDetail>(
+          `/api/projects/${projectId}/prs/${prNumber}${params}`
+        );
+      },
     }),
 };

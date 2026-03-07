@@ -7,6 +7,7 @@ interface Props {
   projectName?: string;
   prNumber: string;
   pr: PRDetail;
+  origin?: string;
 }
 
 const statusColors = {
@@ -15,7 +16,13 @@ const statusColors = {
   closed: 'bg-red-100 text-red-800',
 };
 
-export const PRHeader = ({ projectId, projectName, prNumber, pr }: Props) => {
+export const PRHeader = ({
+  projectId,
+  projectName,
+  prNumber,
+  pr,
+  origin,
+}: Props) => {
   const statusColor =
     statusColors[pr.state as keyof typeof statusColors] ||
     'bg-gray-100 text-gray-800';
@@ -28,7 +35,7 @@ export const PRHeader = ({ projectId, projectName, prNumber, pr }: Props) => {
         </Link>
         <span>/</span>
         <Link
-          to={`/projects/${projectId}/prs`}
+          to={`/projects/${projectId}/prs${origin ? `?origin=${encodeURIComponent(origin)}` : ''}`}
           className="hover:text-indigo-500"
         >
           {projectName}
