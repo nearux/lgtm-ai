@@ -150,13 +150,13 @@ export async function resolveGitHubRepo(
   remoteName: string
 ): Promise<string> {
   const project = await findById(projectId);
-  const selectedRemoteUrl =
-    project.gitInfo.remotes.find((remote) => remote.name === remoteName)?.url ??
-    (remoteName === 'origin' ? project.gitInfo.remoteUrl : null);
+  const selectedRemoteUrl = project.gitInfo.remotes.find(
+    (remote) => remote.name === remoteName
+  )?.url;
 
   if (!selectedRemoteUrl) {
     throw new AppError(
-      'Project does not have a configured Git remote',
+      `Project does not have a configured Git remote named '${remoteName}'`,
       HttpStatus.UNPROCESSABLE_ENTITY
     );
   }
