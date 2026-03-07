@@ -1,6 +1,20 @@
 import { spawn, ChildProcess } from 'node:child_process';
 import { join } from 'node:path';
+import open from 'open';
 import { FRONTEND_URL } from './utils/ports.js';
+
+async function waitForBackend(url: string, timeoutMs = 30000): Promise<void> {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(1000) });
+      if (res.ok || res.status < 500) return;
+    } catch {
+      // not ready yet
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+}
 
 export async function launchServers(): Promise<void> {
   console.log('\n🚀 Starting servers...\n');
@@ -14,11 +28,10 @@ export async function launchServers(): Promise<void> {
   });
   processes.push(backend);
 
-  // Wait for backend to be ready, then open browser
-  setTimeout(async () => {
-    const { default: open } = await import('open');
+  // Poll until backend is ready, then open browser
+  waitForBackend(FRONTEND_URL).then(() => {
     open(FRONTEND_URL);
-  }, 2000);
+  });
 
   const cleanup = () => {
     console.log('\n\n🛑 Shutting down servers...');
