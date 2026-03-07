@@ -14,6 +14,7 @@
     "test": "pnpm --filter '*' --if-present run test",
     "lint": "pnpm --filter '*' --if-present run lint",
     "lint:fix": "pnpm --filter '*' --if-present run lint:fix",
+    "postinstall": "prisma generate --schema=backend/prisma/schema.prisma",
     "prepublishOnly": "pnpm run build"
   },
   "keywords": [
@@ -33,6 +34,7 @@
   "files": [
     "cli/dist",
     "backend/dist",
+    "backend/prisma/schema.prisma",
     "frontend/dist",
     "bin"
   ],
@@ -48,7 +50,8 @@
   "dependencies": {
     "@libsql/client": "^0.17.0",
     "@prisma/adapter-libsql": "^7.4.0",
-    "@prisma/client": "^7.4.0"
+    "@prisma/client": "^7.4.0",
+    "prisma": "^7.4.0"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",

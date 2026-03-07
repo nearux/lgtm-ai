@@ -7,12 +7,15 @@ await build({
   target: 'node18',
   format: 'esm',
   outfile: 'dist/index.js',
+  define: {
+    'process.env.NODE_ENV': '"production"',
+  },
   external: [
     // Prisma and libsql use native binaries and must remain external
     '@prisma/client',
     '@prisma/adapter-libsql',
     '@libsql/client',
-    // swagger-ui-express is only used in dev mode, keep external to avoid bloat
+    // swagger-ui-express is only used in dev mode
     'swagger-ui-express',
   ],
   banner: {
