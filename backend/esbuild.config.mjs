@@ -18,9 +18,12 @@ await build({
   ],
   banner: {
     js: [
-      'const require = (await import("module")).createRequire(import.meta.url);',
-      'const __filename = (await import("url")).fileURLToPath(import.meta.url);',
-      'const __dirname = (await import("path")).dirname(__filename);',
+      'import { createRequire } from "module";',
+      'import { fileURLToPath } from "url";',
+      'import { dirname } from "path";',
+      'const require = createRequire(import.meta.url);',
+      'const __filename = fileURLToPath(import.meta.url);',
+      'const __dirname = dirname(__filename);',
     ].join('\n'),
   },
 });
