@@ -16,8 +16,9 @@ await build({
     '@prisma/client',
     '@prisma/adapter-libsql',
     '@libsql/client',
-    // tsoa is a build-time tool only
+    // tsoa and @tsoa/cli are build-time tools
     'tsoa',
+    '@tsoa/cli',
     // swagger-ui-express is dev-only
     'swagger-ui-express',
   ],
