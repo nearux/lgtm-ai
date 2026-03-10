@@ -7,11 +7,13 @@ import {
   Home,
   Check,
   AlertCircle,
+  Search,
 } from 'lucide-react';
 import { fsQuery } from '@/shared/apis';
 import { Button, IconButton, Spinner } from '@/shared/components';
 import { cn } from '@/shared/lib';
 import { parsePathSegments, buildPathFromSegments } from '@/shared/utils';
+import { filterEntries } from './utils/filterEntries';
 
 interface Props {
   initialPath?: string;
@@ -24,12 +26,14 @@ export const FolderBrowser = ({ initialPath, onSelect, onCancel }: Props) => {
     initialPath
   );
   const [isPending, startTransition] = useTransition();
+  const [filterKeyword, setFilterKeyword] = useState('');
 
   const { data } = useSuspenseQuery(fsQuery.browse(currentPath));
 
   const handleNavigate = (path: string) => {
     startTransition(() => {
       setCurrentPath(path);
+      setFilterKeyword('');
     });
   };
 
@@ -37,6 +41,7 @@ export const FolderBrowser = ({ initialPath, onSelect, onCancel }: Props) => {
     if (data.parent) {
       startTransition(() => {
         setCurrentPath(data.parent ?? undefined);
+        setFilterKeyword('');
       });
     }
   };
@@ -44,6 +49,7 @@ export const FolderBrowser = ({ initialPath, onSelect, onCancel }: Props) => {
   const handleGoHome = () => {
     startTransition(() => {
       setCurrentPath(undefined);
+      setFilterKeyword('');
     });
   };
 
@@ -52,6 +58,7 @@ export const FolderBrowser = ({ initialPath, onSelect, onCancel }: Props) => {
   };
 
   const pathSegments = parsePathSegments(data.path);
+  const filteredEntries = filterEntries(data.entries, filterKeyword);
 
   return (
     <div className="flex h-80 flex-col rounded-lg border border-gray-200 bg-white">
@@ -96,6 +103,19 @@ export const FolderBrowser = ({ initialPath, onSelect, onCancel }: Props) => {
         </div>
       </div>
 
+      {/* Filter input */}
+      <div className="flex items-center gap-2 border-b border-gray-200 px-3 py-2">
+        <Search className="h-4 w-4 shrink-0 text-gray-400" />
+        <input
+          type="text"
+          aria-label="Filter folders"
+          value={filterKeyword}
+          onChange={(e) => setFilterKeyword(e.target.value)}
+          placeholder="Filter folders..."
+          className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400"
+        />
+      </div>
+
       {/* Directory list */}
       <div
         className={cn('flex-1 overflow-y-auto transition-opacity', {
@@ -106,9 +126,13 @@ export const FolderBrowser = ({ initialPath, onSelect, onCancel }: Props) => {
           <div className="flex h-full items-center justify-center text-sm text-gray-500">
             No subdirectories
           </div>
+        ) : filteredEntries.length === 0 ? (
+          <div className="flex h-full items-center justify-center text-sm text-gray-500">
+            No matching folders
+          </div>
         ) : (
           <ul className="divide-y divide-gray-100">
-            {data.entries.map((entry) => (
+            {filteredEntries.map((entry) => (
               <li key={entry.path}>
                 <button
                   type="button"
