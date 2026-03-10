@@ -8,8 +8,7 @@ import {
   XCircle,
   Loader2,
 } from 'lucide-react';
-import Markdown from 'react-markdown';
-import { IconButton, Spinner } from '@/shared/components';
+import { IconButton, Spinner, GFMMarkdown } from '@/shared/components';
 import type { ClaudeMessage, ConnectionStatus } from '../../hooks';
 
 interface Props {
@@ -154,9 +153,7 @@ export const ChatPanel = ({
                   key={item.id}
                   className="rounded-lg border border-gray-200 bg-white p-3"
                 >
-                  <div className="prose prose-sm max-w-none text-gray-800">
-                    <Markdown>{item.content}</Markdown>
-                  </div>
+                  <GFMMarkdown className="prose-sm">{item.content}</GFMMarkdown>
                 </div>
               ) : (
                 <div

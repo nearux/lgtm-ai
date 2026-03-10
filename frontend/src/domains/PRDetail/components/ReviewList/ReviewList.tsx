@@ -1,8 +1,7 @@
-import { useState, useEffect } from 'react';
-import Markdown from 'react-markdown';
+import { useState, useEffect, useRef } from 'react';
 import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { formatDateTime } from '@/shared/utils';
-import { Button } from '@/shared/components';
+import { Button, GFMMarkdown } from '@/shared/components';
 import { useClaudeWebSocket } from '../../hooks';
 import { useChatPanel } from '../../contexts';
 import type { PRReview } from '@lgtmai/backend/types';
@@ -39,16 +38,28 @@ const reviewStateStyles = {
 
 type ValidationStatus = 'idle' | 'validating' | 'valid' | 'invalid';
 
-interface ReviewValidation {
+interface ValidationState {
   status: ValidationStatus;
   result?: string;
 }
 
+interface ValidationTarget {
+  type: 'review' | 'comment';
+  id: string;
+  body: string;
+  author: string;
+  path?: string;
+}
+
 export const ReviewList = ({ reviews, workingDir, prNumber }: Props) => {
   const [validations, setValidations] = useState<
-    Record<string, ReviewValidation>
+    Record<string, ValidationState>
   >({});
-  const [activeReviewId, setActiveReviewId] = useState<string | null>(null);
+  const [activeTarget, setActiveTarget] = useState<ValidationTarget | null>(
+    null
+  );
+  const pendingPromptRef = useRef<string | null>(null);
+
   const { openPanel, setMessages, setStatus } = useChatPanel();
   const {
     status: wsStatus,
@@ -58,7 +69,6 @@ export const ReviewList = ({ reviews, workingDir, prNumber }: Props) => {
     clearMessages,
   } = useClaudeWebSocket();
 
-  // Sync messages and status to context
   useEffect(() => {
     setMessages(messages);
   }, [messages, setMessages]);
@@ -67,30 +77,14 @@ export const ReviewList = ({ reviews, workingDir, prNumber }: Props) => {
     setStatus(wsStatus);
   }, [wsStatus, setStatus]);
 
-  const handleValidate = (review: PRReview) => {
-    if (wsStatus !== 'connected') {
-      connect();
-    }
-    setActiveReviewId(review.id);
-    setValidations((prev) => ({
-      ...prev,
-      [review.id]: { status: 'validating' },
-    }));
-    clearMessages();
-    openPanel(`Validating: ${review.author.login}'s review`);
-  };
-
-  useEffect(() => {
-    if (wsStatus === 'connected' && activeReviewId) {
-      const review = reviews.find((r) => r.id === activeReviewId);
-      if (review && validations[activeReviewId]?.status === 'validating') {
-        const prompt = `Review this PR review comment and determine if it's a valid, actionable code review suggestion.
+  const buildPrompt = (target: ValidationTarget) => {
+    if (target.type === 'review') {
+      return `Review this PR review comment and determine if it's a valid, actionable code review suggestion.
 
 PR Number: #${prNumber}
-Review Author: ${review.author.login}
-Review State: ${review.state}
+Review Author: ${target.author}
 Review Body:
-${review.body}
+${target.body}
 
 Analyze if this review comment:
 1. Points out a real issue or valid improvement
@@ -102,22 +96,56 @@ Respond with:
 - "INVALID" if the review is vague, incorrect, or not actionable
 
 Then briefly explain your reasoning in 1-2 sentences.`;
+    } else {
+      return `Review this inline code comment and determine if it's a valid, actionable code review suggestion.
 
-        execute(prompt, workingDir, { executionMode: 'bypassPermissions' });
-      }
+PR Number: #${prNumber}
+Comment Author: ${target.author}
+File: ${target.path}
+Comment:
+${target.body}
+
+Analyze if this inline comment:
+1. Points out a real issue or valid improvement
+2. Is actionable (can be addressed with code changes)
+3. Is clear and specific enough to act upon
+
+Respond with:
+- "VALID" if the comment is legitimate and actionable
+- "INVALID" if the comment is vague, incorrect, or not actionable
+
+Then briefly explain your reasoning in 1-2 sentences.`;
     }
-  }, [
-    wsStatus,
-    activeReviewId,
-    reviews,
-    validations,
-    prNumber,
-    workingDir,
-    execute,
-  ]);
+  };
+
+  const handleValidate = (target: ValidationTarget) => {
+    if (wsStatus !== 'connected') {
+      connect();
+    }
+    setActiveTarget(target);
+    setValidations((prev) => ({
+      ...prev,
+      [target.id]: { status: 'validating' },
+    }));
+    clearMessages();
+    pendingPromptRef.current = buildPrompt(target);
+    openPanel(
+      target.type === 'review'
+        ? `Validating: ${target.author}'s review`
+        : `Validating: ${target.author}'s comment on ${target.path}`
+    );
+  };
 
   useEffect(() => {
-    if (!activeReviewId) return;
+    if (wsStatus === 'connected' && activeTarget && pendingPromptRef.current) {
+      const prompt = pendingPromptRef.current;
+      pendingPromptRef.current = null;
+      execute(prompt, workingDir, { executionMode: 'bypassPermissions' });
+    }
+  }, [wsStatus, activeTarget, workingDir, execute]);
+
+  useEffect(() => {
+    if (!activeTarget) return;
 
     const isDone = messages.some((m) => m.type === 'done');
     if (isDone) {
@@ -128,14 +156,14 @@ Then briefly explain your reasoning in 1-2 sentences.`;
         !fullText.toUpperCase().startsWith('INVALID');
       setValidations((prev) => ({
         ...prev,
-        [activeReviewId]: {
+        [activeTarget.id]: {
           status: isValid ? 'valid' : 'invalid',
           result: fullText.trim(),
         },
       }));
-      setActiveReviewId(null);
+      setActiveTarget(null);
     }
-  }, [messages, activeReviewId]);
+  }, [messages, activeTarget]);
 
   const getValidationIcon = (status: ValidationStatus) => {
     switch (status) {
@@ -163,7 +191,7 @@ Then briefly explain your reasoning in 1-2 sentences.`;
       ) : (
         <div className="space-y-4">
           {reviews.map((review) => {
-            const validation = validations[review.id];
+            const reviewValidation = validations[review.id];
             return (
               <div
                 key={review.id}
@@ -179,69 +207,90 @@ Then briefly explain your reasoning in 1-2 sentences.`;
                     <span className="text-sm font-medium text-gray-700">
                       {review.author.login}
                     </span>
-                    {validation && getValidationIcon(validation.status)}
+                    {reviewValidation &&
+                      getValidationIcon(reviewValidation.status)}
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-gray-500">
                       {formatDateTime(review.submittedAt)}
                     </span>
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => handleValidate(review)}
-                      disabled={validation?.status === 'validating'}
-                    >
-                      {validation?.status === 'validating'
-                        ? 'Validating...'
-                        : 'Validate'}
-                    </Button>
+                    {review.body && (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() =>
+                          handleValidate({
+                            type: 'review',
+                            id: review.id,
+                            body: review.body,
+                            author: review.author.login,
+                          })
+                        }
+                        disabled={reviewValidation?.status === 'validating'}
+                      >
+                        {reviewValidation?.status === 'validating'
+                          ? 'Validating...'
+                          : 'Validate'}
+                      </Button>
+                    )}
                   </div>
                 </div>
-                {review.body && (
-                  <div className="prose prose-gray max-w-none">
-                    <Markdown>{review.body}</Markdown>
-                  </div>
-                )}
+                {review.body && <GFMMarkdown>{review.body}</GFMMarkdown>}
                 {review.inlineComments.length > 0 && (
                   <div className="mt-3 space-y-2">
-                    {review.inlineComments.map((comment) => (
-                      <div
-                        key={comment.id}
-                        className="rounded-lg border border-gray-200 bg-white text-sm"
-                      >
-                        <div className="flex items-center gap-2 border-b border-gray-100 px-3 py-2">
-                          <code className="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-700">
-                            {comment.path}
-                          </code>
-                          <span className="text-xs text-gray-500">
-                            {comment.author.login}
-                          </span>
+                    {review.inlineComments.map((comment) => {
+                      const commentValidation = validations[comment.id];
+                      return (
+                        <div
+                          key={comment.id}
+                          className="rounded-lg border border-gray-200 bg-white text-sm"
+                        >
+                          <div className="flex items-center justify-between border-b border-gray-100 px-3 py-2">
+                            <div className="flex items-center gap-2">
+                              <code className="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-700">
+                                {comment.path}
+                              </code>
+                              <span className="text-xs text-gray-500">
+                                {comment.author.login}
+                              </span>
+                              {commentValidation &&
+                                getValidationIcon(commentValidation.status)}
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() =>
+                                handleValidate({
+                                  type: 'comment',
+                                  id: comment.id,
+                                  body: comment.body,
+                                  author: comment.author.login,
+                                  path: comment.path,
+                                })
+                              }
+                              disabled={
+                                commentValidation?.status === 'validating'
+                              }
+                            >
+                              {commentValidation?.status === 'validating'
+                                ? 'Validating...'
+                                : 'Validate'}
+                            </Button>
+                          </div>
+                          {comment.diffHunk && (
+                            <DiffHunk
+                              diffHunk={comment.diffHunk}
+                              filePath={comment.path}
+                            />
+                          )}
+                          <div className="px-3 py-2">
+                            <GFMMarkdown className="prose-sm">
+                              {comment.body}
+                            </GFMMarkdown>
+                          </div>
                         </div>
-                        {comment.diffHunk && (
-                          <DiffHunk
-                            diffHunk={comment.diffHunk}
-                            filePath={comment.path}
-                          />
-                        )}
-                        <div className="prose prose-gray max-w-none px-3 py-2 text-sm">
-                          <Markdown>{comment.body}</Markdown>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {validation?.result && (
-                  <div
-                    className={`mt-3 rounded-lg p-3 text-sm ${
-                      validation.status === 'valid'
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-red-100 text-red-800'
-                    }`}
-                  >
-                    <strong>AI Analysis:</strong>
-                    <p className="mt-1 whitespace-pre-wrap">
-                      {validation.result}
-                    </p>
+                      );
+                    })}
                   </div>
                 )}
               </div>
