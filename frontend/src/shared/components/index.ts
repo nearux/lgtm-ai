@@ -6,3 +6,7 @@ export { Input } from './Input/Input';
 export { Badge } from './Badge/Badge';
 export { Spinner } from './Spinner/Spinner';
 export { Modal } from './Modal/Modal';
+export { Select } from './Select/Select';
+export { Tabs } from './Tabs/Tabs';
+export { Pagination } from './Pagination/Pagination';
+export { GFMMarkdown } from './GFMMarkdown';

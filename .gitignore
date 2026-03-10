@@ -3,6 +3,7 @@ node_modules/
 *.log
 .DS_Store
 .worktrees/
+.vscode
 
 # Prisma
 */generated/
@@ -11,3 +12,6 @@ backend/.env
 # TSOA auto-generated files
 backend/public/swagger.json
 backend/routes.ts
+
+
+.claude/worktrees/*
