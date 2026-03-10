@@ -26,7 +26,6 @@ function parseUUID(id: string): string {
 }
 import * as projectsService from '../services/projects.js';
 import * as pullRequestsService from '../services/pullRequests.js';
-import * as gitUtils from '../utils/git.js';
 import type {
   Project,
   ProjectDetail,
@@ -120,9 +119,11 @@ export class ProjectsController extends Controller {
    * @param page Page number (1-based)
    * @param limit Results per page (max 100)
    * @param state PR state filter: open, closed, or all (default: open)
+   * @param origin Git remote name to use (default: origin)
    */
   @Get('{projectId}/prs')
   @Response<ErrorResponse>(HttpStatus.BAD_REQUEST, 'Invalid remote URL')
+  @Response<ErrorResponse>(HttpStatus.BAD_REQUEST, 'Invalid remote name')
   @Response<ErrorResponse>(HttpStatus.NOT_FOUND, 'Project not found')
   @Response<ErrorResponse>(
     HttpStatus.UNPROCESSABLE_ENTITY,
@@ -136,18 +137,13 @@ export class ProjectsController extends Controller {
     @Path() projectId: string,
     @Query() page?: number,
     @Query() limit?: number,
-    @Query() state?: PRState
+    @Query() state?: PRState,
+    @Query() origin?: string
   ): Promise<PRListItem[]> {
-    const project = await projectsService.findById(parseUUID(projectId));
-
-    if (!project.gitInfo.remoteUrl) {
-      throw new AppError(
-        'Project does not have a configured Git remote',
-        HttpStatus.UNPROCESSABLE_ENTITY
-      );
-    }
-
-    const repoOwnerName = gitUtils.parseGitHubRepo(project.gitInfo.remoteUrl);
+    const repoOwnerName = await projectsService.resolveGitHubRepo(
+      parseUUID(projectId),
+      origin ?? 'origin'
+    );
     return pullRequestsService.fetchPRList(repoOwnerName, {
       page,
       limit,
@@ -159,9 +155,11 @@ export class ProjectsController extends Controller {
    * Get detailed information for a specific pull request
    * @param projectId Project UUID
    * @param prNumber Pull request number
+   * @param origin Git remote name to use (default: origin)
    */
   @Get('{projectId}/prs/{prNumber}')
   @Response<ErrorResponse>(HttpStatus.BAD_REQUEST, 'Invalid remote URL')
+  @Response<ErrorResponse>(HttpStatus.BAD_REQUEST, 'Invalid remote name')
   @Response<ErrorResponse>(
     HttpStatus.NOT_FOUND,
     'Project or pull request not found'
@@ -176,18 +174,13 @@ export class ProjectsController extends Controller {
   )
   public async getProjectPR(
     @Path() projectId: string,
-    @Path() prNumber: number
+    @Path() prNumber: number,
+    @Query() origin?: string
   ): Promise<PRDetail> {
-    const project = await projectsService.findById(parseUUID(projectId));
-
-    if (!project.gitInfo.remoteUrl) {
-      throw new AppError(
-        'Project does not have a configured Git remote',
-        HttpStatus.UNPROCESSABLE_ENTITY
-      );
-    }
-
-    const repoOwnerName = gitUtils.parseGitHubRepo(project.gitInfo.remoteUrl);
+    const repoOwnerName = await projectsService.resolveGitHubRepo(
+      parseUUID(projectId),
+      origin ?? 'origin'
+    );
     return pullRequestsService.fetchPRDetail(repoOwnerName, prNumber);
   }
 }

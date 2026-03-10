@@ -1,5 +1,12 @@
 export const prsQueryKey = {
-  all: (projectId: string) => ['projects', projectId, 'prs'] as const,
-  detail: (projectId: string, prNumber: number) =>
-    ['projects', projectId, 'prs', prNumber] as const,
+  all: (projectId: string, origin?: string) =>
+    ['projects', projectId, 'prs', ...(origin ? [origin] : [])] as const,
+  detail: (projectId: string, prNumber: number, origin?: string) =>
+    [
+      'projects',
+      projectId,
+      'prs',
+      prNumber,
+      ...(origin ? [origin] : []),
+    ] as const,
 };

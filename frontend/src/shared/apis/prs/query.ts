@@ -4,16 +4,23 @@ import { prsQueryKey } from './queryKey';
 import type { PRListItem, PRDetail } from '@lgtmai/backend/types';
 
 export const prsQuery = {
-  list: (projectId: string) =>
+  list: (projectId: string, origin?: string) =>
     queryOptions<PRListItem[]>({
-      queryKey: prsQueryKey.all(projectId),
-      queryFn: () => apiGet<PRListItem[]>(`/api/projects/${projectId}/prs`),
+      queryKey: prsQueryKey.all(projectId, origin),
+      queryFn: () => {
+        const params = origin ? `?origin=${encodeURIComponent(origin)}` : '';
+        return apiGet<PRListItem[]>(`/api/projects/${projectId}/prs${params}`);
+      },
     }),
 
-  detail: (projectId: string, prNumber: number) =>
+  detail: (projectId: string, prNumber: number, origin?: string) =>
     queryOptions<PRDetail>({
-      queryKey: prsQueryKey.detail(projectId, prNumber),
-      queryFn: () =>
-        apiGet<PRDetail>(`/api/projects/${projectId}/prs/${prNumber}`),
+      queryKey: prsQueryKey.detail(projectId, prNumber, origin),
+      queryFn: () => {
+        const params = origin ? `?origin=${encodeURIComponent(origin)}` : '';
+        return apiGet<PRDetail>(
+          `/api/projects/${projectId}/prs/${prNumber}${params}`
+        );
+      },
     }),
 };
