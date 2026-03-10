@@ -1,6 +1,6 @@
 import { useSuspenseQueries } from '@tanstack/react-query';
 import { projectsQuery, prsQuery } from '@/shared/apis';
-import { parseGitHubUrl, linkifyIssueReferences } from '@/shared/utils';
+import { parseGitHubUrl, linkifyGitHubReferences } from '@/shared/utils';
 import { PRHeader } from '../PRHeader/PRHeader';
 import { PRDescription } from '../PRDescription/PRDescription';
 import { ReviewList } from '../ReviewList/ReviewList';
@@ -28,7 +28,7 @@ export const PRDetailContent = ({ projectId, prNumber, origin }: Props) => {
     remote?.url ?? project.gitInfo.remoteUrl
   );
   const linkedBody = pr.body
-    ? linkifyIssueReferences(pr.body, githubBaseUrl)
+    ? linkifyGitHubReferences(pr.body, githubBaseUrl)
     : '';
 
   return (
@@ -39,6 +39,7 @@ export const PRDetailContent = ({ projectId, prNumber, origin }: Props) => {
         prNumber={prNumber}
         pr={pr}
         origin={origin}
+        githubBaseUrl={githubBaseUrl}
       />
 
       {linkedBody && <PRDescription body={linkedBody} />}
@@ -48,8 +49,12 @@ export const PRDetailContent = ({ projectId, prNumber, origin }: Props) => {
         workingDir={project.working_dir}
         prNumber={pr.number}
       />
-      <CommentList comments={pr.comments} />
-      <CommitList commits={pr.commits} />
+      <CommentList
+        comments={pr.comments}
+        workingDir={project.working_dir}
+        prNumber={pr.number}
+      />
+      <CommitList commits={pr.commits} githubBaseUrl={githubBaseUrl} />
     </>
   );
 };
