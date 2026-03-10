@@ -10,7 +10,7 @@ import {
   Search,
 } from 'lucide-react';
 import { fsQuery } from '@/shared/apis';
-import { Button, IconButton, Spinner } from '@/shared/components';
+import { Button, IconButton, Input, Spinner } from '@/shared/components';
 import { cn } from '@/shared/lib';
 import { parsePathSegments, buildPathFromSegments } from '@/shared/utils';
 import { createEntriesFuse, filterEntries } from './utils/filterEntries';
@@ -114,13 +114,12 @@ export const FolderBrowser = ({ initialPath, onSelect, onCancel }: Props) => {
       {/* Filter input */}
       <div className="flex items-center gap-2 border-b border-gray-200 px-3 py-2">
         <Search className="h-4 w-4 shrink-0 text-gray-400" />
-        <input
+        <Input
           type="text"
           aria-label="Filter folders"
           value={filterKeyword}
           onChange={(e) => setFilterKeyword(e.target.value)}
           placeholder="Filter folders..."
-          className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400"
         />
       </div>
 
