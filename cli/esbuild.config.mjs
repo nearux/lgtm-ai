@@ -7,4 +7,5 @@ await build({
   target: 'node18',
   format: 'cjs',
   outfile: 'dist/index.js',
+  minify: true,
 });

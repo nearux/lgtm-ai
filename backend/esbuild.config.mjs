@@ -10,6 +10,7 @@ await build({
   define: {
     'process.env.NODE_ENV': '"production"',
   },
+  minify: true,
   external: [
     // Prisma and libsql use native binaries and must remain external
     '@prisma/client',
@@ -17,6 +18,8 @@ await build({
     '@libsql/client',
     // tsoa is a build-time tool only
     'tsoa',
+    // swagger-ui-express is dev-only
+    'swagger-ui-express',
   ],
   banner: {
     js: [
