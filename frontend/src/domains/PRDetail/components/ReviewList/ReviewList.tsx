@@ -256,26 +256,6 @@ Then briefly explain your reasoning in 1-2 sentences.`;
                               {commentValidation &&
                                 getValidationIcon(commentValidation.status)}
                             </div>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() =>
-                                handleValidate({
-                                  type: 'comment',
-                                  id: comment.id,
-                                  body: comment.body,
-                                  author: comment.author.login,
-                                  path: comment.path,
-                                })
-                              }
-                              disabled={
-                                commentValidation?.status === 'validating'
-                              }
-                            >
-                              {commentValidation?.status === 'validating'
-                                ? 'Validating...'
-                                : 'Validate'}
-                            </Button>
                           </div>
                           {comment.diffHunk && (
                             <DiffHunk
