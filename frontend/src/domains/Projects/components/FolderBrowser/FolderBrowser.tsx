@@ -1,4 +1,4 @@
-import { useState, useTransition } from 'react';
+import { useMemo, useState, useTransition } from 'react';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import {
   Folder,
@@ -13,7 +13,7 @@ import { fsQuery } from '@/shared/apis';
 import { Button, IconButton, Spinner } from '@/shared/components';
 import { cn } from '@/shared/lib';
 import { parsePathSegments, buildPathFromSegments } from '@/shared/utils';
-import { filterEntries } from './utils/filterEntries';
+import { createEntriesFuse, filterEntries } from './utils/filterEntries';
 
 interface Props {
   initialPath?: string;
@@ -58,7 +58,15 @@ export const FolderBrowser = ({ initialPath, onSelect, onCancel }: Props) => {
   };
 
   const pathSegments = parsePathSegments(data.path);
-  const filteredEntries = filterEntries(data.entries, filterKeyword);
+  const entriesFuse = useMemo(
+    () => createEntriesFuse(data.entries),
+    [data.entries]
+  );
+  const filteredEntries = filterEntries(
+    data.entries,
+    filterKeyword,
+    entriesFuse
+  );
 
   return (
     <div className="flex h-80 flex-col rounded-lg border border-gray-200 bg-white">

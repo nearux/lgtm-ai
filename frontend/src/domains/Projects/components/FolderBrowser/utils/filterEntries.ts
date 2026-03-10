@@ -1,7 +1,8 @@
 import type { DirectoryEntry } from '@lgtmai/backend/types';
+import type { IFuseOptions } from 'fuse.js';
 import Fuse from 'fuse.js';
 
-const fuseOptions: Fuse.IFuseOptions<DirectoryEntry> = {
+const fuseOptions: IFuseOptions<DirectoryEntry> = {
   keys: ['name'],
   threshold: 0.4,
   ignoreLocation: true,
