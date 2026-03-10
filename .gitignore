@@ -13,4 +13,4 @@ backend/public/swagger.json
 backend/routes.ts
 
 
-.claude/worktrees/
+.claude/worktrees/*
