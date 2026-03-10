@@ -1,7 +1,7 @@
 import { spawn, ChildProcess } from 'node:child_process';
 import { join } from 'node:path';
 import open from 'open';
-import { FRONTEND_URL } from './utils/ports.js';
+import { PORT, FRONTEND_URL } from './utils/ports.js';
 
 async function waitForBackend(url: string, timeoutMs = 30000): Promise<void> {
   const start = Date.now();
@@ -24,7 +24,11 @@ export async function launchServers(): Promise<void> {
   const backendPath = join(__dirname, '../../backend/dist/index.js');
   const backend = spawn('node', [backendPath], {
     stdio: 'inherit',
-    env: { ...process.env, NODE_ENV: process.env.NODE_ENV ?? 'production' },
+    env: {
+      ...process.env,
+      NODE_ENV: process.env.NODE_ENV ?? 'production',
+      PORT: String(PORT),
+    },
   });
   processes.push(backend);
 

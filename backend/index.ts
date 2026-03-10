@@ -11,7 +11,7 @@ import { handleClaudeWebSocket } from './controllers/ClaudeWSController.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
-const PORT = 5051;
+const PORT = Number(process.env.PORT ?? 5051);
 
 app.use(cors());
 app.use(express.json());
