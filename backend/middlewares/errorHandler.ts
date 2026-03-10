@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { ValidateError } from 'tsoa';
+import { ValidateError } from '@tsoa/runtime';
 import { AppError } from '../errors/AppError.js';
 
 export function errorHandler(

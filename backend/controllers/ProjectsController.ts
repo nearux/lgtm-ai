@@ -11,7 +11,7 @@ import {
   Response,
   Tags,
   SuccessResponse,
-} from 'tsoa';
+} from '@tsoa/runtime';
 import { z } from 'zod';
 import HttpStatus from 'http-status';
 import { AppError } from '../errors/AppError.js';

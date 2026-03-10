@@ -9,11 +9,12 @@
   },
   "scripts": {
     "build": "pnpm --filter @lgtmai/cli build && pnpm --filter @lgtmai/backend build && pnpm --filter frontend build",
-    "dev": "concurrently --kill-others-on-fail \"pnpm --filter '@lgtmai/backend' run dev\" \"wait-on http://localhost:5051/health && pnpm --filter 'frontend' run dev\"",
+    "dev": "concurrently --kill-others-on-fail \"PORT=5051 pnpm --filter '@lgtmai/backend' run dev\" \"wait-on http://localhost:5051/health && pnpm --filter 'frontend' run dev\"",
     "start": "node bin/lgtmai.js",
     "test": "pnpm --filter '*' --if-present run test",
     "lint": "pnpm --filter '*' --if-present run lint",
     "lint:fix": "pnpm --filter '*' --if-present run lint:fix",
+    "postinstall": "prisma generate --schema=backend/prisma/schema.prisma",
     "prepublishOnly": "pnpm run build"
   },
   "keywords": [
@@ -31,8 +32,9 @@
     "url": "https://github.com/nearux/lgtm-ai"
   },
   "files": [
-    "cli/dist",
-    "backend/dist",
+    "cli/dist/index.js",
+    "backend/dist/index.js",
+    "backend/prisma/schema.prisma",
     "frontend/dist",
     "bin"
   ],
@@ -44,6 +46,12 @@
     "overrides": {
       "signal-exit": "3.0.7"
     }
+  },
+  "dependencies": {
+    "@libsql/client": "^0.17.0",
+    "@prisma/adapter-libsql": "^7.4.0",
+    "@prisma/client": "^7.4.0",
+    "prisma": "^7.4.0"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",

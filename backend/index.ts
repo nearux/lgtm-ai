@@ -3,6 +3,7 @@ import cors from 'cors';
 import { createServer } from 'node:http';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { existsSync } from 'node:fs';
 import { WebSocketServer } from 'ws';
 import { RegisterRoutes } from './routes.js';
 import { errorHandler } from './middlewares/errorHandler.js';
@@ -10,7 +11,7 @@ import { handleClaudeWebSocket } from './controllers/ClaudeWSController.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
-const PORT = 5051;
+const PORT = Number(process.env.PORT ?? 5051);
 
 app.use(cors());
 app.use(express.json());
@@ -35,6 +36,18 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 RegisterRoutes(app);
+
+// Serve frontend static files in production
+const frontendDist = join(__dirname, '../../frontend/dist');
+if (existsSync(frontendDist)) {
+  app.use(express.static(frontendDist));
+  // SPA fallback: serve index.html for non-API routes only
+  app.get(/^(?!\/api).*/, (_req, res) => {
+    res.sendFile(join(frontendDist, 'index.html'));
+  });
+} else if (process.env.NODE_ENV === 'production') {
+  console.warn('⚠️  frontend/dist not found — UI will not be served');
+}
 
 app.use(errorHandler);
 

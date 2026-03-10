@@ -38,3 +38,7 @@ The CLI requires these tools installed and authenticated:
 # Publishing
 
 `bin/lgtmai.js` wraps `cli/dist/index.js`. `prepublishOnly` builds all workspaces.
+
+# GitHub Write Actions Policy
+
+Never perform GitHub write actions (creating PRs/comments/issues, committing, pushing, etc.) unless explicitly instructed in the immediately preceding user message. Always ask first.
