@@ -11,3 +11,6 @@ backend/.env
 # TSOA auto-generated files
 backend/public/swagger.json
 backend/routes.ts
+
+
+.claude/worktrees/*

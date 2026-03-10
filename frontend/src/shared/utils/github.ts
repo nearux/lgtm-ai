@@ -42,3 +42,47 @@ export const linkifyIssueReferences = (
     `[#$1](${githubBaseUrl}/issues/$1)`
   );
 };
+
+/**
+ * Convert commit SHA references to GitHub links
+ * Matches 7-40 character hex strings that look like commit SHAs
+ */
+export const linkifyCommitReferences = (
+  text: string,
+  githubBaseUrl: string | null
+): string => {
+  if (!githubBaseUrl) return text;
+
+  // Match 7-40 char hex strings not inside URLs, links, or code blocks
+  // Negative lookbehind for common prefixes that indicate it's not a standalone SHA
+  return text.replace(
+    /(?<![[\w/`])([a-f0-9]{7,40})(?![a-f0-9\]`])/gi,
+    `[\`$1\`](${githubBaseUrl}/commit/$1)`
+  );
+};
+
+/**
+ * Convert @username mentions to GitHub profile links
+ */
+export const linkifyUserMentions = (text: string): string => {
+  // Match @username patterns (GitHub usernames: alphanumeric and hyphens)
+  // Negative lookbehind to avoid matching email addresses or already linked
+  return text.replace(
+    /(?<![[\w.])@([a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?)(?!\])/g,
+    '[@$1](https://github.com/$1)'
+  );
+};
+
+/**
+ * Apply all GitHub-style linkifications to text
+ */
+export const linkifyGitHubReferences = (
+  text: string,
+  githubBaseUrl: string | null
+): string => {
+  let result = text;
+  result = linkifyIssueReferences(result, githubBaseUrl);
+  result = linkifyCommitReferences(result, githubBaseUrl);
+  result = linkifyUserMentions(result);
+  return result;
+};

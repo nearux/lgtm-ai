@@ -1,11 +1,13 @@
+import { ExternalLink } from 'lucide-react';
 import { formatDate } from '@/shared/utils';
 import type { PRCommit } from '@lgtmai/backend/types';
 
 interface Props {
   commits: PRCommit[];
+  githubBaseUrl?: string | null;
 }
 
-export const CommitList = ({ commits }: Props) => {
+export const CommitList = ({ commits, githubBaseUrl }: Props) => {
   return (
     <section>
       <h2 className="mb-4 text-xl font-semibold text-gray-900">
@@ -23,9 +25,21 @@ export const CommitList = ({ commits }: Props) => {
               key={commit.oid}
               className={`flex items-center gap-4 p-4 ${index !== commits.length - 1 ? 'border-b border-gray-100' : ''}`}
             >
-              <code className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-600">
-                {commit.oid.slice(0, 7)}
-              </code>
+              {githubBaseUrl ? (
+                <a
+                  href={`${githubBaseUrl}/commit/${commit.oid}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 rounded bg-gray-100 px-2 py-1 text-xs text-gray-600 hover:bg-indigo-100 hover:text-indigo-700"
+                >
+                  {commit.oid.slice(0, 7)}
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              ) : (
+                <code className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-600">
+                  {commit.oid.slice(0, 7)}
+                </code>
+              )}
               <span className="flex-1 text-gray-900">
                 {commit.messageHeadline}
               </span>
