@@ -94,7 +94,7 @@ export const PRTable = ({
                 <td className="px-6 py-4">
                   <StatusBadge status={pr.state} />
                 </td>
-                <td className="px-6 py-4 text-sm text-gray-500">
+                <td className="flex min-w-max px-6 py-4 text-sm text-gray-500">
                   {formatDate(pr.createdAt)}
                 </td>
               </tr>
