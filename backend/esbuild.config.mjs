@@ -15,6 +15,8 @@ await build({
     '@prisma/client',
     '@prisma/adapter-libsql',
     '@libsql/client',
+    // tsoa is a build-time tool only
+    'tsoa',
   ],
   banner: {
     js: [
