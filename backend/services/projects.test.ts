@@ -1,85 +1,86 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Project } from '../types/projects.js';
+import { randomUUID } from 'node:crypto';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Prisma, PrismaClient } from '@prisma/client';
+import { clearDatabase, createTestDatabase } from '../test/prismaTestDb.js';
 
-const mockExistsSync = vi.hoisted(() => vi.fn());
-const mockExecFileAsync = vi.hoisted(() => vi.fn());
-const mockProjectRepository = vi.hoisted(() => ({
-  create: vi.fn(),
-  findAll: vi.fn(),
-  findById: vi.fn(),
-  updateById: vi.fn(),
-  deleteById: vi.fn(),
-}));
+const mockExistsSync = vi.fn();
+const mockExecFileAsync = vi.fn();
 
-vi.mock('node:fs', () => ({
-  existsSync: mockExistsSync,
-}));
+let prisma: PrismaClient;
+let cleanupDb: (() => Promise<void>) | null = null;
+let projectsService: typeof import('./projects.js');
 
-vi.mock('node:util', () => ({
-  promisify: () => mockExecFileAsync,
-}));
+async function seedProject(
+  overrides: Partial<Prisma.ProjectUncheckedCreateInput> = {}
+) {
+  const now = new Date();
 
-vi.mock('../repositories/projectRepository.js', () => ({
-  ...mockProjectRepository,
-}));
-
-const {
-  create,
-  findAll,
-  findById,
-  remove,
-  resolveGitHubRepo,
-  update,
-} = await import('./projects.js');
-
-describe('projects service', () => {
-  const now = new Date('2026-03-11T00:00:00.000Z');
-
-  const project: Project = {
-    id: 'project-1',
-    name: 'LGTM AI',
-    description: 'Code review helper',
-    working_dir: '/tmp/project',
-    created_at: now,
-    updated_at: now,
-  };
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.useFakeTimers();
-    vi.setSystemTime(now);
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
-  it('creates project with trimmed fields', async () => {
-    mockExistsSync.mockReturnValue(true);
-    mockProjectRepository.create.mockResolvedValue(project);
-
-    const result = await create({
-      name: '  LGTM AI  ',
-      description: '  Code review helper  ',
-      working_dir: '  /tmp/project  ',
-    });
-
-    expect(mockProjectRepository.create).toHaveBeenCalledWith({
-      id: expect.any(String),
+  return prisma.project.create({
+    data: {
+      id: randomUUID(),
       name: 'LGTM AI',
       description: 'Code review helper',
       working_dir: '/tmp/project',
       created_at: now,
       updated_at: now,
+      ...overrides,
+    },
+  });
+}
+
+beforeAll(async () => {
+  vi.resetModules();
+
+  const testDb = await createTestDatabase();
+  prisma = testDb.prisma;
+  cleanupDb = testDb.cleanup;
+
+  vi.doMock('../prismaClient.js', () => ({ default: prisma }));
+  vi.doMock('node:fs', () => ({ existsSync: mockExistsSync }));
+  vi.doMock('node:util', () => ({
+    promisify: () => mockExecFileAsync,
+  }));
+
+  projectsService = await import('./projects.js');
+});
+
+afterAll(async () => {
+  if (cleanupDb) {
+    await cleanupDb();
+  }
+});
+
+beforeEach(async () => {
+  vi.clearAllMocks();
+  await clearDatabase(prisma);
+});
+
+describe('projects service', () => {
+  it('creates project with trimmed fields and persists it in sqlite', async () => {
+    mockExistsSync.mockReturnValue(true);
+
+    const result = await projectsService.create({
+      name: '  LGTM AI  ',
+      description: '  Code review helper  ',
+      working_dir: '  /tmp/project  ',
     });
-    expect(result).toEqual(project);
+
+    const persisted = await prisma.project.findUnique({
+      where: { id: result.id },
+    });
+
+    expect(persisted).not.toBeNull();
+    expect(persisted?.name).toBe('LGTM AI');
+    expect(persisted?.description).toBe('Code review helper');
+    expect(persisted?.working_dir).toBe('/tmp/project');
+    expect(result.id).toBe(persisted?.id);
   });
 
   it('throws when creating project with non-existing working directory', async () => {
     mockExistsSync.mockReturnValue(false);
 
     await expect(
-      create({
+      projectsService.create({
         name: 'LGTM AI',
         description: 'desc',
         working_dir: '/tmp/missing',
@@ -90,17 +91,32 @@ describe('projects service', () => {
     });
   });
 
-  it('lists all projects', async () => {
-    mockProjectRepository.findAll.mockResolvedValue([project]);
+  it('lists all projects from sqlite ordered by created_at desc', async () => {
+    const older = new Date('2026-03-01T00:00:00.000Z');
+    const newer = new Date('2026-03-02T00:00:00.000Z');
 
-    const result = await findAll();
+    const first = await seedProject({
+      id: 'project-old',
+      created_at: older,
+      updated_at: older,
+    });
+    const second = await seedProject({
+      id: 'project-new',
+      created_at: newer,
+      updated_at: newer,
+    });
 
-    expect(mockProjectRepository.findAll).toHaveBeenCalledWith();
-    expect(result).toEqual([project]);
+    const result = await projectsService.findAll();
+
+    expect(result.map((project) => project.id)).toEqual([second.id, first.id]);
   });
 
   it('returns project detail with git info', async () => {
-    mockProjectRepository.findById.mockResolvedValue(project);
+    const project = await seedProject({
+      id: 'project-1',
+      working_dir: '/tmp/project',
+    });
+
     mockExecFileAsync
       .mockResolvedValueOnce({ stdout: 'git@github.com:owner/repo.git\n' })
       .mockResolvedValueOnce({
@@ -112,9 +128,8 @@ describe('projects service', () => {
         stdout: '* feature/my-branch\n  main\n',
       });
 
-    const result = await findById('project-1');
+    const result = await projectsService.findById(project.id);
 
-    expect(mockProjectRepository.findById).toHaveBeenCalledWith('project-1');
     expect(result).toEqual({
       ...project,
       gitInfo: {
@@ -130,62 +145,69 @@ describe('projects service', () => {
   });
 
   it('throws not found when project does not exist', async () => {
-    mockProjectRepository.findById.mockResolvedValue(null);
-
-    await expect(findById('project-1')).rejects.toMatchObject({
-      message: 'Project not found',
-      statusCode: 404,
-    });
+    await expect(projectsService.findById('missing-project')).rejects.toMatchObject(
+      {
+        message: 'Project not found',
+        statusCode: 404,
+      }
+    );
   });
 
-  it('updates project with trimmed fields', async () => {
-    mockProjectRepository.findById.mockResolvedValue(project);
-    mockExistsSync.mockReturnValue(true);
-    mockProjectRepository.updateById.mockResolvedValue({
-      ...project,
-      name: 'New Name',
-      description: null,
-      working_dir: '/tmp/next',
-      updated_at: now,
+  it('updates project with trimmed fields and persists changes in sqlite', async () => {
+    const project = await seedProject({
+      id: 'project-1',
+      description: 'Initial',
+      working_dir: '/tmp/project',
     });
+    mockExistsSync.mockReturnValue(true);
 
-    const result = await update('project-1', {
+    const result = await projectsService.update(project.id, {
       name: '  New Name  ',
       description: '   ',
       working_dir: '  /tmp/next  ',
     });
 
-    expect(mockProjectRepository.updateById).toHaveBeenCalledWith('project-1', {
-      name: 'New Name',
-      description: null,
-      working_dir: '/tmp/next',
-      updated_at: now,
+    const persisted = await prisma.project.findUnique({
+      where: { id: project.id },
     });
+
     expect(result.name).toBe('New Name');
+    expect(result.description).toBeNull();
+    expect(result.working_dir).toBe('/tmp/next');
+    expect(persisted?.name).toBe('New Name');
+    expect(persisted?.description).toBeNull();
+    expect(persisted?.working_dir).toBe('/tmp/next');
   });
 
   it('throws when updating to non-existing working directory', async () => {
-    mockProjectRepository.findById.mockResolvedValue(project);
+    const project = await seedProject({ id: 'project-1' });
     mockExistsSync.mockReturnValue(false);
 
     await expect(
-      update('project-1', { working_dir: '/tmp/missing' })
+      projectsService.update(project.id, { working_dir: '/tmp/missing' })
     ).rejects.toMatchObject({
       message: 'working_dir does not exist on the filesystem',
       statusCode: 422,
     });
   });
 
-  it('removes existing project', async () => {
-    mockProjectRepository.findById.mockResolvedValue(project);
+  it('removes existing project from sqlite', async () => {
+    const project = await seedProject({ id: 'project-1' });
 
-    await remove('project-1');
+    await projectsService.remove(project.id);
 
-    expect(mockProjectRepository.deleteById).toHaveBeenCalledWith('project-1');
+    const persisted = await prisma.project.findUnique({
+      where: { id: project.id },
+    });
+    expect(persisted).toBeNull();
   });
 
   it('resolves GitHub repository by remote name', async () => {
-    mockProjectRepository.findById.mockResolvedValue(project);
+    const project = await seedProject({
+      id: 'project-1',
+      working_dir: '/tmp/project',
+    });
+
     mockExecFileAsync
       .mockResolvedValueOnce({ stdout: 'git@github.com:owner/repo.git\n' })
       .mockResolvedValueOnce({
@@ -195,7 +217,7 @@ describe('projects service', () => {
       .mockResolvedValueOnce({ stdout: 'feature/my-branch\n' })
       .mockResolvedValueOnce({ stdout: '* feature/my-branch\n  main\n' });
 
-    const result = await resolveGitHubRepo('project-1', 'team');
+    const result = await projectsService.resolveGitHubRepo(project.id, 'team');
 
     expect(result).toBe('org/repo');
   });
