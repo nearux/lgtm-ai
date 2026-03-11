@@ -5,7 +5,7 @@ import type { ClaudeExecuteOptions } from '../../types/claude.js';
 import type { ClaudeChatContext } from '../../types/chatSessions.js';
 import {
   createChatSessionFromExecution,
-  touchChatSessionByClaudeSessionId,
+  markChatSessionAsUsed,
 } from '../chatSessions.js';
 
 export class ClaudeSessionManager {
@@ -46,7 +46,7 @@ export class ClaudeSessionManager {
     this.processes.set(requestId, proc);
 
     if (options.sessionId) {
-      void touchChatSessionByClaudeSessionId(options.sessionId).catch((error) => {
+      void markChatSessionAsUsed(options.sessionId).catch((error) => {
         console.error('[ClaudeSessionManager] Failed to touch chat session:', error);
       });
     }

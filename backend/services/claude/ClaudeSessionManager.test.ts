@@ -2,7 +2,7 @@ import { EventEmitter } from 'node:events';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockCreateChatSessionFromExecution = vi.hoisted(() => vi.fn());
-const mockTouchChatSessionByClaudeSessionId = vi.hoisted(() => vi.fn());
+const mockMarkChatSessionAsUsed = vi.hoisted(() => vi.fn());
 const processInstances = vi.hoisted(() => [] as MockClaudeProcess[]);
 
 class MockClaudeProcess extends EventEmitter {
@@ -28,7 +28,7 @@ vi.mock('./ClaudeProcess.js', () => ({
 
 vi.mock('../chatSessions.js', () => ({
   createChatSessionFromExecution: mockCreateChatSessionFromExecution,
-  touchChatSessionByClaudeSessionId: mockTouchChatSessionByClaudeSessionId,
+  markChatSessionAsUsed: mockMarkChatSessionAsUsed,
 }));
 
 const { ClaudeSessionManager } = await import('./ClaudeSessionManager.js');
@@ -43,7 +43,7 @@ describe('ClaudeSessionManager', () => {
     vi.clearAllMocks();
     processInstances.length = 0;
     mockCreateChatSessionFromExecution.mockResolvedValue(undefined);
-    mockTouchChatSessionByClaudeSessionId.mockResolvedValue(undefined);
+    mockMarkChatSessionAsUsed.mockResolvedValue(undefined);
   });
 
   it('persists a chat session when a new claude execution completes with session id', async () => {
@@ -85,9 +85,7 @@ describe('ClaudeSessionManager', () => {
       sessionId: 'claude-session-1',
     });
 
-    expect(mockTouchChatSessionByClaudeSessionId).toHaveBeenCalledWith(
-      'claude-session-1'
-    );
+    expect(mockMarkChatSessionAsUsed).toHaveBeenCalledWith('claude-session-1');
     expect(mockCreateChatSessionFromExecution).not.toHaveBeenCalled();
   });
 });

@@ -68,7 +68,7 @@ export async function touchChatSession(id: string): Promise<void> {
   });
 }
 
-export async function touchChatSessionByClaudeSessionId(
+export async function markChatSessionAsUsed(
   claudeSessionId: string
 ): Promise<void> {
   const now = new Date();
