@@ -88,4 +88,25 @@ describe('ClaudeSessionManager', () => {
     expect(mockMarkChatSessionAsUsed).toHaveBeenCalledWith('claude-session-1');
     expect(mockCreateChatSessionFromExecution).not.toHaveBeenCalled();
   });
+
+  it('forwards init events from the claude process to websocket', () => {
+    const manager = new ClaudeSessionManager(ws as never);
+
+    manager.execute('request-3', 'prompt', '/tmp/project', {
+      executionMode: 'default',
+    });
+
+    const proc = processInstances[0];
+    expect(proc).toBeDefined();
+
+    proc!.emit('init', 'claude-session-2');
+
+    expect(ws.send).toHaveBeenCalledWith(
+      JSON.stringify({
+        type: 'init',
+        requestId: 'request-3',
+        sessionId: 'claude-session-2',
+      })
+    );
+  });
 });

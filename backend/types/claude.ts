@@ -90,6 +90,12 @@ export interface WsDoneEvent {
   sessionId?: string;
 }
 
+export interface WsInitEvent {
+  type: 'init';
+  requestId: string;
+  sessionId: string;
+}
+
 export interface WsErrorEvent {
   type: 'error';
   requestId?: string;
@@ -119,6 +125,7 @@ export type WsServerMessage =
   | WsToolMessageEvent
   | WsToolResultEvent
   | WsStderrEvent
+  | WsInitEvent
   | WsDoneEvent
   | WsErrorEvent
   | WsApprovalRequestEvent

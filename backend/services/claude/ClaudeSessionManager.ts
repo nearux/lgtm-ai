@@ -47,7 +47,10 @@ export class ClaudeSessionManager {
 
     if (options.sessionId) {
       void markChatSessionAsUsed(options.sessionId).catch((error) => {
-        console.error('[ClaudeSessionManager] Failed to touch chat session:', error);
+        console.error(
+          '[ClaudeSessionManager] Failed to touch chat session:',
+          error
+        );
       });
     }
 
@@ -91,6 +94,9 @@ export class ClaudeSessionManager {
     proc.on('stderr', (chunk) =>
       sender.send({ type: 'stderr', requestId, chunk })
     );
+    proc.on('init', (sessionId) => {
+      sender.send({ type: 'init', requestId, sessionId });
+    });
     proc.on('done', (exitCode, result, sessionId) => {
       if (!options.sessionId && sessionId && chatContext) {
         void createChatSessionFromExecution(chatContext, sessionId).catch(
