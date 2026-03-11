@@ -49,15 +49,21 @@ describe('ClaudeSessionManager', () => {
   it('persists a chat session when a new claude execution initializes with session id', async () => {
     const manager = new ClaudeSessionManager(ws as never);
 
-    manager.execute('request-1', 'prompt', '/tmp/project', {
-      executionMode: 'default',
-    }, {
-      projectId: 'project-1',
-      prNumber: 45,
-      scopeType: 'REVIEW',
-      scopeTargetId: 'review-123',
-      title: 'Validate review',
-    });
+    manager.execute(
+      'request-1',
+      'prompt',
+      '/tmp/project',
+      {
+        executionMode: 'default',
+      },
+      {
+        projectId: 'project-1',
+        prNumber: 45,
+        scopeType: 'REVIEW',
+        scopeTargetId: 'review-123',
+        title: 'Validate review',
+      }
+    );
 
     const proc = processInstances[0];
     expect(proc).toBeDefined();

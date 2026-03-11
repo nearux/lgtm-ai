@@ -163,12 +163,12 @@ describe('chatSessions service', () => {
   it('throws not found when session does not belong to project/pr', async () => {
     mockPrisma.chatSession.findUnique.mockResolvedValue(null);
 
-    await expect(getChatSession('project-1', 45, 'session-1')).rejects.toMatchObject(
-      {
-        message: 'Chat session not found',
-        statusCode: 404,
-      }
-    );
+    await expect(
+      getChatSession('project-1', 45, 'session-1')
+    ).rejects.toMatchObject({
+      message: 'Chat session not found',
+      statusCode: 404,
+    });
   });
 
   it('returns chat session history using the project working directory', async () => {

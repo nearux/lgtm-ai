@@ -90,7 +90,11 @@ export async function getChatSession(
     where: { id: sessionId },
   });
 
-  if (!record || record.project_id !== projectId || record.pr_number !== prNumber) {
+  if (
+    !record ||
+    record.project_id !== projectId ||
+    record.pr_number !== prNumber
+  ) {
     throw new AppError('Chat session not found', HttpStatus.NOT_FOUND);
   }
 

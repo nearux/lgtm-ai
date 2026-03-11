@@ -105,7 +105,11 @@ describe('claudeSessionHistory', () => {
           message: {
             role: 'assistant',
             content: [
-              { type: 'tool_use', name: 'Read', input: { file_path: 'foo.ts' } },
+              {
+                type: 'tool_use',
+                name: 'Read',
+                input: { file_path: 'foo.ts' },
+              },
               { type: 'text', text: 'Done.' },
             ],
           },
@@ -122,7 +126,7 @@ describe('claudeSessionHistory', () => {
     expect(result.entries).toEqual([
       {
         role: 'assistant',
-        content: '[tool:Read] {\"file_path\":\"foo.ts\"}\nDone.',
+        content: '[tool:Read] {"file_path":"foo.ts"}\nDone.',
         timestamp: '2026-03-11T00:00:02.000Z',
       },
     ]);

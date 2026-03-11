@@ -231,7 +231,10 @@ export class ProjectsController extends Controller {
    * @param sessionId Saved chat session id
    */
   @Get('{projectId}/prs/{prNumber}/chat-sessions/{sessionId}/history')
-  @Response<ErrorResponse>(HttpStatus.NOT_FOUND, 'Project or chat session not found')
+  @Response<ErrorResponse>(
+    HttpStatus.NOT_FOUND,
+    'Project or chat session not found'
+  )
   public async getChatSessionHistory(
     @Path() projectId: string,
     @Path() prNumber: number,
