@@ -1,30 +1,16 @@
 import HttpStatus from 'http-status';
 import { randomUUID } from 'node:crypto';
-import type { ChatSession } from '@prisma/client';
 import prisma from '../prismaClient.js';
 import { AppError } from '../errors/AppError.js';
 import { getClaudeSessionHistory } from './claude/claudeSessionHistory.js';
+import { ChatSessionHistoryResponseDto } from '../dtos/chatSessionHistoryResponseDto.js';
+import { ChatSessionSummaryDto } from '../dtos/chatSessionSummaryDto.js';
 import type {
   ChatSessionHistoryResponse,
   ChatSessionSummary,
   ClaudeChatContext,
   ListChatSessionsFilters,
 } from '../types/chatSessions.js';
-
-function toSummary(record: ChatSession): ChatSessionSummary {
-  return {
-    id: record.id,
-    projectId: record.project_id,
-    prNumber: record.pr_number,
-    scopeType: record.scope_type,
-    scopeTargetId: record.scope_target_id,
-    claudeSessionId: record.claude_session_id,
-    ...(record.title ? { title: record.title } : {}),
-    createdAt: record.created_at.toISOString(),
-    updatedAt: record.updated_at.toISOString(),
-    lastUsedAt: record.last_used_at.toISOString(),
-  };
-}
 
 export async function createChatSessionFromExecution(
   context: ClaudeChatContext,
@@ -46,7 +32,7 @@ export async function createChatSessionFromExecution(
     },
   });
 
-  return toSummary(record);
+  return ChatSessionSummaryDto.fromModel(record);
 }
 
 export async function listChatSessions(
@@ -68,7 +54,7 @@ export async function listChatSessions(
     },
   });
 
-  return records.map(toSummary);
+  return records.map(ChatSessionSummaryDto.fromModel);
 }
 
 export async function touchChatSession(id: string): Promise<void> {
@@ -108,7 +94,7 @@ export async function getChatSession(
     throw new AppError('Chat session not found', HttpStatus.NOT_FOUND);
   }
 
-  return toSummary(record);
+  return ChatSessionSummaryDto.fromModel(record);
 }
 
 export async function getChatSessionHistory(
@@ -131,9 +117,9 @@ export async function getChatSessionHistory(
     project.working_dir
   );
 
-  return {
-    sessionId: session.id,
-    claudeSessionId: history.claudeSessionId,
-    entries: history.entries,
-  };
+  return ChatSessionHistoryResponseDto.of(
+    session.id,
+    history.claudeSessionId,
+    history.entries
+  );
 }
