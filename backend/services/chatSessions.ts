@@ -1,10 +1,11 @@
 import HttpStatus from 'http-status';
 import { randomUUID } from 'node:crypto';
-import prisma from '../prismaClient.js';
 import { AppError } from '../errors/AppError.js';
 import { getClaudeSessionHistory } from './claude/claudeSessionHistory.js';
 import { ChatSessionHistoryResponseDto } from '../dtos/chatSessionHistoryResponseDto.js';
 import { ChatSessionSummaryDto } from '../dtos/chatSessionSummaryDto.js';
+import * as chatSessionRepository from '../repositories/chatSessionRepository.js';
+import * as projectRepository from '../repositories/projectRepository.js';
 import type {
   ChatSessionHistoryResponse,
   ChatSessionSummary,
@@ -17,19 +18,17 @@ export async function createChatSessionFromExecution(
   claudeSessionId: string
 ): Promise<ChatSessionSummary> {
   const now = new Date();
-  const record = await prisma.chatSession.create({
-    data: {
-      id: randomUUID(),
-      project_id: context.projectId,
-      pr_number: context.prNumber,
-      scope_type: context.scopeType,
-      scope_target_id: context.scopeTargetId,
-      claude_session_id: claudeSessionId,
-      title: context.title ?? null,
-      created_at: now,
-      updated_at: now,
-      last_used_at: now,
-    },
+  const record = await chatSessionRepository.create({
+    id: randomUUID(),
+    project_id: context.projectId,
+    pr_number: context.prNumber,
+    scope_type: context.scopeType,
+    scope_target_id: context.scopeTargetId,
+    claude_session_id: claudeSessionId,
+    title: context.title ?? null,
+    created_at: now,
+    updated_at: now,
+    last_used_at: now,
   });
 
   return ChatSessionSummaryDto.fromModel(record);
@@ -40,45 +39,20 @@ export async function listChatSessions(
   prNumber: number,
   filters: ListChatSessionsFilters = {}
 ): Promise<ChatSessionSummary[]> {
-  const records = await prisma.chatSession.findMany({
-    where: {
-      project_id: projectId,
-      pr_number: prNumber,
-      ...(filters.scopeType ? { scope_type: filters.scopeType } : {}),
-      ...(filters.scopeTargetId
-        ? { scope_target_id: filters.scopeTargetId }
-        : {}),
-    },
-    orderBy: {
-      last_used_at: 'desc',
-    },
-  });
+  const records = await chatSessionRepository.findManyByProjectAndPr(
+    projectId,
+    prNumber,
+    filters
+  );
 
   return records.map(ChatSessionSummaryDto.fromModel);
-}
-
-export async function touchChatSession(id: string): Promise<void> {
-  const now = new Date();
-  await prisma.chatSession.update({
-    where: { id },
-    data: {
-      last_used_at: now,
-      updated_at: now,
-    },
-  });
 }
 
 export async function markChatSessionAsUsed(
   claudeSessionId: string
 ): Promise<void> {
   const now = new Date();
-  await prisma.chatSession.update({
-    where: { claude_session_id: claudeSessionId },
-    data: {
-      last_used_at: now,
-      updated_at: now,
-    },
-  });
+  await chatSessionRepository.markAsUsedByClaudeSessionId(claudeSessionId, now);
 }
 
 export async function getChatSession(
@@ -86,9 +60,7 @@ export async function getChatSession(
   prNumber: number,
   sessionId: string
 ): Promise<ChatSessionSummary> {
-  const record = await prisma.chatSession.findUnique({
-    where: { id: sessionId },
-  });
+  const record = await chatSessionRepository.findById(sessionId);
 
   if (
     !record ||
@@ -106,19 +78,17 @@ export async function getChatSessionHistory(
   prNumber: number,
   sessionId: string
 ): Promise<ChatSessionHistoryResponse> {
-  const project = await prisma.project.findUnique({
-    where: { id: projectId },
-    select: { id: true, working_dir: true },
-  });
+  const workingDirectory =
+    await projectRepository.findWorkingDirectoryById(projectId);
 
-  if (!project) {
+  if (!workingDirectory) {
     throw new AppError('Project not found', HttpStatus.NOT_FOUND);
   }
 
   const session = await getChatSession(projectId, prNumber, sessionId);
   const history = await getClaudeSessionHistory(
     session.claudeSessionId,
-    project.working_dir
+    workingDirectory
   );
 
   return ChatSessionHistoryResponseDto.of(
