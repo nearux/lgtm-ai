@@ -22,6 +22,8 @@ describe('pullRequests service', () => {
         number: 1,
         title: 'Test PR',
         body: 'Test body',
+        comments: 3,
+        review_comments: 5,
         assignees: [{ id: 1, login: 'user1', name: 'User One', type: 'User' }],
         user: { id: 2, login: 'author1', name: 'Author One', type: 'User' },
         created_at: '2024-01-01T00:00:00Z',
@@ -32,6 +34,8 @@ describe('pullRequests service', () => {
         number: 2,
         title: 'Another PR',
         body: null,
+        comments: 0,
+        review_comments: 2,
         assignees: [],
         user: { id: 3, login: 'author2', type: 'Bot' },
         created_at: '2024-01-03T00:00:00Z',
@@ -45,6 +49,8 @@ describe('pullRequests service', () => {
         number: 1,
         title: 'Test PR',
         body: 'Test body',
+        commentsCount: 3,
+        reviewCommentsCount: 5,
         assignees: [{ id: '1', login: 'user1', name: 'User One' }],
         author: { id: '2', login: 'author1', name: 'Author One' },
         createdAt: '2024-01-01T00:00:00Z',
@@ -55,6 +61,8 @@ describe('pullRequests service', () => {
         number: 2,
         title: 'Another PR',
         body: '',
+        commentsCount: 0,
+        reviewCommentsCount: 2,
         assignees: [],
         author: {
           id: '3',
@@ -81,6 +89,93 @@ describe('pullRequests service', () => {
         'api',
         'repos/owner/repo/pulls?per_page=100&page=1&state=open',
       ]);
+      expect(mockExecAsync).toHaveBeenCalledTimes(1);
+    });
+
+    it('should default counts to 0 when GitHub fields are missing', async () => {
+      const withoutCountFields = [
+        {
+          number: 3,
+          title: 'No counts PR',
+          body: 'Body',
+          assignees: [],
+          user: { id: 4, login: 'author3', name: 'Author Three', type: 'User' },
+          created_at: '2024-01-05T00:00:00Z',
+          updated_at: '2024-01-06T00:00:00Z',
+          state: 'open',
+        },
+      ];
+
+      mockExecAsync.mockResolvedValueOnce({
+        stdout: JSON.stringify(withoutCountFields),
+        stderr: '',
+      });
+      mockExecAsync.mockResolvedValueOnce({
+        stdout: JSON.stringify({ comments: 9, review_comments: 4 }),
+        stderr: '',
+      });
+
+      const result = await fetchPRList('owner/repo');
+
+      expect(result[0].commentsCount).toBe(9);
+      expect(result[0].reviewCommentsCount).toBe(4);
+    });
+
+    it('should default counts to 0 when GitHub fields are null', async () => {
+      const nullCountFields = [
+        {
+          number: 4,
+          title: 'Null counts PR',
+          body: 'Body',
+          comments: null,
+          review_comments: null,
+          assignees: [],
+          user: { id: 5, login: 'author4', name: 'Author Four', type: 'User' },
+          created_at: '2024-01-07T00:00:00Z',
+          updated_at: '2024-01-08T00:00:00Z',
+          state: 'open',
+        },
+      ];
+
+      mockExecAsync.mockResolvedValueOnce({
+        stdout: JSON.stringify(nullCountFields),
+        stderr: '',
+      });
+      mockExecAsync.mockResolvedValueOnce({
+        stdout: JSON.stringify({ comments: 6, review_comments: 2 }),
+        stderr: '',
+      });
+
+      const result = await fetchPRList('owner/repo');
+
+      expect(result[0].commentsCount).toBe(6);
+      expect(result[0].reviewCommentsCount).toBe(2);
+    });
+
+    it('should fallback to 0 when detail lookup for missing counts fails', async () => {
+      const withoutCountFields = [
+        {
+          number: 5,
+          title: 'Missing counts PR',
+          body: 'Body',
+          assignees: [],
+          user: { id: 6, login: 'author5', name: 'Author Five', type: 'User' },
+          created_at: '2024-01-09T00:00:00Z',
+          updated_at: '2024-01-10T00:00:00Z',
+          state: 'open',
+        },
+      ];
+
+      mockExecAsync.mockResolvedValueOnce({
+        stdout: JSON.stringify(withoutCountFields),
+        stderr: '',
+      });
+      mockExecAsync.mockRejectedValueOnce(new Error('detail lookup failed'));
+
+      const result = await fetchPRList('owner/repo');
+
+      expect(result[0].commentsCount).toBe(0);
+      expect(result[0].reviewCommentsCount).toBe(0);
     });
 
     it('should pass page and limit options', async () => {
@@ -190,6 +285,8 @@ describe('pullRequests service', () => {
       number: 1,
       title: 'Test PR',
       body: 'Test body',
+      commentsCount: 1,
+      reviewCommentsCount: 0,
       assignees: [{ id: '1', login: 'user1', name: 'User One' }],
       author: { id: '2', login: 'author1', name: 'Author One' },
       createdAt: '2024-01-01T00:00:00Z',

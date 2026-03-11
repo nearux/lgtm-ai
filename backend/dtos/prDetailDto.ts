@@ -12,6 +12,8 @@ export class PRDetailDto implements PRDetail {
   number: number;
   title: string;
   body: string;
+  commentsCount: number;
+  reviewCommentsCount: number;
   assignees: PRDetail['assignees'];
   author: PRDetail['author'];
   createdAt: string;
@@ -25,6 +27,8 @@ export class PRDetailDto implements PRDetail {
     this.number = data.number;
     this.title = data.title;
     this.body = data.body;
+    this.commentsCount = data.commentsCount;
+    this.reviewCommentsCount = data.reviewCommentsCount;
     this.assignees = data.assignees;
     this.author = data.author;
     this.createdAt = data.createdAt;
@@ -39,10 +43,18 @@ export class PRDetailDto implements PRDetail {
     raw: GhPRDetail,
     inlineCommentsByReview: Map<string, GhReviewInlineComment[]>
   ): PRDetailDto {
+    const reviewCommentsCount = raw.reviews.reduce(
+      (total, review) =>
+        total + (inlineCommentsByReview.get(review.id)?.length ?? 0),
+      0
+    );
+
     return new PRDetailDto({
       number: raw.number,
       title: raw.title,
       body: isString(raw.body) ? raw.body : '',
+      commentsCount: raw.comments.length,
+      reviewCommentsCount,
       assignees: raw.assignees.map((a) => ({
         id: a.id ?? a.login,
         login: a.login,
