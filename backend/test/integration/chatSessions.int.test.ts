@@ -10,13 +10,13 @@ import {
   vi,
 } from 'vitest';
 import type { Prisma, PrismaClient } from '@prisma/client';
-import { clearDatabase, createTestDatabase } from '../test/prismaTestDb.js';
+import { clearDatabase, createTestDatabase } from '../prismaTestDb.js';
 
 const mockGetClaudeSessionHistory = vi.fn();
 
 let prisma: PrismaClient;
 let cleanupDb: (() => Promise<void>) | null = null;
-let createApp: typeof import('../app.js').createApp;
+let createApp: typeof import('../../app.js').createApp;
 let server: Server | null = null;
 let baseUrl = '';
 
@@ -65,12 +65,12 @@ beforeAll(async () => {
   prisma = testDb.prisma;
   cleanupDb = testDb.cleanup;
 
-  vi.doMock('../prismaClient.js', () => ({ default: prisma }));
-  vi.doMock('../services/claude/claudeSessionHistory.js', () => ({
+  vi.doMock('../../prismaClient.js', () => ({ default: prisma }));
+  vi.doMock('../../services/claude/claudeSessionHistory.js', () => ({
     getClaudeSessionHistory: mockGetClaudeSessionHistory,
   }));
 
-  ({ createApp } = await import('../app.js'));
+  ({ createApp } = await import('../../app.js'));
   const app = await createApp({ enableSwagger: false });
   server = createServer(app);
 
