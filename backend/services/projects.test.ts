@@ -1,5 +1,13 @@
 import { randomUUID } from 'node:crypto';
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { clearDatabase, createTestDatabase } from '../test/prismaTestDb.js';
 
@@ -145,12 +153,12 @@ describe('projects service', () => {
   });
 
   it('throws not found when project does not exist', async () => {
-    await expect(projectsService.findById('missing-project')).rejects.toMatchObject(
-      {
-        message: 'Project not found',
-        statusCode: 404,
-      }
-    );
+    await expect(
+      projectsService.findById('missing-project')
+    ).rejects.toMatchObject({
+      message: 'Project not found',
+      statusCode: 404,
+    });
   });
 
   it('updates project with trimmed fields and persists changes in sqlite', async () => {
