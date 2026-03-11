@@ -1,5 +1,6 @@
 import HttpStatus from 'http-status';
 import { randomUUID } from 'node:crypto';
+import type { ChatSession } from '@prisma/client';
 import prisma from '../prismaClient.js';
 import { AppError } from '../errors/AppError.js';
 import { getClaudeSessionHistory } from './claude/claudeSessionHistory.js';
@@ -10,20 +11,7 @@ import type {
   ListChatSessionsFilters,
 } from '../types/chatSessions.js';
 
-type ChatSessionRecord = {
-  id: string;
-  project_id: string;
-  pr_number: number;
-  scope_type: 'REVIEW' | 'COMMENT';
-  scope_target_id: string;
-  claude_session_id: string;
-  title: string | null;
-  created_at: Date;
-  updated_at: Date;
-  last_used_at: Date;
-};
-
-function toSummary(record: ChatSessionRecord): ChatSessionSummary {
+function toSummary(record: ChatSession): ChatSessionSummary {
   return {
     id: record.id,
     projectId: record.project_id,
@@ -43,7 +31,7 @@ export async function createChatSessionFromExecution(
   claudeSessionId: string
 ): Promise<ChatSessionSummary> {
   const now = new Date();
-  const record = (await prisma.chatSession.create({
+  const record = await prisma.chatSession.create({
     data: {
       id: randomUUID(),
       project_id: context.projectId,
@@ -56,7 +44,7 @@ export async function createChatSessionFromExecution(
       updated_at: now,
       last_used_at: now,
     },
-  })) as ChatSessionRecord;
+  });
 
   return toSummary(record);
 }
@@ -66,7 +54,7 @@ export async function listChatSessions(
   prNumber: number,
   filters: ListChatSessionsFilters = {}
 ): Promise<ChatSessionSummary[]> {
-  const records = (await prisma.chatSession.findMany({
+  const records = await prisma.chatSession.findMany({
     where: {
       project_id: projectId,
       pr_number: prNumber,
@@ -78,7 +66,7 @@ export async function listChatSessions(
     orderBy: {
       last_used_at: 'desc',
     },
-  })) as ChatSessionRecord[];
+  });
 
   return records.map(toSummary);
 }
@@ -112,9 +100,9 @@ export async function getChatSession(
   prNumber: number,
   sessionId: string
 ): Promise<ChatSessionSummary> {
-  const record = (await prisma.chatSession.findUnique({
+  const record = await prisma.chatSession.findUnique({
     where: { id: sessionId },
-  })) as ChatSessionRecord | null;
+  });
 
   if (!record || record.project_id !== projectId || record.pr_number !== prNumber) {
     throw new AppError('Chat session not found', HttpStatus.NOT_FOUND);
