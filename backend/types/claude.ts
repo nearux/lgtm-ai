@@ -1,3 +1,5 @@
+import type { ClaudeChatContext } from './chatSessions.js';
+
 // ── Client → Server ──────────────────────────────────────────────────
 
 export type ClaudeExecutionMode =
@@ -18,6 +20,7 @@ export interface WsExecuteMessage {
   prompt: string;
   workingDir: string;
   options?: ClaudeExecuteOptions;
+  chatContext?: ClaudeChatContext;
 }
 
 export interface WsAbortMessage {

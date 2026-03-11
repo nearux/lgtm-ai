@@ -2,6 +2,11 @@ import type WebSocket from 'ws';
 import { ClaudeProcess } from './ClaudeProcess.js';
 import { WebSocketSender } from './WebSocketSender.js';
 import type { ClaudeExecuteOptions } from '../../types/claude.js';
+import type { ClaudeChatContext } from '../../types/chatSessions.js';
+import {
+  createChatSessionFromExecution,
+  touchChatSessionByClaudeSessionId,
+} from '../chatSessions.js';
 
 export class ClaudeSessionManager {
   private processes = new Map<string, ClaudeProcess>();
@@ -15,7 +20,8 @@ export class ClaudeSessionManager {
     requestId: string,
     prompt: string,
     workingDir: string,
-    options: ClaudeExecuteOptions = {}
+    options: ClaudeExecuteOptions = {},
+    chatContext?: ClaudeChatContext
   ): void {
     const { sender } = this;
     if (this.processes.has(requestId)) {
@@ -38,6 +44,13 @@ export class ClaudeSessionManager {
 
     const proc = new ClaudeProcess(workingDir, options);
     this.processes.set(requestId, proc);
+
+    if (options.sessionId) {
+      void touchChatSessionByClaudeSessionId(options.sessionId).catch((error) => {
+        console.error('[ClaudeSessionManager] Failed to touch chat session:', error);
+      });
+    }
+
     proc.sendInitialize(requestId, options.executionMode);
     proc.sendPermissionMode(options.executionMode ?? 'default');
     proc.sendPrompt(prompt);
@@ -79,6 +92,16 @@ export class ClaudeSessionManager {
       sender.send({ type: 'stderr', requestId, chunk })
     );
     proc.on('done', (exitCode, result, sessionId) => {
+      if (!options.sessionId && sessionId && chatContext) {
+        void createChatSessionFromExecution(chatContext, sessionId).catch(
+          (error) => {
+            console.error(
+              '[ClaudeSessionManager] Failed to persist chat session:',
+              error
+            );
+          }
+        );
+      }
       sender.send({ type: 'done', requestId, exitCode, result, sessionId });
       this.processes.delete(requestId);
     });
