@@ -48,15 +48,11 @@ export class ClaudeSessionManager {
     if (options.sessionId) {
       void markChatSessionAsUsed(options.sessionId).catch((error) => {
         console.error(
-          '[ClaudeSessionManager] Failed to touch chat session:',
+          '[ClaudeSessionManager] Failed to mark chat session as used:',
           error
         );
       });
     }
-
-    proc.sendInitialize(requestId, options.executionMode);
-    proc.sendPermissionMode(options.executionMode ?? 'default');
-    proc.sendPrompt(prompt);
 
     proc.on('text', (chunk) => sender.send({ type: 'text', requestId, chunk }));
     proc.on('tool_message', (toolId, toolName, input) =>
@@ -95,10 +91,7 @@ export class ClaudeSessionManager {
       sender.send({ type: 'stderr', requestId, chunk })
     );
     proc.on('init', (sessionId) => {
-      sender.send({ type: 'init', requestId, sessionId });
-    });
-    proc.on('done', (exitCode, result, sessionId) => {
-      if (!options.sessionId && sessionId && chatContext) {
+      if (!options.sessionId && chatContext) {
         void createChatSessionFromExecution(chatContext, sessionId).catch(
           (error) => {
             console.error(
@@ -108,6 +101,9 @@ export class ClaudeSessionManager {
           }
         );
       }
+      sender.send({ type: 'init', requestId, sessionId });
+    });
+    proc.on('done', (exitCode, result, sessionId) => {
       sender.send({ type: 'done', requestId, exitCode, result, sessionId });
       this.processes.delete(requestId);
     });
@@ -115,6 +111,10 @@ export class ClaudeSessionManager {
       sender.send({ type: 'error', requestId, message });
       this.processes.delete(requestId);
     });
+
+    proc.sendInitialize(requestId, options.executionMode);
+    proc.sendPermissionMode(options.executionMode ?? 'default');
+    proc.sendPrompt(prompt);
   }
 
   respondToToolApproval(

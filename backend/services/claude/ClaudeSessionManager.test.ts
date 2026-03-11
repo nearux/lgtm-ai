@@ -46,7 +46,7 @@ describe('ClaudeSessionManager', () => {
     mockMarkChatSessionAsUsed.mockResolvedValue(undefined);
   });
 
-  it('persists a chat session when a new claude execution completes with session id', async () => {
+  it('persists a chat session when a new claude execution initializes with session id', async () => {
     const manager = new ClaudeSessionManager(ws as never);
 
     manager.execute('request-1', 'prompt', '/tmp/project', {
@@ -62,7 +62,7 @@ describe('ClaudeSessionManager', () => {
     const proc = processInstances[0];
     expect(proc).toBeDefined();
 
-    proc!.emit('done', 0, 'ok', 'claude-session-1');
+    proc!.emit('init', 'claude-session-1');
     await Promise.resolve();
 
     expect(mockCreateChatSessionFromExecution).toHaveBeenCalledWith(
@@ -75,6 +75,32 @@ describe('ClaudeSessionManager', () => {
       },
       'claude-session-1'
     );
+  });
+
+  it('does not persist a new chat session on done without init', async () => {
+    const manager = new ClaudeSessionManager(ws as never);
+
+    manager.execute(
+      'request-4',
+      'prompt',
+      '/tmp/project',
+      { executionMode: 'default' },
+      {
+        projectId: 'project-1',
+        prNumber: 45,
+        scopeType: 'REVIEW',
+        scopeTargetId: 'review-456',
+        title: 'Done should not persist',
+      }
+    );
+
+    const proc = processInstances[0];
+    expect(proc).toBeDefined();
+
+    proc!.emit('done', 0, 'ok', 'claude-session-2');
+    await Promise.resolve();
+
+    expect(mockCreateChatSessionFromExecution).not.toHaveBeenCalled();
   });
 
   it('touches an existing chat session when resuming with a claude session id', () => {
