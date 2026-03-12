@@ -161,3 +161,14 @@ export interface PRDetail extends PRListItem {
   reviews: PRReview[];
   commits: PRCommit[];
 }
+
+export interface CheckoutPRBranchBody {
+  force?: boolean;
+}
+
+export interface CheckoutPRBranchResult {
+  success: boolean;
+  message: string;
+  targetBranch: string;
+  stashed: boolean;
+}

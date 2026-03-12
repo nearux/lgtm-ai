@@ -9,7 +9,9 @@ vi.mock('util', () => ({
 }));
 
 // Import after mocks are set up
-const { fetchPRList, fetchPRDetail } = await import('./pullRequests.js');
+const { fetchPRList, fetchPRDetail, checkoutPRBranch } = await import(
+  './pullRequests.js'
+);
 
 describe('pullRequests service', () => {
   beforeEach(() => {
@@ -439,6 +441,194 @@ describe('pullRequests service', () => {
       expect(result.reviews[0].inlineComments[0].author.login).toBe(
         'reviewer1'
       );
+    });
+  });
+
+  describe('checkoutPRBranch', () => {
+    it('should checkout PR branch when working tree is clean', async () => {
+      mockExecAsync
+        .mockResolvedValueOnce({
+          stdout: JSON.stringify({ headRefName: 'feature/awesome-change' }),
+          stderr: '',
+        })
+        .mockResolvedValueOnce({ stdout: '', stderr: '' })
+        .mockResolvedValueOnce({ stdout: '', stderr: '' });
+
+      const result = await checkoutPRBranch('owner/repo', 23, '/repo', {
+        force: false,
+      });
+
+      expect(result).toEqual({
+        success: true,
+        message: 'Checked out PR branch successfully',
+        targetBranch: 'feature/awesome-change',
+        stashed: false,
+      });
+      expect(mockExecAsync).toHaveBeenNthCalledWith(
+        1,
+        'gh',
+        ['pr', 'view', '23', '--repo', 'owner/repo', '--json', 'headRefName'],
+        { cwd: '/repo' }
+      );
+      expect(mockExecAsync).toHaveBeenNthCalledWith(
+        2,
+        'git',
+        ['status', '--porcelain', '--untracked-files=normal'],
+        { cwd: '/repo' }
+      );
+      expect(mockExecAsync).toHaveBeenNthCalledWith(
+        3,
+        'git',
+        ['checkout', 'feature/awesome-change'],
+        { cwd: '/repo' }
+      );
+    });
+
+    it('should throw CONFLICT when working tree is dirty and force is false', async () => {
+      mockExecAsync
+        .mockResolvedValueOnce({
+          stdout: JSON.stringify({ headRefName: 'feature/awesome-change' }),
+          stderr: '',
+        })
+        .mockResolvedValueOnce({ stdout: ' M backend/services/pullRequests.ts', stderr: '' });
+
+      await expect(
+        checkoutPRBranch('owner/repo', 23, '/repo', { force: false })
+      ).rejects.toMatchObject({
+        message:
+          'Cannot checkout PR branch because local changes exist. Retry with force=true to auto-stash.',
+        statusCode: 409,
+      });
+
+      expect(mockExecAsync).not.toHaveBeenCalledWith(
+        'git',
+        ['checkout', 'feature/awesome-change'],
+        { cwd: '/repo' }
+      );
+    });
+
+    it('should stash including untracked files when force is true', async () => {
+      mockExecAsync
+        .mockResolvedValueOnce({
+          stdout: JSON.stringify({ headRefName: 'feature/awesome-change' }),
+          stderr: '',
+        })
+        .mockResolvedValueOnce({
+          stdout: ' M backend/services/pullRequests.ts\n?? new-file.txt',
+          stderr: '',
+        })
+        .mockResolvedValueOnce({ stdout: 'Saved working directory...', stderr: '' })
+        .mockResolvedValueOnce({ stdout: '', stderr: '' });
+
+      const result = await checkoutPRBranch('owner/repo', 23, '/repo', {
+        force: true,
+      });
+
+      expect(result).toEqual({
+        success: true,
+        message: 'Checked out PR branch successfully',
+        targetBranch: 'feature/awesome-change',
+        stashed: true,
+      });
+      expect(mockExecAsync).toHaveBeenNthCalledWith(
+        3,
+        'git',
+        [
+          'stash',
+          'push',
+          '--include-untracked',
+          '-m',
+          'lgtmai: auto-stash before PR #23 checkout',
+        ],
+        { cwd: '/repo' }
+      );
+      expect(mockExecAsync).toHaveBeenNthCalledWith(
+        4,
+        'git',
+        ['checkout', 'feature/awesome-change'],
+        { cwd: '/repo' }
+      );
+    });
+
+    it('should throw NOT_FOUND when PR does not exist', async () => {
+      mockExecAsync.mockRejectedValue(
+        new Error('could not resolve to a PullRequest')
+      );
+
+      await expect(
+        checkoutPRBranch('owner/repo', 999, '/repo', { force: false })
+      ).rejects.toMatchObject({
+        message: 'Pull request not found',
+        statusCode: 404,
+      });
+    });
+
+    it('should throw SERVICE_UNAVAILABLE for gh authentication failure', async () => {
+      mockExecAsync.mockRejectedValue(
+        new Error('authentication required: gh auth login')
+      );
+
+      await expect(
+        checkoutPRBranch('owner/repo', 23, '/repo', { force: false })
+      ).rejects.toMatchObject({
+        message: 'GitHub CLI is not available or authenticated',
+        statusCode: 503,
+      });
+    });
+
+    it('should fallback to remote-tracking checkout when local branch checkout fails', async () => {
+      mockExecAsync
+        .mockResolvedValueOnce({
+          stdout: JSON.stringify({ headRefName: 'feature/awesome-change' }),
+          stderr: '',
+        })
+        .mockResolvedValueOnce({ stdout: '', stderr: '' })
+        .mockRejectedValueOnce(new Error('pathspec did not match any file(s) known to git'))
+        .mockResolvedValueOnce({ stdout: '', stderr: '' })
+        .mockResolvedValueOnce({ stdout: '', stderr: '' });
+
+      const result = await checkoutPRBranch('owner/repo', 23, '/repo', {
+        force: false,
+      });
+
+      expect(result.success).toBe(true);
+      expect(mockExecAsync).toHaveBeenNthCalledWith(
+        4,
+        'git',
+        ['fetch', '--all', '--prune'],
+        { cwd: '/repo' }
+      );
+      expect(mockExecAsync).toHaveBeenNthCalledWith(
+        5,
+        'git',
+        [
+          'checkout',
+          '-b',
+          'feature/awesome-change',
+          '--track',
+          'origin/feature/awesome-change',
+        ],
+        { cwd: '/repo' }
+      );
+    });
+
+    it('should throw INTERNAL_SERVER_ERROR when checkout and fallback both fail', async () => {
+      mockExecAsync
+        .mockResolvedValueOnce({
+          stdout: JSON.stringify({ headRefName: 'feature/awesome-change' }),
+          stderr: '',
+        })
+        .mockResolvedValueOnce({ stdout: '', stderr: '' })
+        .mockRejectedValueOnce(new Error('pathspec did not match any file(s) known to git'))
+        .mockResolvedValueOnce({ stdout: '', stderr: '' })
+        .mockRejectedValueOnce(new Error('fatal: cannot set up tracking information'));
+
+      await expect(
+        checkoutPRBranch('owner/repo', 23, '/repo', { force: false })
+      ).rejects.toMatchObject({
+        message: 'Failed to checkout PR branch',
+        statusCode: 500,
+      });
     });
   });
 });

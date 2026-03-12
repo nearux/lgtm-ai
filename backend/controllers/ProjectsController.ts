@@ -33,7 +33,13 @@ import type {
   UpdateProjectBody,
   ErrorResponse,
 } from '../types/projects.js';
-import type { PRListItem, PRDetail, PRState } from '../types/pullRequests.js';
+import type {
+  PRListItem,
+  PRDetail,
+  PRState,
+  CheckoutPRBranchBody,
+  CheckoutPRBranchResult,
+} from '../types/pullRequests.js';
 
 export type {
   Project,
@@ -43,6 +49,7 @@ export type {
   ErrorResponse,
   PRListItem,
   PRDetail,
+  CheckoutPRBranchResult,
 };
 
 @Route('api/projects')
@@ -182,5 +189,45 @@ export class ProjectsController extends Controller {
       origin ?? 'origin'
     );
     return pullRequestsService.fetchPRDetail(repoOwnerName, prNumber);
+  }
+
+  /**
+   * Checkout the branch associated with a pull request
+   * @param projectId Project UUID
+   * @param prNumber Pull request number
+   * @param body Checkout options (`force` stashes local changes including untracked files)
+   * @param origin Git remote name to use (default: origin)
+   */
+  @Post('{projectId}/prs/{prNumber}/checkout')
+  @Response<ErrorResponse>(HttpStatus.BAD_REQUEST, 'Invalid remote URL')
+  @Response<ErrorResponse>(HttpStatus.BAD_REQUEST, 'Invalid remote name')
+  @Response<ErrorResponse>(HttpStatus.NOT_FOUND, 'Project or pull request not found')
+  @Response<ErrorResponse>(
+    HttpStatus.UNPROCESSABLE_ENTITY,
+    'Project does not have a configured Git remote'
+  )
+  @Response<ErrorResponse>(
+    HttpStatus.SERVICE_UNAVAILABLE,
+    'GitHub CLI unavailable'
+  )
+  @Response<ErrorResponse>(HttpStatus.CONFLICT, 'Local changes exist')
+  public async checkoutProjectPRBranch(
+    @Path() projectId: string,
+    @Path() prNumber: number,
+    @Body() body?: CheckoutPRBranchBody,
+    @Query() origin?: string
+  ): Promise<CheckoutPRBranchResult> {
+    const normalizedProjectId = parseUUID(projectId);
+    const project = await projectsService.findById(normalizedProjectId);
+    const repoOwnerName = await projectsService.resolveGitHubRepo(
+      normalizedProjectId,
+      origin ?? 'origin'
+    );
+    return pullRequestsService.checkoutPRBranch(
+      repoOwnerName,
+      prNumber,
+      project.working_dir,
+      body ?? {}
+    );
   }
 }
