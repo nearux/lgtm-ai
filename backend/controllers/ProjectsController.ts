@@ -195,8 +195,7 @@ export class ProjectsController extends Controller {
    * Checkout the branch associated with a pull request
    * @param projectId Project UUID
    * @param prNumber Pull request number
-   * @param body Checkout options (`force` stashes local changes including untracked files)
-   * @param origin Git remote name to use (default: origin)
+   * @param body Checkout options (`force` stashes local changes including untracked files, `origin` selects git remote name)
    */
   @Post('{projectId}/prs/{prNumber}/checkout')
   @Response<ErrorResponse>(HttpStatus.BAD_REQUEST, 'Invalid remote URL')
@@ -214,20 +213,19 @@ export class ProjectsController extends Controller {
   public async checkoutProjectPRBranch(
     @Path() projectId: string,
     @Path() prNumber: number,
-    @Body() body?: CheckoutPRBranchBody,
-    @Query() origin?: string
+    @Body() body?: CheckoutPRBranchBody
   ): Promise<CheckoutPRBranchResult> {
     const normalizedProjectId = parseUUID(projectId);
     const project = await projectsService.findById(normalizedProjectId);
     const repoOwnerName = await projectsService.resolveGitHubRepo(
       normalizedProjectId,
-      origin ?? 'origin'
+      body?.origin ?? 'origin'
     );
     return pullRequestsService.checkoutPRBranch(
       repoOwnerName,
       prNumber,
       project.working_dir,
-      body ?? {}
+      { force: body?.force }
     );
   }
 }

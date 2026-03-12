@@ -164,6 +164,7 @@ export interface PRDetail extends PRListItem {
 
 export interface CheckoutPRBranchBody {
   force?: boolean;
+  origin?: string;
 }
 
 export interface CheckoutPRBranchResult {
