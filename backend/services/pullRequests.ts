@@ -245,7 +245,7 @@ export async function checkoutPRBranch(
 
   try {
     await execFileAsync('git', ['checkout', targetBranch], { cwd: workingDir });
-  } catch (firstCheckoutError) {
+  } catch (initialCheckoutError) {
     try {
       await execFileAsync('git', ['fetch', '--all', '--prune'], {
         cwd: workingDir,
@@ -259,7 +259,7 @@ export async function checkoutPRBranch(
       throw new AppError(
         'Failed to checkout PR branch',
         HttpStatus.INTERNAL_SERVER_ERROR,
-        fallbackError
+        { initialCheckoutError, fallbackError }
       );
     }
   }

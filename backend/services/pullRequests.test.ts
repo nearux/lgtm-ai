@@ -613,21 +613,32 @@ describe('pullRequests service', () => {
     });
 
     it('should throw INTERNAL_SERVER_ERROR when checkout and fallback both fail', async () => {
+      const initialCheckoutError = new Error(
+        'pathspec did not match any file(s) known to git'
+      );
+      const fallbackError = new Error(
+        'fatal: cannot set up tracking information'
+      );
+
       mockExecAsync
         .mockResolvedValueOnce({
           stdout: JSON.stringify({ headRefName: 'feature/awesome-change' }),
           stderr: '',
         })
         .mockResolvedValueOnce({ stdout: '', stderr: '' })
-        .mockRejectedValueOnce(new Error('pathspec did not match any file(s) known to git'))
+        .mockRejectedValueOnce(initialCheckoutError)
         .mockResolvedValueOnce({ stdout: '', stderr: '' })
-        .mockRejectedValueOnce(new Error('fatal: cannot set up tracking information'));
+        .mockRejectedValueOnce(fallbackError);
 
       await expect(
         checkoutPRBranch('owner/repo', 23, '/repo', { force: false })
       ).rejects.toMatchObject({
         message: 'Failed to checkout PR branch',
         statusCode: 500,
+        cause: {
+          initialCheckoutError,
+          fallbackError,
+        },
       });
     });
   });
