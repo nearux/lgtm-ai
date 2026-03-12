@@ -8,10 +8,13 @@ import { WebSocketServer } from 'ws';
 import { RegisterRoutes } from './routes.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 import { handleClaudeWebSocket } from './controllers/ClaudeWSController.js';
+import { runStartupMigrations } from './startup/runMigrations.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = Number(process.env.PORT ?? 5051);
+
+await runStartupMigrations();
 
 app.use(cors());
 app.use(express.json());

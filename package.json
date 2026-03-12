@@ -34,7 +34,9 @@
   "files": [
     "cli/dist/index.js",
     "backend/dist/index.js",
+    "backend/prisma.config.ts",
     "backend/prisma/schema.prisma",
+    "backend/prisma/migrations",
     "frontend/dist",
     "bin"
   ],

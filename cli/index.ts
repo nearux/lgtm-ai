@@ -58,7 +58,7 @@ export async function main(): Promise<void> {
   }
   console.log('✅ Claude Code CLI: OK');
 
-  console.log('\n✨ All checks passed!\n');
+  console.log('\n✨ Prerequisite tool checks passed (gh/claude).\n');
 
   await launchServers();
 }
