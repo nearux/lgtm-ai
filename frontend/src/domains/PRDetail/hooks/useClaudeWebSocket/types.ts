@@ -21,7 +21,7 @@ export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
 
 export interface ClaudeMessage {
   id: string;
-  type: 'text' | 'tool' | 'tool_result' | 'error' | 'stderr' | 'done';
+  type: 'text' | 'tool' | 'tool_result' | 'error' | 'stderr' | 'done' | 'user';
   content: string;
   toolName?: string;
   toolId?: string;
