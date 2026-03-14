@@ -35,6 +35,11 @@ const PRDetailPageContent = () => {
         messages={state.messages}
         status={state.status}
         title={state.title}
+        sessionId={state.sessionId}
+        onSendFollowUp={state.onSendFollowUp}
+        mode={state.mode}
+        targetContext={state.targetContext}
+        onExecuteAction={state.onExecuteAction}
       />
     </div>
   );
