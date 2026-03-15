@@ -2,8 +2,12 @@ import { createServer } from 'node:http';
 import { WebSocketServer } from 'ws';
 import { handleClaudeWebSocket } from './controllers/ClaudeWSController.js';
 import { createApp } from './app.js';
+import { runStartupMigrations } from './startup/runMigrations.js';
 
 const PORT = Number(process.env.PORT ?? 5051);
+
+await runStartupMigrations();
+
 const app = await createApp();
 const httpServer = createServer(app);
 
