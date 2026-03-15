@@ -12,13 +12,18 @@ afterEach(async () => {
   );
 });
 
-async function createExecutableJs(filePath: string, script: string): Promise<void> {
+async function createExecutableJs(
+  filePath: string,
+  script: string
+): Promise<void> {
   await writeFile(filePath, script, { mode: 0o755 });
 }
 
 describe('runStartupMigrations (integration)', () => {
   it('invokes prisma cli via real child_process execution', async () => {
-    const tempDir = await mkdtemp(path.join(os.tmpdir(), 'lgtmai-runmigrations-'));
+    const tempDir = await mkdtemp(
+      path.join(os.tmpdir(), 'lgtmai-runmigrations-')
+    );
     tempDirs.push(tempDir);
 
     const backendRoot = path.join(tempDir, 'backend');
@@ -50,7 +55,9 @@ describe('runStartupMigrations (integration)', () => {
   });
 
   it('wraps errors from child_process execution', async () => {
-    const tempDir = await mkdtemp(path.join(os.tmpdir(), 'lgtmai-runmigrations-'));
+    const tempDir = await mkdtemp(
+      path.join(os.tmpdir(), 'lgtmai-runmigrations-')
+    );
     tempDirs.push(tempDir);
 
     const backendRoot = path.join(tempDir, 'backend');

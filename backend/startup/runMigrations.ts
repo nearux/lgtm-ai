@@ -28,7 +28,10 @@ function resolveBackendRoot(explicitRoot?: string): string {
   return join(dirname(fileURLToPath(import.meta.url)), '..');
 }
 
-function resolvePrismaCliPath(backendRoot: string, explicitPath?: string): string {
+function resolvePrismaCliPath(
+  backendRoot: string,
+  explicitPath?: string
+): string {
   if (explicitPath) return explicitPath;
   const prismaPackageJson = require.resolve('prisma/package.json', {
     paths: [backendRoot],
@@ -45,8 +48,12 @@ export async function runStartupMigrations(
 
   const schemaPath =
     options.schemaPath ?? join(backendRoot, 'prisma', 'schema.prisma');
-  const configPath = options.configPath ?? join(backendRoot, 'prisma.config.ts');
-  const prismaCliPath = resolvePrismaCliPath(backendRoot, options.prismaCliPath);
+  const configPath =
+    options.configPath ?? join(backendRoot, 'prisma.config.ts');
+  const prismaCliPath = resolvePrismaCliPath(
+    backendRoot,
+    options.prismaCliPath
+  );
   const execAsync = options.execFileAsync ?? execFileAsyncDefault;
 
   const args = [
@@ -59,6 +66,7 @@ export async function runStartupMigrations(
     configPath,
   ];
 
+  console.log('🔄 Applying database migrations...');
   try {
     await execAsync(process.execPath, args, {
       cwd: backendRoot,
