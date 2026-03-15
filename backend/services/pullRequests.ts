@@ -7,6 +7,7 @@ import type {
   PRListItem,
   PRDetail,
   PRState,
+  CheckoutPRBranchResult,
   GitHubPullRequest,
   GhPRDetail,
   GhReviewInlineComment,
@@ -49,6 +50,10 @@ function normalizePRState(state: string | undefined): PRState {
   return 'open';
 }
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 /**
  * Fetch PR list using GitHub API via gh
  */
@@ -70,7 +75,7 @@ export async function fetchPRList(
   try {
     ({ stdout } = await execFileAsync('gh', ['api', apiPath]));
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage = getErrorMessage(error);
     if (errorMessage.toLowerCase().includes('authentication')) {
       throw new AppError(
         'GitHub CLI is not available or authenticated',
@@ -113,7 +118,7 @@ export async function fetchPRDetail(
       'number,title,body,assignees,author,createdAt,updatedAt,state,comments,reviews,commits',
     ]));
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage = getErrorMessage(error);
 
     if (errorMessage.toLowerCase().includes('could not resolve')) {
       throw new AppError('Pull request not found', HttpStatus.NOT_FOUND, error);
@@ -141,6 +146,130 @@ export async function fetchPRDetail(
     raw.reviews.map((r) => r.id)
   );
   return PRDetailDto.fromGh(raw, inlineCommentsByReview);
+}
+
+export async function checkoutPRBranch(
+  repoOwnerName: string,
+  prNumber: number,
+  workingDir: string,
+  options: { force?: boolean } = {}
+): Promise<CheckoutPRBranchResult> {
+  validateRepoOwnerName(repoOwnerName);
+
+  const force = options.force === true;
+  let targetBranch = '';
+
+  try {
+    const { stdout } = await execFileAsync(
+      'gh',
+      [
+        'pr',
+        'view',
+        String(prNumber),
+        '--repo',
+        repoOwnerName,
+        '--json',
+        'headRefName',
+      ],
+      { cwd: workingDir }
+    );
+    const parsed = JSON.parse(stdout) as { headRefName?: string };
+    targetBranch = parsed.headRefName?.trim() ?? '';
+  } catch (error) {
+    const errorMessage = getErrorMessage(error).toLowerCase();
+
+    if (errorMessage.includes('could not resolve')) {
+      throw new AppError('Pull request not found', HttpStatus.NOT_FOUND, error);
+    }
+
+    if (errorMessage.includes('authentication')) {
+      throw new AppError(
+        'GitHub CLI is not available or authenticated',
+        HttpStatus.SERVICE_UNAVAILABLE,
+        error
+      );
+    }
+
+    throw new AppError(
+      'Failed to resolve PR branch from GitHub',
+      HttpStatus.INTERNAL_SERVER_ERROR,
+      error
+    );
+  }
+
+  if (!targetBranch) {
+    throw new AppError(
+      'Failed to resolve PR branch from GitHub',
+      HttpStatus.INTERNAL_SERVER_ERROR
+    );
+  }
+
+  const { stdout: gitStatusStdout } = await execFileAsync(
+    'git',
+    ['status', '--porcelain', '--untracked-files=normal'],
+    { cwd: workingDir }
+  );
+
+  const isDirty = gitStatusStdout.trim().length > 0;
+  let stashed = false;
+
+  if (isDirty && !force) {
+    throw new AppError(
+      'Cannot checkout PR branch because local changes exist. Retry with force=true to auto-stash.',
+      HttpStatus.CONFLICT
+    );
+  }
+
+  if (isDirty && force) {
+    try {
+      await execFileAsync(
+        'git',
+        [
+          'stash',
+          'push',
+          '--include-untracked',
+          '-m',
+          `lgtmai: auto-stash before PR #${prNumber} checkout`,
+        ],
+        { cwd: workingDir }
+      );
+      stashed = true;
+    } catch (error) {
+      throw new AppError(
+        'Failed to stash local changes before checkout',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        error
+      );
+    }
+  }
+
+  try {
+    await execFileAsync('git', ['checkout', targetBranch], { cwd: workingDir });
+  } catch (initialCheckoutError) {
+    try {
+      await execFileAsync('git', ['fetch', '--all', '--prune'], {
+        cwd: workingDir,
+      });
+      await execFileAsync(
+        'git',
+        ['checkout', '-b', targetBranch, '--track', `origin/${targetBranch}`],
+        { cwd: workingDir }
+      );
+    } catch (fallbackError) {
+      throw new AppError(
+        'Failed to checkout PR branch',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        { initialCheckoutError, fallbackError }
+      );
+    }
+  }
+
+  return {
+    success: true,
+    message: 'Checked out PR branch successfully',
+    targetBranch,
+    stashed,
+  };
 }
 
 async function fetchReviewInlineComments(
