@@ -26,6 +26,7 @@ function parseUUID(id: string): string {
 }
 import * as projectsService from '../services/projects.js';
 import * as pullRequestsService from '../services/pullRequests.js';
+import * as chatSessionsService from '../services/chatSessions.js';
 import type {
   Project,
   ProjectDetail,
@@ -40,6 +41,11 @@ import type {
   CheckoutPRBranchBody,
   CheckoutPRBranchResult,
 } from '../types/pullRequests.js';
+import type {
+  ChatSessionHistoryResponse,
+  ChatSessionScopeType,
+  ChatSessionSummary,
+} from '../types/chatSessions.js';
 
 export type {
   Project,
@@ -49,6 +55,8 @@ export type {
   ErrorResponse,
   PRListItem,
   PRDetail,
+  ChatSessionSummary,
+  ChatSessionHistoryResponse,
   CheckoutPRBranchResult,
 };
 
@@ -192,6 +200,61 @@ export class ProjectsController extends Controller {
   }
 
   /**
+   * Get saved chat sessions for a specific pull request
+   * @param projectId Project UUID
+   * @param prNumber Pull request number
+   * @param scopeType Optional chat target type filter
+   * @param scopeTargetId Optional chat target id filter
+   */
+  @Get('{projectId}/prs/{prNumber}/chat-sessions')
+  @Response<ErrorResponse>(HttpStatus.BAD_REQUEST, 'Invalid request')
+  @Response<ErrorResponse>(HttpStatus.NOT_FOUND, 'Project not found')
+  public async listChatSessions(
+    @Path() projectId: string,
+    @Path() prNumber: number,
+    @Query() scopeType?: ChatSessionScopeType,
+    @Query() scopeTargetId?: string
+  ): Promise<ChatSessionSummary[]> {
+    const parsedProjectId = parseUUID(projectId);
+    await projectsService.findById(parsedProjectId);
+
+    if ((scopeType && !scopeTargetId) || (!scopeType && scopeTargetId)) {
+      throw new AppError(
+        'scopeType and scopeTargetId must be provided together',
+        HttpStatus.BAD_REQUEST
+      );
+    }
+
+    return chatSessionsService.listChatSessions(parsedProjectId, prNumber, {
+      scopeType,
+      scopeTargetId,
+    });
+  }
+
+  /**
+   * Get saved chat history for a specific pull request session
+   * @param projectId Project UUID
+   * @param prNumber Pull request number
+   * @param sessionId Saved chat session id
+   */
+  @Get('{projectId}/prs/{prNumber}/chat-sessions/{sessionId}/history')
+  @Response<ErrorResponse>(
+    HttpStatus.NOT_FOUND,
+    'Project or chat session not found'
+  )
+  public async getChatSessionHistory(
+    @Path() projectId: string,
+    @Path() prNumber: number,
+    @Path() sessionId: string
+  ): Promise<ChatSessionHistoryResponse> {
+    return chatSessionsService.getChatSessionHistory(
+      parseUUID(projectId),
+      prNumber,
+      sessionId
+    );
+  }
+
+  /**
    * Checkout the branch associated with a pull request
    * @param projectId Project UUID
    * @param prNumber Pull request number
@@ -200,7 +263,10 @@ export class ProjectsController extends Controller {
   @Post('{projectId}/prs/{prNumber}/checkout')
   @Response<ErrorResponse>(HttpStatus.BAD_REQUEST, 'Invalid remote URL')
   @Response<ErrorResponse>(HttpStatus.BAD_REQUEST, 'Invalid remote name')
-  @Response<ErrorResponse>(HttpStatus.NOT_FOUND, 'Project or pull request not found')
+  @Response<ErrorResponse>(
+    HttpStatus.NOT_FOUND,
+    'Project or pull request not found'
+  )
   @Response<ErrorResponse>(
     HttpStatus.UNPROCESSABLE_ENTITY,
     'Project does not have a configured Git remote'

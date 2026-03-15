@@ -9,9 +9,8 @@ vi.mock('util', () => ({
 }));
 
 // Import after mocks are set up
-const { fetchPRList, fetchPRDetail, checkoutPRBranch } = await import(
-  './pullRequests.js'
-);
+const { fetchPRList, fetchPRDetail, checkoutPRBranch } =
+  await import('./pullRequests.js');
 
 describe('pullRequests service', () => {
   beforeEach(() => {
@@ -490,7 +489,10 @@ describe('pullRequests service', () => {
           stdout: JSON.stringify({ headRefName: 'feature/awesome-change' }),
           stderr: '',
         })
-        .mockResolvedValueOnce({ stdout: ' M backend/services/pullRequests.ts', stderr: '' });
+        .mockResolvedValueOnce({
+          stdout: ' M backend/services/pullRequests.ts',
+          stderr: '',
+        });
 
       await expect(
         checkoutPRBranch('owner/repo', 23, '/repo', { force: false })
@@ -517,7 +519,10 @@ describe('pullRequests service', () => {
           stdout: ' M backend/services/pullRequests.ts\n?? new-file.txt',
           stderr: '',
         })
-        .mockResolvedValueOnce({ stdout: 'Saved working directory...', stderr: '' })
+        .mockResolvedValueOnce({
+          stdout: 'Saved working directory...',
+          stderr: '',
+        })
         .mockResolvedValueOnce({ stdout: '', stderr: '' });
 
       const result = await checkoutPRBranch('owner/repo', 23, '/repo', {
@@ -583,7 +588,9 @@ describe('pullRequests service', () => {
           stderr: '',
         })
         .mockResolvedValueOnce({ stdout: '', stderr: '' })
-        .mockRejectedValueOnce(new Error('pathspec did not match any file(s) known to git'))
+        .mockRejectedValueOnce(
+          new Error('pathspec did not match any file(s) known to git')
+        )
         .mockResolvedValueOnce({ stdout: '', stderr: '' })
         .mockResolvedValueOnce({ stdout: '', stderr: '' });
 

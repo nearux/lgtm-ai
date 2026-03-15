@@ -22,8 +22,8 @@ export function handleClaudeWebSocket(ws: WebSocket): void {
     }
 
     if (msg.type === 'execute') {
-      const { requestId, prompt, workingDir, options } = msg;
-      manager.execute(requestId, prompt, workingDir, options);
+      const { requestId, prompt, workingDir, options, chatContext } = msg;
+      manager.execute(requestId, prompt, workingDir, options, chatContext);
       return;
     }
 
