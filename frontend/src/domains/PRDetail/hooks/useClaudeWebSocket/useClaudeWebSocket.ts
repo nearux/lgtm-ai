@@ -13,6 +13,7 @@ export interface UseClaudeWebSocketReturn {
   status: ConnectionStatus;
   messages: ClaudeMessage[];
   pendingApproval: ApprovalRequest | null;
+  sessionId: string | null;
   connect: () => void;
   disconnect: () => void;
   execute: (
@@ -34,6 +35,7 @@ export interface UseClaudeWebSocketReturn {
     message?: string
   ) => void;
   clearMessages: () => void;
+  addUserMessage: (content: string) => void;
 }
 
 export function useClaudeWebSocket(): UseClaudeWebSocketReturn {
@@ -41,6 +43,7 @@ export function useClaudeWebSocket(): UseClaudeWebSocketReturn {
   const [messages, setMessages] = useState<ClaudeMessage[]>([]);
   const [pendingApproval, setPendingApproval] =
     useState<ApprovalRequest | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
 
   const addMessage = (msg: Omit<ClaudeMessage, 'id' | 'timestamp'>) => {
@@ -84,6 +87,9 @@ export function useClaudeWebSocket(): UseClaudeWebSocketReturn {
         addMessage({ type: 'error', content: data.message });
         break;
       case 'done':
+        if (data.sessionId) {
+          setSessionId(data.sessionId);
+        }
         addMessage({
           type: 'done',
           content: '',
@@ -154,6 +160,10 @@ export function useClaudeWebSocket(): UseClaudeWebSocketReturn {
     options?: ClaudeExecuteOptions
   ): string => {
     const requestId = crypto.randomUUID();
+    // Add user message to chat when it's a follow-up (has sessionId)
+    if (options?.sessionId) {
+      addMessage({ type: 'user', content: prompt });
+    }
     send({
       type: 'execute',
       requestId,
@@ -204,10 +214,15 @@ export function useClaudeWebSocket(): UseClaudeWebSocketReturn {
     setMessages([]);
   };
 
+  const addUserMessage = (content: string) => {
+    addMessage({ type: 'user', content });
+  };
+
   return {
     status,
     messages,
     pendingApproval,
+    sessionId,
     connect,
     disconnect,
     execute,
@@ -215,5 +230,6 @@ export function useClaudeWebSocket(): UseClaudeWebSocketReturn {
     respondToApproval,
     respondToPlanApproval,
     clearMessages,
+    addUserMessage,
   };
 }

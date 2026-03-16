@@ -7,9 +7,15 @@ import {
   Check,
   XCircle,
   Loader2,
+  Send,
 } from 'lucide-react';
 import { IconButton, Spinner, GFMMarkdown } from '@/shared/components';
 import type { ClaudeMessage, ConnectionStatus } from '../../hooks';
+import type {
+  ChatPanelMode,
+  TargetContext,
+} from '../../contexts/ChatPanelContext';
+import { ActionSelector } from './ActionSelector';
 
 interface Props {
   isOpen: boolean;
@@ -17,10 +23,16 @@ interface Props {
   messages: ClaudeMessage[];
   status: ConnectionStatus;
   title?: string;
+  sessionId?: string | null;
+  onSendFollowUp?: ((message: string) => void) | null;
+  mode?: ChatPanelMode;
+  targetContext?: TargetContext | null;
+  onExecuteAction?: ((actionId: string, customPrompt?: string) => void) | null;
 }
 
 type GroupedItem =
   | { kind: 'text'; id: string; content: string }
+  | { kind: 'user'; id: string; content: string }
   | {
       kind: 'tool';
       id: string;
@@ -49,6 +61,9 @@ const groupMessages = (messages: ClaudeMessage[]): GroupedItem[] => {
     if (msg.type === 'text') {
       if (!textId) textId = msg.id;
       textBuffer += msg.content;
+    } else if (msg.type === 'user') {
+      flushText();
+      result.push({ kind: 'user', id: msg.id, content: msg.content });
     } else if (msg.type === 'tool' && msg.toolId) {
       flushText();
       const toolItem: GroupedItem & { kind: 'tool' } = {
@@ -86,9 +101,29 @@ export const ChatPanel = ({
   messages,
   status,
   title = 'Claude',
+  sessionId,
+  onSendFollowUp,
+  mode = 'action-selection',
+  targetContext,
+  onExecuteAction,
 }: Props) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [expandedTools, setExpandedTools] = useState<Set<string>>(new Set());
+  const [followUpInput, setFollowUpInput] = useState('');
+
+  const lastMessage = messages[messages.length - 1];
+  const isWaitingForResponse =
+    status === 'connected' && lastMessage?.type === 'user';
+
+  const showActionSelector =
+    mode === 'action-selection' && messages.length === 0 && onExecuteAction;
+
+  const handleSubmitFollowUp = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!followUpInput.trim() || !onSendFollowUp) return;
+    onSendFollowUp(followUpInput.trim());
+    setFollowUpInput('');
+  };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -115,27 +150,34 @@ export const ChatPanel = ({
       <div className="flex shrink-0 items-center justify-between border-b border-gray-200 bg-white px-4 py-3">
         <div className="flex items-center gap-3">
           <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
-          <span
-            className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-              status === 'connected'
-                ? 'bg-green-100 text-green-700'
-                : status === 'connecting'
-                  ? 'bg-yellow-100 text-yellow-700'
-                  : 'bg-gray-100 text-gray-600'
-            }`}
-          >
-            {status}
-          </span>
+          {!showActionSelector && (
+            <span
+              className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                status === 'connected'
+                  ? 'bg-green-100 text-green-700'
+                  : status === 'connecting'
+                    ? 'bg-yellow-100 text-yellow-700'
+                    : 'bg-gray-100 text-gray-600'
+              }`}
+            >
+              {status}
+            </span>
+          )}
         </div>
         <IconButton onClick={onClose} aria-label="Close panel">
           <X className="h-5 w-5" />
         </IconButton>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4">
-        {grouped.length === 0 ? (
-          <div className="flex h-full items-center justify-center">
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto">
+        {showActionSelector ? (
+          <ActionSelector
+            targetContext={targetContext ?? null}
+            onSelect={onExecuteAction}
+          />
+        ) : grouped.length === 0 ? (
+          <div className="flex h-full items-center justify-center p-4">
             {status === 'connecting' ? (
               <div className="flex flex-col items-center gap-2">
                 <Spinner size="lg" />
@@ -146,21 +188,36 @@ export const ChatPanel = ({
             )}
           </div>
         ) : (
-          <div className="space-y-3">
-            {grouped.map((item) =>
-              item.kind === 'text' ? (
-                <div
-                  key={item.id}
-                  className="rounded-lg border border-gray-200 bg-white p-3"
-                >
-                  <GFMMarkdown className="prose-sm">{item.content}</GFMMarkdown>
-                </div>
-              ) : (
+          <div className="space-y-3 p-4">
+            {grouped.map((item) => {
+              if (item.kind === 'text') {
+                return (
+                  <div
+                    key={item.id}
+                    className="rounded-lg border border-gray-200 bg-white p-3"
+                  >
+                    <GFMMarkdown className="prose-sm">
+                      {item.content}
+                    </GFMMarkdown>
+                  </div>
+                );
+              }
+              if (item.kind === 'user') {
+                return (
+                  <div key={item.id} className="flex justify-end">
+                    <div className="max-w-[85%] rounded-lg bg-indigo-600 px-3 py-2 text-sm text-white">
+                      {item.content}
+                    </div>
+                  </div>
+                );
+              }
+              return (
                 <div
                   key={item.id}
                   className="overflow-hidden rounded-lg border border-purple-200 bg-purple-50"
                 >
                   <button
+                    type="button"
                     onClick={() => toggleTool(item.id)}
                     className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-purple-100"
                   >
@@ -209,12 +266,43 @@ export const ChatPanel = ({
                     </div>
                   )}
                 </div>
-              )
+              );
+            })}
+            {isWaitingForResponse && (
+              <div className="flex items-center gap-2 px-1 py-2">
+                <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                <span className="text-sm text-gray-400">Thinking...</span>
+              </div>
             )}
             <div ref={messagesEndRef} />
           </div>
         )}
       </div>
+
+      {/* Follow-up Input - always show when in chat mode */}
+      {!showActionSelector && messages.length > 0 && onSendFollowUp && (
+        <form
+          onSubmit={handleSubmitFollowUp}
+          className="shrink-0 border-t border-gray-200 bg-white p-4"
+        >
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={followUpInput}
+              onChange={(e) => setFollowUpInput(e.target.value)}
+              placeholder="Ask a follow-up question..."
+              className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+            />
+            <button
+              type="submit"
+              disabled={!followUpInput.trim() || !sessionId || !onSendFollowUp}
+              className="rounded-lg bg-indigo-600 px-4 py-2 text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+            >
+              <Send className="h-4 w-4" />
+            </button>
+          </div>
+        </form>
+      )}
     </div>
   );
 };
