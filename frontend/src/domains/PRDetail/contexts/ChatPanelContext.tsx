@@ -1,7 +1,8 @@
 import { createContext, useContext, useState, type ReactNode } from 'react';
 import type { ClaudeMessage, ConnectionStatus } from '../hooks';
+import type { ChatSessionSummary } from '@lgtmai/backend/types';
 
-export type ChatPanelMode = 'action-selection' | 'chat';
+export type ChatPanelMode = 'action-selection' | 'chat' | 'history';
 
 export interface TargetContext {
   type: 'review' | 'inline';
@@ -11,31 +12,49 @@ export interface TargetContext {
   prNumber: number;
 }
 
-interface ChatPanelState {
+export interface PRContext {
+  projectId: string;
+  prNumber: number;
+}
+
+export interface ChatPanelState {
   isOpen: boolean;
   title: string;
   messages: ClaudeMessage[];
   status: ConnectionStatus;
   sessionId: string | null;
+  claudeSessionId: string | null;
   onSendFollowUp: ((message: string) => void) | null;
+  clearMessages: (() => void) | null;
   mode: ChatPanelMode;
   targetContext: TargetContext | null;
+  prContext: PRContext | null;
   onExecuteAction: ((actionId: string, customPrompt?: string) => void) | null;
+  onResumeSession: ((session: ChatSessionSummary) => void) | null;
+  isResumedSession: boolean;
 }
 
 interface ChatPanelContextValue {
   state: ChatPanelState;
   openPanel: (title: string) => void;
   closePanel: () => void;
+  setTitle: (title: string) => void;
   setMessages: (messages: ClaudeMessage[]) => void;
   setStatus: (status: ConnectionStatus) => void;
   setSessionId: (sessionId: string | null) => void;
+  setClaudeSessionId: (claudeSessionId: string | null) => void;
   setOnSendFollowUp: (callback: ((message: string) => void) | null) => void;
+  setClearMessages: (callback: (() => void) | null) => void;
   setMode: (mode: ChatPanelMode) => void;
   setTargetContext: (context: TargetContext | null) => void;
+  setPRContext: (context: PRContext | null) => void;
   setOnExecuteAction: (
     callback: ((actionId: string, customPrompt?: string) => void) | null
   ) => void;
+  setOnResumeSession: (
+    callback: ((session: ChatSessionSummary) => void) | null
+  ) => void;
+  setIsResumedSession: (isResumed: boolean) => void;
 }
 
 const ChatPanelContext = createContext<ChatPanelContextValue | null>(null);
@@ -47,10 +66,15 @@ export const ChatPanelProvider = ({ children }: { children: ReactNode }) => {
     messages: [],
     status: 'disconnected',
     sessionId: null,
+    claudeSessionId: null,
     onSendFollowUp: null,
+    clearMessages: null,
     mode: 'action-selection',
     targetContext: null,
+    prContext: null,
     onExecuteAction: null,
+    onResumeSession: null,
+    isResumedSession: false,
   });
 
   const openPanel = (title: string) => {
@@ -59,6 +83,10 @@ export const ChatPanelProvider = ({ children }: { children: ReactNode }) => {
 
   const closePanel = () => {
     setState((prev) => ({ ...prev, isOpen: false }));
+  };
+
+  const setTitle = (title: string) => {
+    setState((prev) => ({ ...prev, title }));
   };
 
   const setMessages = (messages: ClaudeMessage[]) => {
@@ -73,8 +101,16 @@ export const ChatPanelProvider = ({ children }: { children: ReactNode }) => {
     setState((prev) => ({ ...prev, sessionId }));
   };
 
+  const setClaudeSessionId = (claudeSessionId: string | null) => {
+    setState((prev) => ({ ...prev, claudeSessionId }));
+  };
+
   const setOnSendFollowUp = (callback: ((message: string) => void) | null) => {
     setState((prev) => ({ ...prev, onSendFollowUp: callback }));
+  };
+
+  const setClearMessages = (callback: (() => void) | null) => {
+    setState((prev) => ({ ...prev, clearMessages: callback }));
   };
 
   const setMode = (mode: ChatPanelMode) => {
@@ -85,10 +121,24 @@ export const ChatPanelProvider = ({ children }: { children: ReactNode }) => {
     setState((prev) => ({ ...prev, targetContext }));
   };
 
+  const setPRContext = (prContext: PRContext | null) => {
+    setState((prev) => ({ ...prev, prContext }));
+  };
+
   const setOnExecuteAction = (
     callback: ((actionId: string, customPrompt?: string) => void) | null
   ) => {
     setState((prev) => ({ ...prev, onExecuteAction: callback }));
+  };
+
+  const setOnResumeSession = (
+    callback: ((session: ChatSessionSummary) => void) | null
+  ) => {
+    setState((prev) => ({ ...prev, onResumeSession: callback }));
+  };
+
+  const setIsResumedSession = (isResumedSession: boolean) => {
+    setState((prev) => ({ ...prev, isResumedSession }));
   };
 
   return (
@@ -97,13 +147,19 @@ export const ChatPanelProvider = ({ children }: { children: ReactNode }) => {
         state,
         openPanel,
         closePanel,
+        setTitle,
         setMessages,
         setStatus,
         setSessionId,
+        setClaudeSessionId,
         setOnSendFollowUp,
+        setClearMessages,
         setMode,
         setTargetContext,
+        setPRContext,
         setOnExecuteAction,
+        setOnResumeSession,
+        setIsResumedSession,
       }}
     >
       {children}
