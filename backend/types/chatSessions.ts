@@ -16,6 +16,8 @@ export interface ChatSessionSummary {
   scopeTargetId: string;
   claudeSessionId: string;
   title?: string;
+  command?: string;
+  customPrompt?: string;
   createdAt: string;
   updatedAt: string;
   lastUsedAt: string;
