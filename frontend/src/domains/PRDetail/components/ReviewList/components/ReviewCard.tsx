@@ -32,7 +32,7 @@ interface InlineComment {
   path: string;
   body: string;
   diffHunk?: string;
-  author: { login: string };
+  author: { login: string; avatarUrl: string };
 }
 
 interface Review {
@@ -40,7 +40,7 @@ interface Review {
   state: string;
   body: string;
   submittedAt: string;
-  author: { login: string };
+  author: { login: string; avatarUrl: string };
   inlineComments: InlineComment[];
 }
 
@@ -77,6 +77,11 @@ export const ReviewCard = ({
           >
             {review.state}
           </span>
+          <img
+            src={review.author.avatarUrl}
+            alt={review.author.login}
+            className="h-6 w-6 rounded-full"
+          />
           <span className="text-sm font-medium text-gray-700">
             {review.author.login}
           </span>

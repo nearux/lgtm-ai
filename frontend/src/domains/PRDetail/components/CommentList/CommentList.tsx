@@ -148,6 +148,11 @@ Then briefly explain your reasoning in 1-2 sentences.`;
               >
                 <div className="mb-3 flex items-center justify-between">
                   <div className="flex items-center gap-2">
+                    <img
+                      src={comment.author.avatarUrl}
+                      alt={comment.author.login}
+                      className="h-6 w-6 rounded-full"
+                    />
                     <span className="text-sm font-medium text-gray-700">
                       {comment.author.login}
                     </span>

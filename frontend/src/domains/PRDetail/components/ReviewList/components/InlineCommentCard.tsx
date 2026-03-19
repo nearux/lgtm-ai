@@ -8,7 +8,7 @@ interface InlineComment {
   path: string;
   body: string;
   diffHunk?: string;
-  author: { login: string };
+  author: { login: string; avatarUrl: string };
 }
 
 interface Props {
@@ -29,6 +29,11 @@ export const InlineCommentCard = ({
           <code className="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-700">
             {comment.path}
           </code>
+          <img
+            src={comment.author.avatarUrl}
+            alt={comment.author.login}
+            className="h-4 w-4 rounded-full"
+          />
           <span className="text-xs text-gray-500">{comment.author.login}</span>
           {validationStatus && <ValidationIcon status={validationStatus} />}
         </div>

@@ -95,6 +95,7 @@ export interface PRAuthor {
   id: string;
   login: string;
   name: string;
+  avatarUrl: string;
   is_bot?: boolean;
 }
 

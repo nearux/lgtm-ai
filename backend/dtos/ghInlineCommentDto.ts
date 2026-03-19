@@ -8,6 +8,7 @@ export class GhInlineCommentDto {
         id: String(c.user.id),
         login: c.user.login,
         name: c.user.login,
+        avatarUrl: `https://avatars.githubusercontent.com/u/${c.user.id}`,
         ...(c.user.type?.toLowerCase() === 'bot' ? { is_bot: true } : {}),
       },
       body: c.body,
