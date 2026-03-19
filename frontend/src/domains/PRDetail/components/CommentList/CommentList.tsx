@@ -32,7 +32,15 @@ export const CommentList = ({ comments, workingDir, prNumber }: Props) => {
   const [activeTarget, setActiveTarget] = useState<ValidationTarget | null>(
     null
   );
-  const pendingPromptRef = useRef<string | null>(null);
+  const pendingPayloadRef = useRef<{
+    command: 'validate';
+    context: {
+      type: 'review';
+      author: string;
+      body: string;
+      prNumber: number;
+    };
+  } | null>(null);
 
   const { openPanel, setMessages, setStatus } = useChatPanel();
   const {
@@ -51,26 +59,6 @@ export const CommentList = ({ comments, workingDir, prNumber }: Props) => {
     setStatus(wsStatus);
   }, [wsStatus, setStatus]);
 
-  const buildPrompt = (target: ValidationTarget) => {
-    return `Review this PR comment and determine if it's a valid, actionable suggestion.
-
-PR Number: #${prNumber}
-Comment Author: ${target.author}
-Comment:
-${target.body}
-
-Analyze if this comment:
-1. Points out a real issue or valid improvement
-2. Is actionable (can be addressed with code changes)
-3. Is clear and specific enough to act upon
-
-Respond with:
-- "VALID" if the comment is legitimate and actionable
-- "INVALID" if the comment is vague, incorrect, or not actionable
-
-Then briefly explain your reasoning in 1-2 sentences.`;
-  };
-
   const handleValidate = (target: ValidationTarget) => {
     if (wsStatus !== 'connected') {
       connect();
@@ -81,15 +69,23 @@ Then briefly explain your reasoning in 1-2 sentences.`;
       [target.id]: { status: 'validating' },
     }));
     clearMessages();
-    pendingPromptRef.current = buildPrompt(target);
+    pendingPayloadRef.current = {
+      command: 'validate',
+      context: {
+        type: 'review',
+        author: target.author,
+        body: target.body,
+        prNumber,
+      },
+    };
     openPanel(`Validating: ${target.author}'s comment`);
   };
 
   useEffect(() => {
-    if (wsStatus === 'connected' && activeTarget && pendingPromptRef.current) {
-      const prompt = pendingPromptRef.current;
-      pendingPromptRef.current = null;
-      execute(prompt, workingDir, { executionMode: 'bypassPermissions' });
+    if (wsStatus === 'connected' && activeTarget && pendingPayloadRef.current) {
+      const payload = pendingPayloadRef.current;
+      pendingPayloadRef.current = null;
+      execute(payload, workingDir, { executionMode: 'bypassPermissions' });
     }
   }, [wsStatus, activeTarget, workingDir, execute]);
 

@@ -31,7 +31,7 @@ export function useChatPanelSync(workingDir: string) {
   useEffect(() => {
     const handleFollowUp = (message: string) => {
       if (ws.sessionId) {
-        ws.execute(message, workingDir, {
+        ws.execute({ followUp: message }, workingDir, {
           executionMode: 'bypassPermissions',
           sessionId: ws.sessionId,
         });

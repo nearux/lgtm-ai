@@ -2,11 +2,7 @@ import { useState, useEffect } from 'react';
 import { useChatPanelSync } from '../../hooks';
 import { useChatPanel } from '../../contexts';
 import type { PRReview } from '@lgtmai/backend/types';
-import {
-  buildPromptForAction,
-  getExecutionMode,
-  ACTION_LABELS,
-} from '../../utils/reviewPrompts';
+import { ACTION_LABELS } from '../../utils/reviewPrompts';
 import { ReviewCard, type ValidationStatus } from './components';
 
 interface Props {
@@ -68,15 +64,27 @@ export const ReviewList = ({ reviews, workingDir, prNumber }: Props) => {
         [target.id]: { status: 'validating' },
       }));
 
-      const prompt =
-        customPrompt || buildPromptForAction(actionId, target, prNumber);
-      const executionMode = getExecutionMode(actionId);
+      const context = {
+        type: target.type,
+        author: target.author,
+        body: target.body,
+        ...(target.path ? { path: target.path } : {}),
+        prNumber,
+      } as const;
 
       const userMessage = ACTION_LABELS[actionId] || customPrompt || actionId;
       addUserMessage(userMessage);
 
       setMode('chat');
-      execute(prompt, workingDir, { executionMode });
+      execute(
+        {
+          command: actionId as 'validate' | 'fix' | 'explain' | 'custom',
+          context,
+          ...(customPrompt ? { customPrompt } : {}),
+        },
+        workingDir,
+        { executionMode: 'bypassPermissions' }
+      );
     });
 
     setMode('action-selection');
