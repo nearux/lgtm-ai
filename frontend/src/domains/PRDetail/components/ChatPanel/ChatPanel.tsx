@@ -109,7 +109,6 @@ export const ChatPanel = ({
     status,
     sessionId,
     onSendFollowUp,
-    targetContext,
     prContext,
     onExecuteAction,
     onResumeSession,
@@ -210,7 +209,6 @@ export const ChatPanel = ({
           />
         ) : showActionSelector ? (
           <ActionSelector
-            targetContext={targetContext ?? null}
             onSelect={onExecuteAction}
             onShowHistory={onShowHistory}
           />

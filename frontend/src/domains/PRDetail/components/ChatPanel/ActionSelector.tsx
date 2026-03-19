@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { CheckCircle, BookOpen, Wrench, Send, History } from 'lucide-react';
-import type { TargetContext } from '../../contexts/ChatPanelContext';
 
 interface ActionOption {
   id: string;
@@ -10,7 +9,6 @@ interface ActionOption {
 }
 
 interface Props {
-  targetContext: TargetContext | null;
   onSelect: (actionId: string, customPrompt?: string) => void;
   onShowHistory?: () => void;
 }
@@ -36,11 +34,7 @@ const actions: ActionOption[] = [
   },
 ];
 
-export const ActionSelector = ({
-  targetContext,
-  onSelect,
-  onShowHistory,
-}: Props) => {
+export const ActionSelector = ({ onSelect, onShowHistory }: Props) => {
   const [chatInput, setChatInput] = useState('');
 
   const handleChatSubmit = (e: React.FormEvent) => {
@@ -55,19 +49,6 @@ export const ActionSelector = ({
       <h3 className="mb-4 text-xl font-medium text-gray-700">
         What would you like to do?
       </h3>
-
-      {targetContext && (
-        <div className="mb-4 w-full max-w-sm rounded-lg border border-gray-200 bg-gray-50 p-3">
-          <p className="mb-1 text-xs font-medium text-gray-500">
-            {targetContext.type === 'inline'
-              ? targetContext.path
-              : `Review by ${targetContext.author}`}
-          </p>
-          <p className="line-clamp-2 text-sm text-gray-700">
-            {targetContext.body}
-          </p>
-        </div>
-      )}
 
       <div className="grid w-full max-w-sm grid-cols-3 gap-3">
         {actions.map((action) => (
