@@ -66,6 +66,10 @@ const COMMAND_LABELS: Record<string, string> = {
   fix: 'Fix code based on this review',
 };
 
+/**
+ * Replaces the first user message content with a readable label for the chat history UI.
+ * The raw prompt assembled by promptBuilder is too verbose to display directly.
+ */
 export function replaceFirstUserMessage(
   entries: ChatSessionHistoryEntry[],
   command?: string,
