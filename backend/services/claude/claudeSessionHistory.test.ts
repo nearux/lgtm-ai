@@ -193,30 +193,24 @@ describe('replaceFirstUserMessage', () => {
     expect(result).toEqual(baseEntries);
   });
 
-  it('replaces first user message with known command label', () => {
-    const result = replaceFirstUserMessage(baseEntries, 'validate');
-    expect(result[0].content).toBe('Validate this review');
-    expect(result[1].content).toBe('Done.');
-  });
+  it.each([
+    ['validate', undefined, 'Validate this review'],
+    ['explain', undefined, 'Explain this review'],
+    ['fix', undefined, 'Fix code based on this review'],
+    ['custom', 'My custom instruction', 'My custom instruction'],
+  ])(
+    'replaces the first user message for command %s',
+    (command, customPrompt, expectedContent) => {
+      const result = replaceFirstUserMessage(
+        baseEntries,
+        command,
+        customPrompt
+      );
 
-  it('replaces first user message with explain label', () => {
-    const result = replaceFirstUserMessage(baseEntries, 'explain');
-    expect(result[0].content).toBe('Explain this review');
-  });
-
-  it('replaces first user message with fix label', () => {
-    const result = replaceFirstUserMessage(baseEntries, 'fix');
-    expect(result[0].content).toBe('Fix code based on this review');
-  });
-
-  it('uses customPrompt when command is custom', () => {
-    const result = replaceFirstUserMessage(
-      baseEntries,
-      'custom',
-      'My custom instruction'
-    );
-    expect(result[0].content).toBe('My custom instruction');
-  });
+      expect(result[0].content).toBe(expectedContent);
+      expect(result[1]).toEqual(baseEntries[1]);
+    }
+  );
 
   it('falls back to original content when command is custom and no customPrompt', () => {
     const result = replaceFirstUserMessage(baseEntries, 'custom');
@@ -226,11 +220,6 @@ describe('replaceFirstUserMessage', () => {
   it('falls back to original content for unknown command', () => {
     const result = replaceFirstUserMessage(baseEntries, 'unknown-command');
     expect(result[0].content).toBe('some long generated prompt');
-  });
-
-  it('does not modify non-first or non-user entries', () => {
-    const result = replaceFirstUserMessage(baseEntries, 'validate');
-    expect(result[1]).toEqual(baseEntries[1]);
   });
 
   it('returns empty array unchanged', () => {
