@@ -133,7 +133,7 @@ export const ReviewList = ({
 
     setOnResumeSession(handleResumeSession);
 
-    setOnExecuteAction((actionId: string, customPrompt?: string) => {
+    setOnExecuteAction((command, customPrompt) => {
       setValidations((prev) => ({
         ...prev,
         [target.id]: { status: 'validating' },
@@ -145,9 +145,9 @@ export const ReviewList = ({
         body: target.body,
         ...(target.path ? { path: target.path } : {}),
         prNumber,
-      } as const;
+      };
 
-      const userMessage = ACTION_LABELS[actionId] || customPrompt || actionId;
+      const userMessage = ACTION_LABELS[command] || customPrompt || command;
       addUserMessage(userMessage);
 
       const chatContext: ClaudeChatContext = {
@@ -163,7 +163,7 @@ export const ReviewList = ({
       execute(
         {
           type: 'command',
-          command: actionId as 'validate' | 'fix' | 'explain' | 'custom',
+          command,
           context,
           ...(customPrompt ? { customPrompt } : {}),
         },

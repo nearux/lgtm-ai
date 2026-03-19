@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { CheckCircle, BookOpen, Wrench, Send, History } from 'lucide-react';
+import type { ClaudeCommand } from '@lgtmai/backend/types';
 import type { TargetContext } from '../../contexts/ChatPanelContext';
 
 interface ActionOption {
-  id: string;
+  id: ClaudeCommand;
   label: string;
   description: string;
   icon: React.ReactNode;
@@ -11,7 +12,7 @@ interface ActionOption {
 
 interface Props {
   targetContext: TargetContext | null;
-  onSelect: (actionId: string, customPrompt?: string) => void;
+  onSelect: (command: ClaudeCommand, customPrompt?: string) => void;
   onShowHistory?: () => void;
 }
 
@@ -46,7 +47,7 @@ export const ActionSelector = ({
   const handleChatSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!chatInput.trim()) return;
-    onSelect('chat', chatInput.trim());
+    onSelect('custom', chatInput.trim());
     setChatInput('');
   };
 
@@ -95,7 +96,7 @@ export const ActionSelector = ({
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 if (chatInput.trim()) {
-                  onSelect('chat', chatInput.trim());
+                  onSelect('custom', chatInput.trim());
                   setChatInput('');
                 }
               }
