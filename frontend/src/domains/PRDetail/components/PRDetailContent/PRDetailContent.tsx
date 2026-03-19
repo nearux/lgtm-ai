@@ -47,7 +47,9 @@ export const PRDetailContent = ({ projectId, prNumber, origin }: Props) => {
       <ReviewList
         reviews={pr.reviews}
         workingDir={project.working_dir}
+        projectId={projectId}
         prNumber={pr.number}
+        origin={origin}
       />
       <CommentList
         comments={pr.comments}

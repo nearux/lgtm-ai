@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useMutation } from '@tanstack/react-query';
 import { useChatPanelSync } from '../../hooks';
 import { useChatPanel } from '../../contexts';
 import type { PRReview } from '@lgtmai/backend/types';
@@ -8,11 +9,16 @@ import {
   ACTION_LABELS,
 } from '../../utils/reviewPrompts';
 import { ReviewCard, type ValidationStatus } from './components';
+import { prsMutation } from '@/shared/apis';
+import { useOverlay } from '@/shared/hooks';
+import { CheckoutModal } from './components/CheckoutModal/CheckoutModal';
 
 interface Props {
   reviews: PRReview[];
   workingDir: string;
+  projectId: string;
   prNumber: number;
+  origin?: string;
 }
 
 interface ValidationState {
@@ -28,13 +34,27 @@ interface ValidationTarget {
   path?: string;
 }
 
-export const ReviewList = ({ reviews, workingDir, prNumber }: Props) => {
+export const ReviewList = ({
+  reviews,
+  workingDir,
+  projectId,
+  prNumber,
+  origin,
+}: Props) => {
   const [validations, setValidations] = useState<
     Record<string, ValidationState>
   >({});
   const [activeTarget, setActiveTarget] = useState<ValidationTarget | null>(
     null
   );
+  const overlay = useOverlay();
+
+  const { mutate, isPending } = useMutation({
+    ...prsMutation.checkout(),
+    onError: (error) => {
+      console.error('Checkout failed:', error);
+    },
+  });
 
   const { openPanel, setMode, setTargetContext, setOnExecuteAction } =
     useChatPanel();
@@ -46,6 +66,62 @@ export const ReviewList = ({ reviews, workingDir, prNumber }: Props) => {
     clearMessages,
     addUserMessage,
   } = useChatPanelSync(workingDir);
+
+  const executeAction = (
+    actionId: string,
+    customPrompt: string | undefined,
+    target: ValidationTarget
+  ) => {
+    setValidations((prev) => ({
+      ...prev,
+      [target.id]: { status: 'validating' },
+    }));
+
+    const prompt =
+      customPrompt || buildPromptForAction(actionId, target, prNumber);
+    const executionMode = getExecutionMode(actionId);
+
+    const userMessage = ACTION_LABELS[actionId] || customPrompt || actionId;
+    addUserMessage(userMessage);
+
+    setMode('chat');
+    execute(prompt, workingDir, { executionMode });
+  };
+
+  const handleFixAction = (
+    actionId: string,
+    customPrompt: string | undefined,
+    target: ValidationTarget
+  ) => {
+    overlay.open(
+      ({ isOpen, close }) => (
+        <CheckoutModal
+          isOpen={isOpen}
+          close={close}
+          onConfirm={async () => {
+            close();
+            mutate(
+              {
+                projectId,
+                prNumber,
+                body: { force: true, origin },
+              },
+              {
+                onSuccess: () => {
+                  executeAction(actionId, customPrompt, target);
+                },
+                onError: (error) => {
+                  console.error('Checkout failed:', error);
+                },
+              }
+            );
+          }}
+          isPending={isPending}
+        />
+      ),
+      'checkout-modal'
+    );
+  };
 
   const handleOpenChat = (target: ValidationTarget) => {
     if (wsStatus !== 'connected') {
@@ -63,20 +139,11 @@ export const ReviewList = ({ reviews, workingDir, prNumber }: Props) => {
     });
 
     setOnExecuteAction((actionId: string, customPrompt?: string) => {
-      setValidations((prev) => ({
-        ...prev,
-        [target.id]: { status: 'validating' },
-      }));
-
-      const prompt =
-        customPrompt || buildPromptForAction(actionId, target, prNumber);
-      const executionMode = getExecutionMode(actionId);
-
-      const userMessage = ACTION_LABELS[actionId] || customPrompt || actionId;
-      addUserMessage(userMessage);
-
-      setMode('chat');
-      execute(prompt, workingDir, { executionMode });
+      if (actionId === 'fix') {
+        handleFixAction(actionId, customPrompt, target);
+      } else {
+        executeAction(actionId, customPrompt, target);
+      }
     });
 
     setMode('action-selection');
@@ -109,43 +176,45 @@ export const ReviewList = ({ reviews, workingDir, prNumber }: Props) => {
   }, [messages, activeTarget]);
 
   return (
-    <section className="mb-8">
-      <h2 className="mb-4 text-xl font-semibold text-gray-900">
-        Reviews ({reviews.length})
-      </h2>
+    <>
+      <section className="mb-8">
+        <h2 className="mb-4 text-xl font-semibold text-gray-900">
+          Reviews ({reviews.length})
+        </h2>
 
-      {reviews.length === 0 ? (
-        <div className="rounded-xl border border-gray-200 bg-white p-8 text-center">
-          <p className="text-gray-500">No reviews yet.</p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {reviews.map((review) => (
-            <ReviewCard
-              key={review.id}
-              review={review}
-              validations={validations}
-              onChatReview={() =>
-                handleOpenChat({
-                  type: 'review',
-                  id: review.id,
-                  body: review.body,
-                  author: review.author.login,
-                })
-              }
-              onChatComment={(comment) =>
-                handleOpenChat({
-                  type: 'comment',
-                  id: comment.id,
-                  body: comment.body,
-                  author: comment.author.login,
-                  path: comment.path,
-                })
-              }
-            />
-          ))}
-        </div>
-      )}
-    </section>
+        {reviews.length === 0 ? (
+          <div className="rounded-xl border border-gray-200 bg-white p-8 text-center">
+            <p className="text-gray-500">No reviews yet.</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {reviews.map((review) => (
+              <ReviewCard
+                key={review.id}
+                review={review}
+                validations={validations}
+                onChatReview={() =>
+                  handleOpenChat({
+                    type: 'review',
+                    id: review.id,
+                    body: review.body,
+                    author: review.author.login,
+                  })
+                }
+                onChatComment={(comment) =>
+                  handleOpenChat({
+                    type: 'comment',
+                    id: comment.id,
+                    body: comment.body,
+                    author: comment.author.login,
+                    path: comment.path,
+                  })
+                }
+              />
+            ))}
+          </div>
+        )}
+      </section>
+    </>
   );
 };

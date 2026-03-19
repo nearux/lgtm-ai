@@ -8,6 +8,7 @@ interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
   size?: ButtonSize;
   loading?: boolean;
+  block?: boolean;
   children: ReactNode;
 }
 
@@ -28,6 +29,7 @@ export const Button = ({
   variant = 'primary',
   size = 'md',
   loading = false,
+  block = false,
   disabled,
   children,
   className = '',
@@ -35,7 +37,7 @@ export const Button = ({
 }: Props) => {
   return (
     <button
-      className={`inline-flex items-center justify-center gap-2 font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${variantClasses[variant]} ${sizeClasses[size]} ${block ? 'w-full' : ''} ${className}`}
       disabled={disabled || loading}
       {...props}
     >
