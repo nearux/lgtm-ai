@@ -25,6 +25,7 @@ interface Props {
   workingDir: string;
   projectId: string;
   prNumber: number;
+  prState: string;
   origin?: string;
 }
 
@@ -40,6 +41,7 @@ export const CommentList = ({
   workingDir,
   projectId,
   prNumber,
+  prState,
   origin,
 }: Props) => {
   const [activeTarget, setActiveTarget] = useState<ValidationTarget | null>(
@@ -145,6 +147,12 @@ export const CommentList = ({
     customPrompt: string | undefined,
     target: ValidationTarget
   ) => {
+    // Skip checkout for closed/merged PRs
+    if (prState !== 'OPEN') {
+      executeAction(actionId, customPrompt, target);
+      return;
+    }
+
     overlay.open(
       ({ isOpen, close }) => (
         <CheckoutModal
