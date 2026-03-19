@@ -157,52 +157,6 @@ export async function checkoutPRBranch(
   validateRepoOwnerName(repoOwnerName);
 
   const force = options.force === true;
-  let targetBranch = '';
-
-  try {
-    const { stdout } = await execFileAsync(
-      'gh',
-      [
-        'pr',
-        'view',
-        String(prNumber),
-        '--repo',
-        repoOwnerName,
-        '--json',
-        'headRefName',
-      ],
-      { cwd: workingDir }
-    );
-    const parsed = JSON.parse(stdout) as { headRefName?: string };
-    targetBranch = parsed.headRefName?.trim() ?? '';
-  } catch (error) {
-    const errorMessage = getErrorMessage(error).toLowerCase();
-
-    if (errorMessage.includes('could not resolve')) {
-      throw new AppError('Pull request not found', HttpStatus.NOT_FOUND, error);
-    }
-
-    if (errorMessage.includes('authentication')) {
-      throw new AppError(
-        'GitHub CLI is not available or authenticated',
-        HttpStatus.SERVICE_UNAVAILABLE,
-        error
-      );
-    }
-
-    throw new AppError(
-      'Failed to resolve PR branch from GitHub',
-      HttpStatus.INTERNAL_SERVER_ERROR,
-      error
-    );
-  }
-
-  if (!targetBranch) {
-    throw new AppError(
-      'Failed to resolve PR branch from GitHub',
-      HttpStatus.INTERNAL_SERVER_ERROR
-    );
-  }
 
   const { stdout: gitStatusStdout } = await execFileAsync(
     'git',
@@ -244,25 +198,39 @@ export async function checkoutPRBranch(
   }
 
   try {
-    await execFileAsync('git', ['checkout', targetBranch], { cwd: workingDir });
-  } catch (initialCheckoutError) {
-    try {
-      await execFileAsync('git', ['fetch', '--all', '--prune'], {
-        cwd: workingDir,
-      });
-      await execFileAsync(
-        'git',
-        ['checkout', '-b', targetBranch, '--track', `origin/${targetBranch}`],
-        { cwd: workingDir }
-      );
-    } catch (fallbackError) {
+    await execFileAsync(
+      'gh',
+      ['pr', 'checkout', String(prNumber), '--repo', repoOwnerName],
+      { cwd: workingDir }
+    );
+  } catch (error) {
+    const errorMessage = getErrorMessage(error).toLowerCase();
+
+    if (errorMessage.includes('could not resolve')) {
+      throw new AppError('Pull request not found', HttpStatus.NOT_FOUND, error);
+    }
+
+    if (errorMessage.includes('authentication')) {
       throw new AppError(
-        'Failed to checkout PR branch',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-        { initialCheckoutError, fallbackError }
+        'GitHub CLI is not available or authenticated',
+        HttpStatus.SERVICE_UNAVAILABLE,
+        error
       );
     }
+
+    throw new AppError(
+      'Failed to checkout PR branch',
+      HttpStatus.INTERNAL_SERVER_ERROR,
+      error
+    );
   }
+
+  const { stdout: currentBranch } = await execFileAsync(
+    'git',
+    ['branch', '--show-current'],
+    { cwd: workingDir }
+  );
+  const targetBranch = currentBranch.trim();
 
   return {
     success: true,

@@ -1,131 +1,232 @@
-import { useState, useEffect, useRef } from 'react';
-import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { MessageCircle } from 'lucide-react';
 import { formatDateTime } from '@/shared/utils';
 import { Button, GFMMarkdown } from '@/shared/components';
-import { useClaudeWebSocket } from '../../hooks';
+import { chatSessionsQuery, prsMutation } from '@/shared/apis';
+import { useChatPanelSync, useChatPanelParams } from '../../hooks';
 import { useChatPanel } from '../../contexts';
-import type { PRComment } from '@lgtmai/backend/types';
+import { useOverlay } from '@/shared/hooks';
+import type { ClaudeMessage } from '../../hooks';
+import {
+  buildPromptForAction,
+  getExecutionMode,
+  ACTION_LABELS,
+} from '../../utils/reviewPrompts';
+import { CheckoutModal } from '../ReviewList/components/CheckoutModal/CheckoutModal';
+import type {
+  PRComment,
+  ClaudeChatContext,
+  ChatSessionSummary,
+} from '@lgtmai/backend/types';
 
 interface Props {
   comments: PRComment[];
   workingDir: string;
+  projectId: string;
   prNumber: number;
-}
-
-type ValidationStatus = 'idle' | 'validating' | 'valid' | 'invalid';
-
-interface ValidationState {
-  status: ValidationStatus;
-  result?: string;
+  prState: string;
+  origin?: string;
 }
 
 interface ValidationTarget {
+  type: 'comment';
   id: string;
   body: string;
   author: string;
 }
 
-export const CommentList = ({ comments, workingDir, prNumber }: Props) => {
-  const [validations, setValidations] = useState<
-    Record<string, ValidationState>
-  >({});
+export const CommentList = ({
+  comments,
+  workingDir,
+  projectId,
+  prNumber,
+  prState,
+  origin,
+}: Props) => {
   const [activeTarget, setActiveTarget] = useState<ValidationTarget | null>(
     null
   );
-  const pendingPromptRef = useRef<string | null>(null);
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(
+    null
+  );
+  const overlay = useOverlay();
 
-  const { openPanel, setMessages, setStatus } = useChatPanel();
+  const { mutate, isPending } = useMutation({
+    ...prsMutation.checkout(),
+    onError: (error) => {
+      console.error('Checkout failed:', error);
+    },
+  });
+
+  const {
+    setTitle,
+    setTargetContext,
+    setPRContext,
+    setOnExecuteAction,
+    setOnResumeSession,
+    setClaudeSessionId,
+  } = useChatPanel();
+
+  const {
+    openActionSelector,
+    openChat,
+    resumeSession: resumeSessionUrl,
+  } = useChatPanelParams();
+
   const {
     status: wsStatus,
     messages,
+    sessionId,
     connect,
     execute,
     clearMessages,
-  } = useClaudeWebSocket();
+    addUserMessage,
+    loadHistoryMessages,
+  } = useChatPanelSync(workingDir);
 
+  // Fetch history for selected session
+  const { data: historyData } = useQuery({
+    ...chatSessionsQuery.history(projectId, prNumber, selectedSessionId ?? ''),
+    enabled: !!selectedSessionId,
+  });
+
+  // When history data is loaded, convert to messages and display
   useEffect(() => {
-    setMessages(messages);
-  }, [messages, setMessages]);
+    if (historyData && selectedSessionId) {
+      const convertedMessages: ClaudeMessage[] = historyData.entries.map(
+        (entry, index) => ({
+          id: `history-${index}`,
+          type: entry.role === 'user' ? 'user' : 'text',
+          content: entry.content,
+          timestamp: entry.timestamp ? new Date(entry.timestamp) : new Date(),
+        })
+      );
 
-  useEffect(() => {
-    setStatus(wsStatus);
-  }, [wsStatus, setStatus]);
+      loadHistoryMessages(convertedMessages);
+      setClaudeSessionId(historyData.claudeSessionId);
+      setSelectedSessionId(null);
+    }
+  }, [historyData, selectedSessionId, loadHistoryMessages, setClaudeSessionId]);
 
-  const buildPrompt = (target: ValidationTarget) => {
-    return `Review this PR comment and determine if it's a valid, actionable suggestion.
-
-PR Number: #${prNumber}
-Comment Author: ${target.author}
-Comment:
-${target.body}
-
-Analyze if this comment:
-1. Points out a real issue or valid improvement
-2. Is actionable (can be addressed with code changes)
-3. Is clear and specific enough to act upon
-
-Respond with:
-- "VALID" if the comment is legitimate and actionable
-- "INVALID" if the comment is vague, incorrect, or not actionable
-
-Then briefly explain your reasoning in 1-2 sentences.`;
+  const handleResumeSession = (session: ChatSessionSummary) => {
+    if (wsStatus !== 'connected') {
+      connect();
+    }
+    setSelectedSessionId(session.id);
+    setTitle(session.title || `Chat ${session.id.slice(0, 8)}`);
+    resumeSessionUrl('comment', session.scopeTargetId);
   };
 
-  const handleValidate = (target: ValidationTarget) => {
+  const executeAction = (
+    actionId: string,
+    customPrompt: string | undefined,
+    target: ValidationTarget
+  ) => {
+    const prompt =
+      customPrompt || buildPromptForAction(actionId, target, prNumber);
+    const executionMode = getExecutionMode(actionId);
+
+    const userMessage = ACTION_LABELS[actionId] || customPrompt || actionId;
+    addUserMessage(userMessage);
+
+    const chatContext: ClaudeChatContext = {
+      projectId,
+      prNumber,
+      scopeType: 'COMMENT',
+      scopeTargetId: target.id,
+      title: userMessage,
+    };
+
+    openChat();
+    execute(prompt, workingDir, { executionMode }, chatContext);
+  };
+
+  const handleFixAction = (
+    actionId: string,
+    customPrompt: string | undefined,
+    target: ValidationTarget
+  ) => {
+    // Skip checkout for closed/merged PRs
+    if (prState !== 'OPEN') {
+      executeAction(actionId, customPrompt, target);
+      return;
+    }
+
+    overlay.open(
+      ({ isOpen, close }) => (
+        <CheckoutModal
+          isOpen={isOpen}
+          close={close}
+          onConfirm={async () => {
+            close();
+            mutate(
+              {
+                projectId,
+                prNumber,
+                body: { force: true, origin },
+              },
+              {
+                onSuccess: () => {
+                  executeAction(actionId, customPrompt, target);
+                },
+                onError: (error) => {
+                  console.error('Checkout failed:', error);
+                },
+              }
+            );
+          }}
+          isPending={isPending}
+        />
+      ),
+      'checkout-modal'
+    );
+  };
+
+  const handleOpenChat = (target: ValidationTarget) => {
     if (wsStatus !== 'connected') {
       connect();
     }
     setActiveTarget(target);
-    setValidations((prev) => ({
-      ...prev,
-      [target.id]: { status: 'validating' },
-    }));
     clearMessages();
-    pendingPromptRef.current = buildPrompt(target);
-    openPanel(`Validating: ${target.author}'s comment`);
-  };
 
-  useEffect(() => {
-    if (wsStatus === 'connected' && activeTarget && pendingPromptRef.current) {
-      const prompt = pendingPromptRef.current;
-      pendingPromptRef.current = null;
-      execute(prompt, workingDir, { executionMode: 'bypassPermissions' });
-    }
-  }, [wsStatus, activeTarget, workingDir, execute]);
+    setTargetContext({
+      type: 'inline',
+      author: target.author,
+      body: target.body,
+      prNumber,
+    });
+
+    setPRContext({ projectId, prNumber });
+    setOnResumeSession(handleResumeSession);
+
+    setOnExecuteAction((actionId: string, customPrompt?: string) => {
+      if (actionId === 'fix') {
+        handleFixAction(actionId, customPrompt, target);
+      } else {
+        executeAction(actionId, customPrompt, target);
+      }
+    });
+
+    setTitle(`Chat: ${target.author}'s comment`);
+    openActionSelector('comment', target.id);
+  };
 
   useEffect(() => {
     if (!activeTarget) return;
 
     const isDone = messages.some((m) => m.type === 'done');
     if (isDone) {
-      const textMessages = messages.filter((m) => m.type === 'text');
-      const fullText = textMessages.map((m) => m.content).join('');
-      const isValid =
-        fullText.toUpperCase().includes('VALID') &&
-        !fullText.toUpperCase().startsWith('INVALID');
-      setValidations((prev) => ({
-        ...prev,
-        [activeTarget.id]: {
-          status: isValid ? 'valid' : 'invalid',
-          result: fullText.trim(),
-        },
-      }));
       setActiveTarget(null);
     }
   }, [messages, activeTarget]);
 
-  const getValidationIcon = (status: ValidationStatus) => {
-    switch (status) {
-      case 'validating':
-        return <Loader2 className="h-4 w-4 animate-spin text-blue-500" />;
-      case 'valid':
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'invalid':
-        return <XCircle className="h-4 w-4 text-red-500" />;
-      default:
-        return null;
+  // Sync sessionId to claudeSessionId when a new session completes
+  useEffect(() => {
+    if (sessionId) {
+      setClaudeSessionId(sessionId);
     }
-  };
+  }, [sessionId, setClaudeSessionId]);
 
   return (
     <section className="mb-8">
@@ -140,7 +241,6 @@ Then briefly explain your reasoning in 1-2 sentences.`;
       ) : (
         <div className="space-y-4">
           {comments.map((comment) => {
-            const validation = validations[comment.id];
             return (
               <div
                 key={comment.id}
@@ -151,7 +251,6 @@ Then briefly explain your reasoning in 1-2 sentences.`;
                     <span className="text-sm font-medium text-gray-700">
                       {comment.author.login}
                     </span>
-                    {validation && getValidationIcon(validation.status)}
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-gray-500">
@@ -161,17 +260,16 @@ Then briefly explain your reasoning in 1-2 sentences.`;
                       size="sm"
                       variant="secondary"
                       onClick={() =>
-                        handleValidate({
+                        handleOpenChat({
+                          type: 'comment',
                           id: comment.id,
                           body: comment.body,
                           author: comment.author.login,
                         })
                       }
-                      disabled={validation?.status === 'validating'}
                     >
-                      {validation?.status === 'validating'
-                        ? 'Validating...'
-                        : 'Validate'}
+                      <MessageCircle className="mr-1 h-3.5 w-3.5" />
+                      Chat
                     </Button>
                   </div>
                 </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { useChatPanelSync, useChatPanelParams } from '../../hooks';
 import { useChatPanel } from '../../contexts';
 import type {
@@ -13,7 +13,9 @@ import {
   ACTION_LABELS,
 } from '../../utils/reviewPrompts';
 import { ReviewCard, type ValidationStatus } from './components';
-import { chatSessionsQuery } from '@/shared/apis';
+import { prsMutation, chatSessionsQuery } from '@/shared/apis';
+import { useOverlay } from '@/shared/hooks';
+import { CheckoutModal } from './components/CheckoutModal/CheckoutModal';
 import type { ClaudeMessage } from '../../hooks';
 
 interface Props {
@@ -21,6 +23,8 @@ interface Props {
   workingDir: string;
   projectId: string;
   prNumber: number;
+  prState: string;
+  origin?: string;
 }
 
 interface ValidationState {
@@ -41,6 +45,8 @@ export const ReviewList = ({
   workingDir,
   projectId,
   prNumber,
+  prState,
+  origin,
 }: Props) => {
   const [validations, setValidations] = useState<
     Record<string, ValidationState>
@@ -51,6 +57,14 @@ export const ReviewList = ({
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(
     null
   );
+  const overlay = useOverlay();
+
+  const { mutate, isPending } = useMutation({
+    ...prsMutation.checkout(),
+    onError: (error) => {
+      console.error('Checkout failed:', error);
+    },
+  });
 
   const {
     setTitle,
@@ -96,14 +110,81 @@ export const ReviewList = ({
         })
       );
 
-      // Load history messages
       loadHistoryMessages(convertedMessages);
-
-      // Set the claude session ID for follow-up messages
       setClaudeSessionId(historyData.claudeSessionId);
       setSelectedSessionId(null);
     }
   }, [historyData, selectedSessionId, loadHistoryMessages, setClaudeSessionId]);
+
+  const executeAction = (
+    actionId: string,
+    customPrompt: string | undefined,
+    target: ValidationTarget
+  ) => {
+    setValidations((prev) => ({
+      ...prev,
+      [target.id]: { status: 'validating' },
+    }));
+
+    const prompt =
+      customPrompt || buildPromptForAction(actionId, target, prNumber);
+    const executionMode = getExecutionMode(actionId);
+
+    const userMessage = ACTION_LABELS[actionId] || customPrompt || actionId;
+    addUserMessage(userMessage);
+
+    const chatContext: ClaudeChatContext = {
+      projectId,
+      prNumber,
+      scopeType: target.type === 'review' ? 'REVIEW' : 'COMMENT',
+      scopeTargetId: target.id,
+      title: userMessage,
+    };
+
+    openChat();
+    execute(prompt, workingDir, { executionMode }, chatContext);
+  };
+
+  const handleFixAction = (
+    actionId: string,
+    customPrompt: string | undefined,
+    target: ValidationTarget
+  ) => {
+    // Skip checkout for closed/merged PRs
+    if (prState !== 'OPEN') {
+      executeAction(actionId, customPrompt, target);
+      return;
+    }
+
+    overlay.open(
+      ({ isOpen, close }) => (
+        <CheckoutModal
+          isOpen={isOpen}
+          close={close}
+          onConfirm={async () => {
+            close();
+            mutate(
+              {
+                projectId,
+                prNumber,
+                body: { force: true, origin },
+              },
+              {
+                onSuccess: () => {
+                  executeAction(actionId, customPrompt, target);
+                },
+                onError: (error) => {
+                  console.error('Checkout failed:', error);
+                },
+              }
+            );
+          }}
+          isPending={isPending}
+        />
+      ),
+      'checkout-modal'
+    );
+  };
 
   const handleResumeSession = (session: ChatSessionSummary) => {
     if (wsStatus !== 'connected') {
@@ -111,7 +192,6 @@ export const ReviewList = ({
     }
     setSelectedSessionId(session.id);
     setTitle(session.title || `Chat ${session.id.slice(0, 8)}`);
-    // Use URL-based navigation with resumed flag
     resumeSessionUrl(
       session.scopeType === 'REVIEW' ? 'review' : 'comment',
       session.scopeTargetId
@@ -134,33 +214,14 @@ export const ReviewList = ({
     });
 
     setPRContext({ projectId, prNumber });
-
     setOnResumeSession(handleResumeSession);
 
     setOnExecuteAction((actionId: string, customPrompt?: string) => {
-      setValidations((prev) => ({
-        ...prev,
-        [target.id]: { status: 'validating' },
-      }));
-
-      const prompt =
-        customPrompt || buildPromptForAction(actionId, target, prNumber);
-      const executionMode = getExecutionMode(actionId);
-
-      const userMessage = ACTION_LABELS[actionId] || customPrompt || actionId;
-      addUserMessage(userMessage);
-
-      const chatContext: ClaudeChatContext = {
-        projectId,
-        prNumber,
-        scopeType: target.type === 'review' ? 'REVIEW' : 'COMMENT',
-        scopeTargetId: target.id,
-        title: userMessage,
-      };
-
-      // Navigate to chat mode via URL
-      openChat();
-      execute(prompt, workingDir, { executionMode }, chatContext);
+      if (actionId === 'fix') {
+        handleFixAction(actionId, customPrompt, target);
+      } else {
+        executeAction(actionId, customPrompt, target);
+      }
     });
 
     setTitle(
@@ -169,7 +230,6 @@ export const ReviewList = ({
         : `Chat: ${target.author}'s comment on ${target.path}`
     );
 
-    // Navigate to action selector via URL
     openActionSelector(target.type, target.id);
   };
 
@@ -202,43 +262,45 @@ export const ReviewList = ({
   }, [sessionId, setClaudeSessionId]);
 
   return (
-    <section className="mb-8">
-      <h2 className="mb-4 text-xl font-semibold text-gray-900">
-        Reviews ({reviews.length})
-      </h2>
+    <>
+      <section className="mb-8">
+        <h2 className="mb-4 text-xl font-semibold text-gray-900">
+          Reviews ({reviews.length})
+        </h2>
 
-      {reviews.length === 0 ? (
-        <div className="rounded-xl border border-gray-200 bg-white p-8 text-center">
-          <p className="text-gray-500">No reviews yet.</p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {reviews.map((review) => (
-            <ReviewCard
-              key={review.id}
-              review={review}
-              validations={validations}
-              onChatReview={() =>
-                handleOpenChat({
-                  type: 'review',
-                  id: review.id,
-                  body: review.body,
-                  author: review.author.login,
-                })
-              }
-              onChatComment={(comment) =>
-                handleOpenChat({
-                  type: 'comment',
-                  id: comment.id,
-                  body: comment.body,
-                  author: comment.author.login,
-                  path: comment.path,
-                })
-              }
-            />
-          ))}
-        </div>
-      )}
-    </section>
+        {reviews.length === 0 ? (
+          <div className="rounded-xl border border-gray-200 bg-white p-8 text-center">
+            <p className="text-gray-500">No reviews yet.</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {reviews.map((review) => (
+              <ReviewCard
+                key={review.id}
+                review={review}
+                validations={validations}
+                onChatReview={() =>
+                  handleOpenChat({
+                    type: 'review',
+                    id: review.id,
+                    body: review.body,
+                    author: review.author.login,
+                  })
+                }
+                onChatComment={(comment) =>
+                  handleOpenChat({
+                    type: 'comment',
+                    id: comment.id,
+                    body: comment.body,
+                    author: comment.author.login,
+                    path: comment.path,
+                  })
+                }
+              />
+            ))}
+          </div>
+        )}
+      </section>
+    </>
   );
 };
