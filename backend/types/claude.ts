@@ -14,6 +14,16 @@ export interface ClaudeExecuteOptions {
   sessionId?: string;
 }
 
+export interface CommandContext {
+  type: 'review' | 'comment';
+  author: string;
+  body: string;
+  path?: string;
+  prNumber: number;
+}
+
+export type ClaudeCommand = 'validate' | 'fix' | 'explain' | 'custom';
+
 export interface WsExecuteMessage {
   type: 'execute';
   requestId: string;
