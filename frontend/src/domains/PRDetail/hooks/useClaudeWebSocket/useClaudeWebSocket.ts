@@ -5,6 +5,8 @@ import type {
   ApprovalRequest,
   WsServerMessage,
   ClaudeExecuteOptions,
+  CommandPayload,
+  FollowUpPayload,
 } from './types';
 
 const WS_URL = `ws://${window.location.hostname}:5051/api/claude/execute`;
@@ -17,7 +19,7 @@ export interface UseClaudeWebSocketReturn {
   connect: () => void;
   disconnect: () => void;
   execute: (
-    prompt: string,
+    payload: CommandPayload | FollowUpPayload,
     workingDir: string,
     options?: ClaudeExecuteOptions
   ) => string;
@@ -155,22 +157,35 @@ export function useClaudeWebSocket(): UseClaudeWebSocketReturn {
   };
 
   const execute = (
-    prompt: string,
+    payload: CommandPayload | FollowUpPayload,
     workingDir: string,
     options?: ClaudeExecuteOptions
   ): string => {
     const requestId = crypto.randomUUID();
-    // Add user message to chat when it's a follow-up (has sessionId)
-    if (options?.sessionId) {
-      addMessage({ type: 'user', content: prompt });
+
+    if ('followUp' in payload) {
+      // Follow-up: add to live UI and send as followUp shape
+      addMessage({ type: 'user', content: payload.followUp });
+      send({
+        type: 'execute',
+        requestId,
+        followUp: payload.followUp,
+        workingDir,
+        options,
+      });
+    } else {
+      // Command-based: caller (ReviewList) already called addUserMessage before execute()
+      send({
+        type: 'execute',
+        requestId,
+        command: payload.command,
+        context: payload.context,
+        ...(payload.customPrompt ? { customPrompt: payload.customPrompt } : {}),
+        workingDir,
+        options,
+      });
     }
-    send({
-      type: 'execute',
-      requestId,
-      prompt,
-      workingDir,
-      options,
-    });
+
     return requestId;
   };
 
