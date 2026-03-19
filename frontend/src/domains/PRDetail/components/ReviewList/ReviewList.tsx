@@ -1,17 +1,25 @@
 import { useState, useEffect } from 'react';
-import { useChatPanelSync } from '../../hooks';
+import { useQuery } from '@tanstack/react-query';
+import { useChatPanelSync, useChatPanelParams } from '../../hooks';
 import { useChatPanel } from '../../contexts';
-import type { PRReview } from '@lgtmai/backend/types';
+import type {
+  PRReview,
+  ChatSessionSummary,
+  ClaudeChatContext,
+} from '@lgtmai/backend/types';
 import {
   buildPromptForAction,
   getExecutionMode,
   ACTION_LABELS,
 } from '../../utils/reviewPrompts';
 import { ReviewCard, type ValidationStatus } from './components';
+import { chatSessionsQuery } from '@/shared/apis';
+import type { ClaudeMessage } from '../../hooks';
 
 interface Props {
   reviews: PRReview[];
   workingDir: string;
+  projectId: string;
   prNumber: number;
 }
 
@@ -28,24 +36,87 @@ interface ValidationTarget {
   path?: string;
 }
 
-export const ReviewList = ({ reviews, workingDir, prNumber }: Props) => {
+export const ReviewList = ({
+  reviews,
+  workingDir,
+  projectId,
+  prNumber,
+}: Props) => {
   const [validations, setValidations] = useState<
     Record<string, ValidationState>
   >({});
   const [activeTarget, setActiveTarget] = useState<ValidationTarget | null>(
     null
   );
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(
+    null
+  );
 
-  const { openPanel, setMode, setTargetContext, setOnExecuteAction } =
-    useChatPanel();
+  const {
+    setTitle,
+    setTargetContext,
+    setPRContext,
+    setOnExecuteAction,
+    setOnResumeSession,
+    setClaudeSessionId,
+  } = useChatPanel();
+
+  const {
+    openActionSelector,
+    openChat,
+    resumeSession: resumeSessionUrl,
+  } = useChatPanelParams();
+
   const {
     status: wsStatus,
     messages,
+    sessionId,
     connect,
     execute,
     clearMessages,
     addUserMessage,
+    loadHistoryMessages,
   } = useChatPanelSync(workingDir);
+
+  // Fetch history for selected session
+  const { data: historyData } = useQuery({
+    ...chatSessionsQuery.history(projectId, prNumber, selectedSessionId ?? ''),
+    enabled: !!selectedSessionId,
+  });
+
+  // When history data is loaded, convert to messages and display
+  useEffect(() => {
+    if (historyData && selectedSessionId) {
+      const convertedMessages: ClaudeMessage[] = historyData.entries.map(
+        (entry, index) => ({
+          id: `history-${index}`,
+          type: entry.role === 'user' ? 'user' : 'text',
+          content: entry.content,
+          timestamp: entry.timestamp ? new Date(entry.timestamp) : new Date(),
+        })
+      );
+
+      // Load history messages
+      loadHistoryMessages(convertedMessages);
+
+      // Set the claude session ID for follow-up messages
+      setClaudeSessionId(historyData.claudeSessionId);
+      setSelectedSessionId(null);
+    }
+  }, [historyData, selectedSessionId, loadHistoryMessages, setClaudeSessionId]);
+
+  const handleResumeSession = (session: ChatSessionSummary) => {
+    if (wsStatus !== 'connected') {
+      connect();
+    }
+    setSelectedSessionId(session.id);
+    setTitle(session.title || `Chat ${session.id.slice(0, 8)}`);
+    // Use URL-based navigation with resumed flag
+    resumeSessionUrl(
+      session.scopeType === 'REVIEW' ? 'review' : 'comment',
+      session.scopeTargetId
+    );
+  };
 
   const handleOpenChat = (target: ValidationTarget) => {
     if (wsStatus !== 'connected') {
@@ -62,6 +133,10 @@ export const ReviewList = ({ reviews, workingDir, prNumber }: Props) => {
       prNumber,
     });
 
+    setPRContext({ projectId, prNumber });
+
+    setOnResumeSession(handleResumeSession);
+
     setOnExecuteAction((actionId: string, customPrompt?: string) => {
       setValidations((prev) => ({
         ...prev,
@@ -75,16 +150,27 @@ export const ReviewList = ({ reviews, workingDir, prNumber }: Props) => {
       const userMessage = ACTION_LABELS[actionId] || customPrompt || actionId;
       addUserMessage(userMessage);
 
-      setMode('chat');
-      execute(prompt, workingDir, { executionMode });
+      const chatContext: ClaudeChatContext = {
+        projectId,
+        prNumber,
+        scopeType: target.type === 'review' ? 'REVIEW' : 'COMMENT',
+        scopeTargetId: target.id,
+        title: userMessage,
+      };
+
+      // Navigate to chat mode via URL
+      openChat();
+      execute(prompt, workingDir, { executionMode }, chatContext);
     });
 
-    setMode('action-selection');
-    openPanel(
+    setTitle(
       target.type === 'review'
         ? `Chat: ${target.author}'s review`
         : `Chat: ${target.author}'s comment on ${target.path}`
     );
+
+    // Navigate to action selector via URL
+    openActionSelector(target.type, target.id);
   };
 
   useEffect(() => {
@@ -107,6 +193,13 @@ export const ReviewList = ({ reviews, workingDir, prNumber }: Props) => {
       setActiveTarget(null);
     }
   }, [messages, activeTarget]);
+
+  // Sync sessionId to claudeSessionId when a new session completes
+  useEffect(() => {
+    if (sessionId) {
+      setClaudeSessionId(sessionId);
+    }
+  }, [sessionId, setClaudeSessionId]);
 
   return (
     <section className="mb-8">
