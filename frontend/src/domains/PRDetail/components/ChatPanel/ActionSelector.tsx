@@ -47,6 +47,7 @@ export const ActionSelector = ({
     e.preventDefault();
     if (!chatInput.trim()) return;
     onSelect('chat', chatInput.trim());
+    setChatInput('');
   };
 
   return (
@@ -95,6 +96,7 @@ export const ActionSelector = ({
                 e.preventDefault();
                 if (chatInput.trim()) {
                   onSelect('chat', chatInput.trim());
+                  setChatInput('');
                 }
               }
             }}
