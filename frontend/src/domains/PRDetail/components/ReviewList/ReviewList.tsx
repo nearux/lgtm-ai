@@ -162,6 +162,7 @@ export const ReviewList = ({
       openChat();
       execute(
         {
+          type: 'command',
           command: actionId as 'validate' | 'fix' | 'explain' | 'custom',
           context,
           ...(customPrompt ? { customPrompt } : {}),

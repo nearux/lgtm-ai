@@ -36,10 +36,10 @@ export interface WsCommandExecuteMessage {
 }
 
 export interface WsFollowUpExecuteMessage {
-  type: 'execute';
+  type: 'followUp';
   requestId: string;
   workingDir: string;
-  followUp: string;
+  message: string;
   options?: ClaudeExecuteOptions;
   chatContext?: ClaudeChatContext;
 }
@@ -72,7 +72,8 @@ export interface WsPlanApprovalResponseMessage {
 }
 
 export type WsClientMessage =
-  | WsExecuteMessage
+  | WsCommandExecuteMessage
+  | WsFollowUpExecuteMessage
   | WsAbortMessage
   | WsApprovalResponseMessage
   | WsPlanApprovalResponseMessage;

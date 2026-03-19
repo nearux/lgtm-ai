@@ -33,6 +33,7 @@ export const CommentList = ({ comments, workingDir, prNumber }: Props) => {
     null
   );
   const pendingPayloadRef = useRef<{
+    type: 'command';
     command: 'validate';
     context: {
       type: 'review';
@@ -70,6 +71,7 @@ export const CommentList = ({ comments, workingDir, prNumber }: Props) => {
     }));
     clearMessages();
     pendingPayloadRef.current = {
+      type: 'command',
       command: 'validate',
       context: {
         type: 'review',

@@ -43,11 +43,13 @@ export interface ApprovalRequest {
 }
 
 export interface CommandPayload {
+  type: 'command';
   command: ClaudeCommand;
   context: CommandContext;
   customPrompt?: string;
 }
 
 export interface FollowUpPayload {
-  followUp: string;
+  type: 'followUp';
+  message: string;
 }

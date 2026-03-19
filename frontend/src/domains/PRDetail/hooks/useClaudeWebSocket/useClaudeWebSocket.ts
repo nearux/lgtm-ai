@@ -167,13 +167,13 @@ export function useClaudeWebSocket(): UseClaudeWebSocketReturn {
   ): string => {
     const requestId = crypto.randomUUID();
 
-    if ('followUp' in payload) {
+    if (payload.type === 'followUp') {
       // Follow-up: add to live UI and send as followUp shape
-      addMessage({ type: 'user', content: payload.followUp });
+      addMessage({ type: 'user', content: payload.message });
       send({
-        type: 'execute',
+        type: 'followUp',
         requestId,
-        followUp: payload.followUp,
+        message: payload.message,
         workingDir,
         options,
       });

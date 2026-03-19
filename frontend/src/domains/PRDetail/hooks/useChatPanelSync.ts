@@ -82,7 +82,7 @@ export function useChatPanelSync(workingDir: string) {
       // Fall back to ws.sessionId (for current session)
       const sessionIdToUse = state.claudeSessionId || ws.sessionId;
       if (sessionIdToUse) {
-        ws.execute({ followUp: message }, workingDir, {
+        ws.execute({ type: 'followUp', message }, workingDir, {
           executionMode: 'bypassPermissions',
           sessionId: sessionIdToUse,
         });

@@ -25,20 +25,19 @@ export function handleClaudeWebSocket(ws: WebSocket): void {
       return;
     }
 
+    if (msg.type === 'followUp') {
+      manager.execute(
+        msg.requestId,
+        msg.message,
+        msg.workingDir,
+        msg.options,
+        msg.chatContext
+      );
+      return;
+    }
+
     if (msg.type === 'execute') {
       const { requestId, workingDir, options, chatContext } = msg;
-
-      if ('followUp' in msg) {
-        // Shape B: follow-up for an existing session — use text directly
-        manager.execute(
-          requestId,
-          msg.followUp,
-          workingDir,
-          options,
-          chatContext
-        );
-        return;
-      }
 
       // Shape A: command-based new session
       const cmdMsg = msg as WsCommandExecuteMessage;
