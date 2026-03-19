@@ -79,7 +79,8 @@ describe('ClaudeSessionManager', () => {
         scopeTargetId: 'review-123',
         title: 'Validate review',
       },
-      'claude-session-1'
+      'claude-session-1',
+      undefined
     );
   });
 

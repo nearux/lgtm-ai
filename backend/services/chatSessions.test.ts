@@ -234,7 +234,10 @@ describe('chatSessions service', () => {
 
     expect(mockGetClaudeSessionHistory).toHaveBeenCalledWith(
       'claude-session-1',
-      '/tmp/project'
+      '/tmp/project',
+      undefined,
+      undefined,
+      undefined
     );
     expect(result).toEqual({
       sessionId: session.id,

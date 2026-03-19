@@ -60,10 +60,38 @@ function normalizeContent(
 
 const defaultTranscriptsRoot = path.join(os.homedir(), '.claude', 'projects');
 
+const COMMAND_LABELS: Record<string, string> = {
+  validate: 'Validate this review',
+  explain: 'Explain this review',
+  fix: 'Fix code based on this review',
+};
+
+export function replaceFirstUserMessage(
+  entries: ChatSessionHistoryEntry[],
+  command?: string,
+  customPrompt?: string
+): ChatSessionHistoryEntry[] {
+  if (!command) return entries;
+
+  const label =
+    command === 'custom'
+      ? (customPrompt ?? entries[0]?.content ?? '')
+      : (COMMAND_LABELS[command] ?? entries[0]?.content ?? '');
+
+  return entries.map((entry, index) => {
+    if (index === 0 && entry.role === 'user') {
+      return { ...entry, content: label };
+    }
+    return entry;
+  });
+}
+
 export async function getClaudeSessionHistory(
   claudeSessionId: string,
   workingDir: string,
-  transcriptsRoot = defaultTranscriptsRoot
+  transcriptsRoot = defaultTranscriptsRoot,
+  command?: string,
+  customPrompt?: string
 ): Promise<ClaudeTranscriptHistory> {
   const transcriptPath = path.join(
     transcriptsRoot,
@@ -82,7 +110,7 @@ export async function getClaudeSessionHistory(
     );
   }
 
-  const entries = raw
+  const rawEntries = raw
     .split('\n')
     .map((line) => line.trim())
     .filter(Boolean)
@@ -97,6 +125,6 @@ export async function getClaudeSessionHistory(
 
   return {
     claudeSessionId,
-    entries,
+    entries: replaceFirstUserMessage(rawEntries, command, customPrompt),
   };
 }
