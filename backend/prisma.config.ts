@@ -1,8 +1,7 @@
-import path from 'node:path';
-import os from 'node:os';
 import { defineConfig } from 'prisma/config';
+import { resolveDbPath } from './utils/dbPath.js';
 
-const dbPath = path.join(os.homedir(), '.lgtmai', 'lgtmai.db');
+const dbPath = resolveDbPath();
 
 export default defineConfig({
   schema: 'prisma/schema.prisma',
