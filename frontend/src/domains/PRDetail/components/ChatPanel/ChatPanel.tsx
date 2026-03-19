@@ -8,26 +8,25 @@ import {
   XCircle,
   Loader2,
   Send,
+  ArrowLeft,
 } from 'lucide-react';
 import { IconButton, Spinner, GFMMarkdown } from '@/shared/components';
-import type { ClaudeMessage, ConnectionStatus } from '../../hooks';
+import type { ClaudeMessage } from '../../hooks';
 import type {
   ChatPanelMode,
-  TargetContext,
+  ChatPanelState,
 } from '../../contexts/ChatPanelContext';
 import { ActionSelector } from './ActionSelector';
+import { ChatHistoryList } from './ChatHistoryList';
 
 interface Props {
   isOpen: boolean;
+  state: ChatPanelState;
+  mode: ChatPanelMode;
   onClose: () => void;
-  messages: ClaudeMessage[];
-  status: ConnectionStatus;
-  title?: string;
-  sessionId?: string | null;
-  onSendFollowUp?: ((message: string) => void) | null;
-  mode?: ChatPanelMode;
-  targetContext?: TargetContext | null;
-  onExecuteAction?: ((actionId: string, customPrompt?: string) => void) | null;
+  onShowHistory: () => void;
+  onHideHistory: () => void;
+  onBackToChat: () => void;
 }
 
 type GroupedItem =
@@ -97,16 +96,24 @@ const groupMessages = (messages: ClaudeMessage[]): GroupedItem[] => {
 
 export const ChatPanel = ({
   isOpen,
+  state,
+  mode,
   onClose,
-  messages,
-  status,
-  title = 'Claude',
-  sessionId,
-  onSendFollowUp,
-  mode = 'action-selection',
-  targetContext,
-  onExecuteAction,
+  onShowHistory,
+  onHideHistory,
+  onBackToChat,
 }: Props) => {
+  const {
+    title,
+    messages,
+    status,
+    sessionId,
+    onSendFollowUp,
+    targetContext,
+    prContext,
+    onExecuteAction,
+    onResumeSession,
+  } = state;
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [expandedTools, setExpandedTools] = useState<Set<string>>(new Set());
   const [followUpInput, setFollowUpInput] = useState('');
@@ -117,6 +124,8 @@ export const ChatPanel = ({
 
   const showActionSelector =
     mode === 'action-selection' && messages.length === 0 && onExecuteAction;
+
+  const showHistory = mode === 'history' && prContext;
 
   const handleSubmitFollowUp = (e: React.FormEvent) => {
     e.preventDefault();
@@ -149,8 +158,28 @@ export const ChatPanel = ({
       {/* Header */}
       <div className="flex shrink-0 items-center justify-between border-b border-gray-200 bg-white px-4 py-3">
         <div className="flex items-center gap-3">
+          {mode === 'chat' && messages.length > 0 && onBackToChat && (
+            <button
+              type="button"
+              onClick={onBackToChat}
+              className="cursor-pointer rounded p-1 hover:bg-gray-100"
+              aria-label="Back"
+            >
+              <ArrowLeft className="h-5 w-5 text-gray-600" />
+            </button>
+          )}
+          {mode === 'history' && onHideHistory && (
+            <button
+              type="button"
+              onClick={onHideHistory}
+              className="cursor-pointer rounded p-1 hover:bg-gray-100"
+              aria-label="Back"
+            >
+              <ArrowLeft className="h-5 w-5 text-gray-600" />
+            </button>
+          )}
           <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
-          {!showActionSelector && (
+          {!showActionSelector && !showHistory && (
             <span
               className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                 status === 'connected'
@@ -171,10 +200,19 @@ export const ChatPanel = ({
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
-        {showActionSelector ? (
+        {showHistory && prContext ? (
+          <ChatHistoryList
+            projectId={prContext.projectId}
+            prNumber={prContext.prNumber}
+            onSelectSession={(session) => {
+              onResumeSession?.(session);
+            }}
+          />
+        ) : showActionSelector ? (
           <ActionSelector
             targetContext={targetContext ?? null}
             onSelect={onExecuteAction}
+            onShowHistory={onShowHistory}
           />
         ) : grouped.length === 0 ? (
           <div className="flex h-full items-center justify-center p-4">
@@ -219,7 +257,7 @@ export const ChatPanel = ({
                   <button
                     type="button"
                     onClick={() => toggleTool(item.id)}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-purple-100"
+                    className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-sm hover:bg-purple-100"
                   >
                     {expandedTools.has(item.id) ? (
                       <ChevronDown className="h-4 w-4 text-purple-500" />
@@ -280,29 +318,34 @@ export const ChatPanel = ({
       </div>
 
       {/* Follow-up Input - always show when in chat mode */}
-      {!showActionSelector && messages.length > 0 && onSendFollowUp && (
-        <form
-          onSubmit={handleSubmitFollowUp}
-          className="shrink-0 border-t border-gray-200 bg-white p-4"
-        >
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={followUpInput}
-              onChange={(e) => setFollowUpInput(e.target.value)}
-              placeholder="Ask a follow-up question..."
-              className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
-            />
-            <button
-              type="submit"
-              disabled={!followUpInput.trim() || !sessionId || !onSendFollowUp}
-              className="rounded-lg bg-indigo-600 px-4 py-2 text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-gray-300"
-            >
-              <Send className="h-4 w-4" />
-            </button>
-          </div>
-        </form>
-      )}
+      {!showActionSelector &&
+        !showHistory &&
+        messages.length > 0 &&
+        onSendFollowUp && (
+          <form
+            onSubmit={handleSubmitFollowUp}
+            className="shrink-0 border-t border-gray-200 bg-white p-4"
+          >
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={followUpInput}
+                onChange={(e) => setFollowUpInput(e.target.value)}
+                placeholder="Ask a follow-up question..."
+                className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+              />
+              <button
+                type="submit"
+                disabled={
+                  !followUpInput.trim() || !sessionId || !onSendFollowUp
+                }
+                className="cursor-pointer rounded-lg bg-indigo-600 px-4 py-2 text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+              >
+                <Send className="h-4 w-4" />
+              </button>
+            </div>
+          </form>
+        )}
     </div>
   );
 };
