@@ -24,14 +24,29 @@ export interface CommandContext {
 
 export type ClaudeCommand = 'validate' | 'fix' | 'explain' | 'custom';
 
-export interface WsExecuteMessage {
+export interface WsCommandExecuteMessage {
   type: 'execute';
   requestId: string;
-  prompt: string;
   workingDir: string;
+  command: ClaudeCommand;
+  context: CommandContext;
+  customPrompt?: string;
   options?: ClaudeExecuteOptions;
   chatContext?: ClaudeChatContext;
 }
+
+export interface WsFollowUpExecuteMessage {
+  type: 'execute';
+  requestId: string;
+  workingDir: string;
+  followUp: string;
+  options?: ClaudeExecuteOptions;
+  chatContext?: ClaudeChatContext;
+}
+
+export type WsExecuteMessage =
+  | WsCommandExecuteMessage
+  | WsFollowUpExecuteMessage;
 
 export interface WsAbortMessage {
   type: 'abort';

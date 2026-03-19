@@ -21,7 +21,8 @@ export class ClaudeSessionManager {
     prompt: string,
     workingDir: string,
     options: ClaudeExecuteOptions = {},
-    chatContext?: ClaudeChatContext
+    chatContext?: ClaudeChatContext,
+    commandMeta?: { command?: string; customPrompt?: string }
   ): void {
     const { sender } = this;
     if (this.processes.has(requestId)) {
@@ -92,14 +93,16 @@ export class ClaudeSessionManager {
     );
     proc.on('init', (sessionId) => {
       if (!options.sessionId && chatContext) {
-        void createChatSessionFromExecution(chatContext, sessionId).catch(
-          (error) => {
-            console.error(
-              '[ClaudeSessionManager] Failed to persist chat session:',
-              error
-            );
-          }
-        );
+        void createChatSessionFromExecution(
+          chatContext,
+          sessionId,
+          commandMeta
+        ).catch((error) => {
+          console.error(
+            '[ClaudeSessionManager] Failed to persist chat session:',
+            error
+          );
+        });
       }
       sender.send({ type: 'init', requestId, sessionId });
     });
