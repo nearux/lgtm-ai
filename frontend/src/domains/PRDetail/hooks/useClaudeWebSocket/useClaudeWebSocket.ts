@@ -8,6 +8,7 @@ import type {
   CommandPayload,
   FollowUpPayload,
 } from './types';
+import type { ClaudeChatContext } from '@lgtmai/backend/types';
 
 const WS_URL = `ws://${window.location.hostname}:5051/api/claude/execute`;
 
@@ -21,7 +22,8 @@ export interface UseClaudeWebSocketReturn {
   execute: (
     payload: CommandPayload | FollowUpPayload,
     workingDir: string,
-    options?: ClaudeExecuteOptions
+    options?: ClaudeExecuteOptions,
+    chatContext?: ClaudeChatContext
   ) => string;
   abort: (requestId: string) => void;
   respondToApproval: (
@@ -38,6 +40,7 @@ export interface UseClaudeWebSocketReturn {
   ) => void;
   clearMessages: () => void;
   addUserMessage: (content: string) => void;
+  loadHistoryMessages: (msgs: ClaudeMessage[]) => void;
 }
 
 export function useClaudeWebSocket(): UseClaudeWebSocketReturn {
@@ -159,7 +162,8 @@ export function useClaudeWebSocket(): UseClaudeWebSocketReturn {
   const execute = (
     payload: CommandPayload | FollowUpPayload,
     workingDir: string,
-    options?: ClaudeExecuteOptions
+    options?: ClaudeExecuteOptions,
+    chatContext?: ClaudeChatContext
   ): string => {
     const requestId = crypto.randomUUID();
 
@@ -183,6 +187,7 @@ export function useClaudeWebSocket(): UseClaudeWebSocketReturn {
         ...(payload.customPrompt ? { customPrompt: payload.customPrompt } : {}),
         workingDir,
         options,
+        chatContext,
       });
     }
 
@@ -233,6 +238,10 @@ export function useClaudeWebSocket(): UseClaudeWebSocketReturn {
     addMessage({ type: 'user', content });
   };
 
+  const loadHistoryMessages = (msgs: ClaudeMessage[]) => {
+    setMessages(msgs);
+  };
+
   return {
     status,
     messages,
@@ -246,5 +255,6 @@ export function useClaudeWebSocket(): UseClaudeWebSocketReturn {
     respondToPlanApproval,
     clearMessages,
     addUserMessage,
+    loadHistoryMessages,
   };
 }
