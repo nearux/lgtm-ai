@@ -1,10 +1,10 @@
 import { execFile } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
-import os from 'node:os';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
+import { resolveDbPath } from '../utils/dbPath.js';
 
 type ExecFileAsync = (
   file: string,
@@ -43,7 +43,7 @@ export async function runStartupMigrations(
   options: RunStartupMigrationsOptions = {}
 ): Promise<void> {
   const backendRoot = resolveBackendRoot(options.backendRoot);
-  const dbDir = join(os.homedir(), '.lgtmai');
+  const dbDir = dirname(resolveDbPath());
   mkdirSync(dbDir, { recursive: true });
 
   const schemaPath =

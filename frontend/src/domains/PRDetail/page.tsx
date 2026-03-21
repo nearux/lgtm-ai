@@ -1,8 +1,18 @@
+import { useEffect, useRef } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { AsyncBoundary } from '@/shared/components';
 import { PRDetailContent } from './components/PRDetailContent/PRDetailContent';
 import { ChatPanel } from './components/ChatPanel';
-import { ChatPanelProvider, useChatPanel } from './contexts';
+import { ChatPanelProvider } from './contexts';
+import { useChatPanelController, useChatPanelParams } from './hooks';
+
+export const PRDetailPage = () => {
+  return (
+    <ChatPanelProvider>
+      <PRDetailPageContent />
+    </ChatPanelProvider>
+  );
+};
 
 const PRDetailPageContent = () => {
   const { projectId, prNumber } = useParams<{
@@ -11,13 +21,23 @@ const PRDetailPageContent = () => {
   }>();
   const [searchParams] = useSearchParams();
   const origin = searchParams.get('origin') ?? undefined;
+  const initialPanelRef = useRef(searchParams.get('panel'));
 
-  const { state, closePanel } = useChatPanel();
+  const { closePanel } = useChatPanelParams();
+  const chatPanel = useChatPanelController();
+
+  // NOTE: Clear panel params on mount (page refresh)
+  useEffect(() => {
+    if (initialPanelRef.current) {
+      closePanel();
+      initialPanelRef.current = null;
+    }
+  }, [closePanel]);
 
   return (
     <div className="flex min-h-screen">
       <div
-        className={`flex-1 transition-all duration-300 ${state.isOpen ? 'mr-[480px]' : ''}`}
+        className={`flex-1 transition-all duration-300 ${chatPanel.isOpen ? 'mr-[480px]' : ''}`}
       >
         <div className="mx-auto max-w-6xl p-8">
           <AsyncBoundary>
@@ -29,26 +49,7 @@ const PRDetailPageContent = () => {
           </AsyncBoundary>
         </div>
       </div>
-      <ChatPanel
-        isOpen={state.isOpen}
-        onClose={closePanel}
-        messages={state.messages}
-        status={state.status}
-        title={state.title}
-        sessionId={state.sessionId}
-        onSendFollowUp={state.onSendFollowUp}
-        mode={state.mode}
-        targetContext={state.targetContext}
-        onExecuteAction={state.onExecuteAction}
-      />
+      <ChatPanel {...chatPanel} />
     </div>
-  );
-};
-
-export const PRDetailPage = () => {
-  return (
-    <ChatPanelProvider>
-      <PRDetailPageContent />
-    </ChatPanelProvider>
   );
 };

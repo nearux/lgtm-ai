@@ -1,6 +1,6 @@
 {
   "name": "lgtmai",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Auto-apply PR reviews with Claude Code",
   "main": "cli/dist/index.js",
   "types": "cli/dist/index.d.ts",

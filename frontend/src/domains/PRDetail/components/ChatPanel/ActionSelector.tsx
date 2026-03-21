@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { CheckCircle, BookOpen, Wrench, Send } from 'lucide-react';
-import type { TargetContext } from '../../contexts/ChatPanelContext';
+import { CheckCircle, BookOpen, Wrench, Send, History } from 'lucide-react';
 
 interface ActionOption {
   id: string;
@@ -10,8 +9,8 @@ interface ActionOption {
 }
 
 interface Props {
-  targetContext: TargetContext | null;
   onSelect: (actionId: string, customPrompt?: string) => void;
+  onShowHistory?: () => void;
 }
 
 const actions: ActionOption[] = [
@@ -35,33 +34,21 @@ const actions: ActionOption[] = [
   },
 ];
 
-export const ActionSelector = ({ targetContext, onSelect }: Props) => {
+export const ActionSelector = ({ onSelect, onShowHistory }: Props) => {
   const [chatInput, setChatInput] = useState('');
 
   const handleChatSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!chatInput.trim()) return;
     onSelect('chat', chatInput.trim());
+    setChatInput('');
   };
 
   return (
     <div className="flex h-full flex-col items-center justify-center p-4">
-      <h3 className="mb-4 text-sm font-medium text-gray-700">
+      <h3 className="mb-4 text-xl font-medium text-gray-700">
         What would you like to do?
       </h3>
-
-      {targetContext && (
-        <div className="mb-4 w-full max-w-sm rounded-lg border border-gray-200 bg-gray-50 p-3">
-          <p className="mb-1 text-xs font-medium text-gray-500">
-            {targetContext.type === 'inline'
-              ? targetContext.path
-              : `Review by ${targetContext.author}`}
-          </p>
-          <p className="line-clamp-2 text-sm text-gray-700">
-            {targetContext.body}
-          </p>
-        </div>
-      )}
 
       <div className="grid w-full max-w-sm grid-cols-3 gap-3">
         {actions.map((action) => (
@@ -69,7 +56,7 @@ export const ActionSelector = ({ targetContext, onSelect }: Props) => {
             key={action.id}
             type="button"
             onClick={() => onSelect(action.id)}
-            className="flex flex-col items-center gap-2 rounded-lg border border-gray-200 bg-white p-4 text-center transition-all hover:border-indigo-300 hover:bg-indigo-50 hover:shadow-sm"
+            className="flex cursor-pointer flex-col items-center gap-2 rounded-lg border border-gray-200 bg-white p-4 text-center transition-all hover:border-indigo-300 hover:bg-indigo-50 hover:shadow-sm"
           >
             <span className="text-indigo-600">{action.icon}</span>
             <span className="text-sm font-medium text-gray-800">
@@ -90,6 +77,7 @@ export const ActionSelector = ({ targetContext, onSelect }: Props) => {
                 e.preventDefault();
                 if (chatInput.trim()) {
                   onSelect('chat', chatInput.trim());
+                  setChatInput('');
                 }
               }
             }}
@@ -99,13 +87,24 @@ export const ActionSelector = ({ targetContext, onSelect }: Props) => {
           <button
             type="submit"
             disabled={!chatInput.trim()}
-            className="flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+            className="flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-gray-300"
           >
             <Send className="h-4 w-4" />
             Send
           </button>
         </div>
       </form>
+
+      {onShowHistory && (
+        <button
+          type="button"
+          onClick={onShowHistory}
+          className="mt-4 flex cursor-pointer items-center gap-2 text-sm text-gray-500 transition-colors hover:text-indigo-600"
+        >
+          <History className="h-4 w-4" />
+          View chat history
+        </button>
+      )}
     </div>
   );
 };
