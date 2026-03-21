@@ -1,37 +1,22 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useChatPanelSync } from '../../hooks';
-import { useChatPanel } from '../../contexts';
 import type {
   PRReview,
   PRComment,
   PRReviewInlineComment,
 } from '@lgtmai/backend/types';
-import {
-  buildPromptForAction,
-  getExecutionMode,
-  ACTION_LABELS,
-} from '../../utils/reviewPrompts';
-import { ReviewCard, type ValidationStatus } from '../ReviewList/components';
+import { ReviewCard } from '../ReviewList/components';
 import { CommentCard } from './components/CommentCard';
+import {
+  useActivityChat,
+  type ValidationState,
+  type ValidationTarget,
+} from './hooks/useActivityChat';
 
 interface Props {
   reviews: PRReview[];
   comments: PRComment[];
   workingDir: string;
   prNumber: number;
-}
-
-interface ValidationState {
-  status: ValidationStatus;
-  result?: string;
-}
-
-interface ValidationTarget {
-  type: 'review' | 'comment';
-  id: string;
-  body: string;
-  author: string;
-  path?: string;
 }
 
 type ActivityItem =
@@ -87,59 +72,15 @@ export const ActivityTimeline = ({
     null
   );
 
-  const { openPanel, setMode, setTargetContext, setOnExecuteAction } =
-    useChatPanel();
-  const {
-    status: wsStatus,
-    messages,
-    connect,
-    execute,
-    clearMessages,
-    addUserMessage,
-  } = useChatPanelSync(workingDir);
+  const { handleOpenChat, messages } = useActivityChat({
+    workingDir,
+    prNumber,
+    setValidations,
+    setActiveTarget,
+  });
 
   // Build global thread map once across all reviews
   const threadMap = useMemo(() => buildThreadMap(reviews), [reviews]);
-
-  const handleOpenChat = (target: ValidationTarget) => {
-    if (wsStatus !== 'connected') {
-      connect();
-    }
-    setActiveTarget(target);
-    clearMessages();
-
-    setTargetContext({
-      type: target.type === 'review' ? 'review' : 'inline',
-      author: target.author,
-      body: target.body,
-      path: target.path,
-      prNumber,
-    });
-
-    setOnExecuteAction((actionId: string, customPrompt?: string) => {
-      setValidations((prev) => ({
-        ...prev,
-        [target.id]: { status: 'validating' },
-      }));
-
-      const prompt =
-        customPrompt || buildPromptForAction(actionId, target, prNumber);
-      const executionMode = getExecutionMode(actionId);
-
-      const userMessage = ACTION_LABELS[actionId] || customPrompt || actionId;
-      addUserMessage(userMessage);
-
-      setMode('chat');
-      execute(prompt, workingDir, { executionMode });
-    });
-
-    setMode('action-selection');
-    openPanel(
-      target.type === 'review'
-        ? `Chat: ${target.author}'s review`
-        : `Chat: ${target.author}'s comment`
-    );
-  };
 
   useEffect(() => {
     if (!activeTarget) return;
