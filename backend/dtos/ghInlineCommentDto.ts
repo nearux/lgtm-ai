@@ -4,6 +4,9 @@ export class GhInlineCommentDto {
   static fromGh(c: GhReviewInlineComment): PRReview['inlineComments'][number] {
     return {
       id: String(c.id),
+      ...(c.in_reply_to_id != null
+        ? { inReplyToId: String(c.in_reply_to_id) }
+        : {}),
       author: {
         id: String(c.user.id),
         login: c.user.login,

@@ -1,7 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useChatPanelSync } from '../../hooks';
 import { useChatPanel } from '../../contexts';
-import type { PRReview, PRComment } from '@lgtmai/backend/types';
+import type {
+  PRReview,
+  PRComment,
+  PRReviewInlineComment,
+} from '@lgtmai/backend/types';
 import {
   buildPromptForAction,
   getExecutionMode,
@@ -34,6 +38,42 @@ type ActivityItem =
   | { kind: 'review'; date: string; item: PRReview }
   | { kind: 'comment'; date: string; item: PRComment };
 
+export interface InlineThread {
+  root: PRReviewInlineComment;
+  replies: PRReviewInlineComment[];
+}
+
+/**
+ * Builds a cross-review thread map: rootCommentId → InlineThread.
+ * Replies may live in a different PRReview than their root, so we gather
+ * all inline comments from every review first and then link by inReplyToId.
+ */
+function buildThreadMap(reviews: PRReview[]): Map<string, InlineThread> {
+  const allComments = reviews.flatMap((r) => r.inlineComments);
+  const byId = new Map(allComments.map((c) => [c.id, c]));
+
+  const threads = new Map<string, InlineThread>();
+
+  for (const comment of allComments) {
+    // Walk up to find the root
+    let rootId = comment.id;
+    while (byId.get(rootId)?.inReplyToId) {
+      rootId = byId.get(rootId)!.inReplyToId!;
+    }
+
+    if (!threads.has(rootId)) {
+      const root = byId.get(rootId);
+      if (root) threads.set(rootId, { root, replies: [] });
+    }
+
+    if (comment.id !== rootId) {
+      threads.get(rootId)?.replies.push(comment);
+    }
+  }
+
+  return threads;
+}
+
 export const ActivityTimeline = ({
   reviews,
   comments,
@@ -57,6 +97,9 @@ export const ActivityTimeline = ({
     clearMessages,
     addUserMessage,
   } = useChatPanelSync(workingDir);
+
+  // Build global thread map once across all reviews
+  const threadMap = useMemo(() => buildThreadMap(reviews), [reviews]);
 
   const handleOpenChat = (target: ValidationTarget) => {
     if (wsStatus !== 'connected') {
@@ -119,8 +162,16 @@ export const ActivityTimeline = ({
     }
   }, [messages, activeTarget]);
 
+  // Exclude reviews that have no body and only contain reply inline comments
+  // (their content is already shown nested under the root comment's review)
+  const visibleReviews = reviews.filter((r) => {
+    const hasBody = r.body.trim().length > 0;
+    const hasRootInlineComment = r.inlineComments.some((c) => !c.inReplyToId);
+    return hasBody || hasRootInlineComment;
+  });
+
   const timeline: ActivityItem[] = [
-    ...reviews.map(
+    ...visibleReviews.map(
       (r): ActivityItem => ({ kind: 'review', date: r.submittedAt, item: r })
     ),
     ...comments.map(
@@ -148,10 +199,17 @@ export const ActivityTimeline = ({
         {timeline.map((entry) => {
           if (entry.kind === 'review') {
             const review = entry.item;
+            // Only pass threads whose root belongs to this review
+            const ownThreads = review.inlineComments
+              .filter((c) => !c.inReplyToId)
+              .map((c) => threadMap.get(c.id))
+              .filter((t): t is InlineThread => t !== undefined);
+
             return (
               <ReviewCard
                 key={`review-${review.id}`}
                 review={review}
+                threads={ownThreads}
                 validations={validations}
                 onChatReview={() =>
                   handleOpenChat({

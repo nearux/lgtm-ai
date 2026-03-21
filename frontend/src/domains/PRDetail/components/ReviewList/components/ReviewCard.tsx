@@ -2,7 +2,8 @@ import { MessageCircle } from 'lucide-react';
 import { formatDateTime } from '@/shared/utils';
 import { Button, GFMMarkdown } from '@/shared/components';
 import { ValidationIcon, type ValidationStatus } from './ValidationIcon';
-import { InlineCommentCard } from './InlineCommentCard';
+import { InlineCommentThread } from './InlineCommentThread';
+import type { InlineThread } from '../../ActivityTimeline/ActivityTimeline';
 
 const reviewStateStyles = {
   APPROVED: {
@@ -27,11 +28,13 @@ const reviewStateStyles = {
   },
 };
 
-interface InlineComment {
+export interface InlineComment {
   id: string;
+  inReplyToId?: string;
   path: string;
   body: string;
   diffHunk?: string;
+  createdAt: string;
   author: { login: string; avatarUrl: string };
 }
 
@@ -51,6 +54,7 @@ interface ValidationState {
 
 interface Props {
   review: Review;
+  threads?: InlineThread[];
   validations: Record<string, ValidationState>;
   onChatReview: () => void;
   onChatComment: (comment: InlineComment) => void;
@@ -58,6 +62,7 @@ interface Props {
 
 export const ReviewCard = ({
   review,
+  threads = [],
   validations,
   onChatReview,
   onChatComment,
@@ -109,17 +114,12 @@ export const ReviewCard = ({
 
       {review.body && <GFMMarkdown>{review.body}</GFMMarkdown>}
 
-      {review.inlineComments.length > 0 && (
-        <div className="mt-3 space-y-2">
-          {review.inlineComments.map((comment) => (
-            <InlineCommentCard
-              key={comment.id}
-              comment={comment}
-              validationStatus={validations[comment.id]?.status}
-              onChat={() => onChatComment(comment)}
-            />
-          ))}
-        </div>
+      {threads.length > 0 && (
+        <InlineCommentThread
+          threads={threads}
+          validations={validations}
+          onChat={onChatComment}
+        />
       )}
     </div>
   );
