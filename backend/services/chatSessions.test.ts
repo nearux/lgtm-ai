@@ -254,13 +254,10 @@ describe('chatSessions service', () => {
       session.id
     );
 
-    expect(mockGetClaudeSessionHistory).toHaveBeenCalledWith(
-      'claude-session-1',
-      '/tmp/project',
-      undefined,
-      undefined,
-      undefined
-    );
+    expect(mockGetClaudeSessionHistory).toHaveBeenCalledWith({
+      claudeSessionId: 'claude-session-1',
+      workingDir: '/tmp/project',
+    });
     expect(result).toEqual({
       sessionId: session.id,
       claudeSessionId: 'claude-session-1',
