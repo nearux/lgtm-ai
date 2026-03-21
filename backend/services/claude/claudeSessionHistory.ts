@@ -90,13 +90,19 @@ export function replaceFirstUserMessage(
   });
 }
 
-export async function getClaudeSessionHistory(
-  claudeSessionId: string,
-  workingDir: string,
+export async function getClaudeSessionHistory({
+  claudeSessionId,
+  workingDir,
   transcriptsRoot = defaultTranscriptsRoot,
-  command?: string,
-  customPrompt?: string
-): Promise<ClaudeTranscriptHistory> {
+  command,
+  customPrompt,
+}: {
+  claudeSessionId: string;
+  workingDir: string;
+  transcriptsRoot?: string;
+  command?: string;
+  customPrompt?: string;
+}): Promise<ClaudeTranscriptHistory> {
   const transcriptPath = path.join(
     transcriptsRoot,
     toProjectTranscriptDir(workingDir),

@@ -89,13 +89,12 @@ export async function getChatSessionHistory(
   }
 
   const session = await getChatSession(projectId, prNumber, sessionId);
-  const history = await getClaudeSessionHistory(
-    session.claudeSessionId,
-    workingDirectory,
-    undefined,
-    session.command,
-    session.customPrompt
-  );
+  const history = await getClaudeSessionHistory({
+    claudeSessionId: session.claudeSessionId,
+    workingDir: workingDirectory,
+    command: session.command,
+    customPrompt: session.customPrompt,
+  });
 
   return ChatSessionHistoryResponseDto.of(
     session.id,

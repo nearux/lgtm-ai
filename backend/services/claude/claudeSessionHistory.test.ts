@@ -52,11 +52,11 @@ describe('claudeSessionHistory', () => {
       ].join('\n')
     );
 
-    const result = await getClaudeSessionHistory(
-      'session-1',
-      projectDir,
-      rootDir
-    );
+    const result = await getClaudeSessionHistory({
+      claudeSessionId: 'session-1',
+      workingDir: projectDir,
+      transcriptsRoot: rootDir,
+    });
 
     expect(result).toEqual({
       claudeSessionId: 'session-1',
@@ -80,7 +80,11 @@ describe('claudeSessionHistory', () => {
     tempDirs.push(rootDir);
 
     await expect(
-      getClaudeSessionHistory('missing-session', '/tmp/project', rootDir)
+      getClaudeSessionHistory({
+        claudeSessionId: 'missing-session',
+        workingDir: '/tmp/project',
+        transcriptsRoot: rootDir,
+      })
     ).rejects.toMatchObject({
       message: 'Claude session transcript not found',
       statusCode: 404,
@@ -115,12 +119,12 @@ describe('claudeSessionHistory', () => {
       ].join('\n')
     );
 
-    const result = await getClaudeSessionHistory(
-      'session-cmd',
-      projectDir,
-      rootDir,
-      'validate'
-    );
+    const result = await getClaudeSessionHistory({
+      claudeSessionId: 'session-cmd',
+      workingDir: projectDir,
+      transcriptsRoot: rootDir,
+      command: 'validate',
+    });
 
     expect(result.entries[0].content).toBe('Validate this review');
   });
@@ -158,11 +162,11 @@ describe('claudeSessionHistory', () => {
       ].join('\n')
     );
 
-    const result = await getClaudeSessionHistory(
-      'session-2',
-      projectDir,
-      rootDir
-    );
+    const result = await getClaudeSessionHistory({
+      claudeSessionId: 'session-2',
+      workingDir: projectDir,
+      transcriptsRoot: rootDir,
+    });
 
     expect(result.entries).toEqual([
       {
