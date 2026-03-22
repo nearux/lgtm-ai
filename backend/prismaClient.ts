@@ -1,13 +1,13 @@
 import path from 'node:path';
-import os from 'node:os';
 import { mkdirSync } from 'node:fs';
 import { PrismaLibSql } from '@prisma/adapter-libsql';
 import { PrismaClient } from '@prisma/client';
+import { resolveDbPath } from './utils/dbPath.js';
 
-const dbDir = path.join(os.homedir(), '.lgtmai');
+const dbPath = resolveDbPath();
+const dbDir = path.dirname(dbPath);
 mkdirSync(dbDir, { recursive: true });
 
-const dbPath = path.join(dbDir, 'lgtmai.db');
 const adapter = new PrismaLibSql({ url: `file:${dbPath}` });
 const prisma = new PrismaClient({ adapter });
 
