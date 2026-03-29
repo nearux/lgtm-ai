@@ -10,3 +10,4 @@ export { Select } from './Select/Select';
 export { Tabs } from './Tabs/Tabs';
 export { Pagination } from './Pagination/Pagination';
 export { GFMMarkdown } from './GFMMarkdown';
+export { AppHeader } from './AppHeader/AppHeader';

@@ -79,9 +79,16 @@ export async function getStatus(): Promise<GitHubAuthStatus> {
   };
 }
 
+const GITHUB_USERNAME_RE =
+  /^[a-zA-Z0-9](?:[a-zA-Z0-9]|-(?=[a-zA-Z0-9])){0,38}$/;
+
 export async function switchAccount(
   username: string
 ): Promise<GitHubAuthStatus> {
+  if (!GITHUB_USERNAME_RE.test(username)) {
+    throw new AppError('Invalid GitHub username', HttpStatus.BAD_REQUEST);
+  }
+
   try {
     await execFileAsync('gh', ['auth', 'switch', '--user', username]);
   } catch (error) {

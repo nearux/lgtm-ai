@@ -1,4 +1,4 @@
-import { Suspense } from 'react';
+import { AsyncBoundary } from '../AsyncBoundary/AsyncBoundary';
 import { AccountMenu } from '../AccountMenu/AccountMenu';
 
 export const AppHeader = () => {
@@ -7,11 +7,19 @@ export const AppHeader = () => {
       <h1 className="from-indigo-500 to-purple-600 bg-clip-text text-xl font-bold text-transparent">
         LGTM AI
       </h1>
-      <Suspense
-        fallback={<span className="text-sm text-gray-500">Loading...</span>}
+      <AsyncBoundary
+        pending={<span className="text-sm text-gray-500">Loading...</span>}
+        rejected={({ error, reset }) => (
+          <button
+            onClick={reset}
+            className="text-sm text-red-400 hover:text-red-300"
+          >
+            {error.message} (retry)
+          </button>
+        )}
       >
         <AccountMenu />
-      </Suspense>
+      </AsyncBoundary>
     </header>
   );
 };
