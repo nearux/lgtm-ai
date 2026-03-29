@@ -12,6 +12,7 @@ import { ACTION_LABELS } from '../../utils/reviewPrompts';
 import { CheckoutModal } from '../ReviewList/components/CheckoutModal/CheckoutModal';
 import type {
   PRComment,
+  PRMeta,
   ClaudeChatContext,
   ChatSessionSummary,
 } from '@lgtmai/backend/types';
@@ -23,6 +24,7 @@ interface Props {
   prNumber: number;
   prState: string;
   origin?: string;
+  prMeta: PRMeta;
 }
 
 interface ValidationTarget {
@@ -39,6 +41,7 @@ export const CommentList = ({
   prNumber,
   prState,
   origin,
+  prMeta,
 }: Props) => {
   const [activeTarget, setActiveTarget] = useState<ValidationTarget | null>(
     null
@@ -140,6 +143,7 @@ export const CommentList = ({
           author: target.author,
           body: target.body,
           prNumber,
+          prMeta,
         },
         ...(customPrompt ? { customPrompt } : {}),
       },

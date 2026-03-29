@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, type ReactNode } from 'react';
 import type { ClaudeMessage, ConnectionStatus } from '../hooks';
-import type { ClaudeCommand, ChatSessionSummary } from '@lgtmai/backend/types';
+import type { ChatSessionSummary } from '@lgtmai/backend/types';
 
 export type ChatPanelMode = 'action-selection' | 'chat' | 'history';
 
@@ -29,9 +29,7 @@ export interface ChatPanelState {
   mode: ChatPanelMode;
   targetContext: TargetContext | null;
   prContext: PRContext | null;
-  onExecuteAction:
-    | ((command: ClaudeCommand, customPrompt?: string) => void)
-    | null;
+  onExecuteAction: ((actionId: string, customPrompt?: string) => void) | null;
   onResumeSession: ((session: ChatSessionSummary) => void) | null;
   isResumedSession: boolean;
 }
@@ -51,7 +49,7 @@ interface ChatPanelContextValue {
   setTargetContext: (context: TargetContext | null) => void;
   setPRContext: (context: PRContext | null) => void;
   setOnExecuteAction: (
-    callback: ((command: ClaudeCommand, customPrompt?: string) => void) | null
+    callback: ((actionId: string, customPrompt?: string) => void) | null
   ) => void;
   setOnResumeSession: (
     callback: ((session: ChatSessionSummary) => void) | null
@@ -128,7 +126,7 @@ export const ChatPanelProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const setOnExecuteAction = (
-    callback: ((command: ClaudeCommand, customPrompt?: string) => void) | null
+    callback: ((actionId: string, customPrompt?: string) => void) | null
   ) => {
     setState((prev) => ({ ...prev, onExecuteAction: callback }));
   };
