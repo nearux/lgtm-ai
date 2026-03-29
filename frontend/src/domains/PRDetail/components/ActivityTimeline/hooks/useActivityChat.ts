@@ -1,10 +1,7 @@
 import { useChatPanelSync } from '../../../hooks';
 import { useChatPanel } from '../../../contexts';
-import {
-  buildPromptForAction,
-  getExecutionMode,
-  ACTION_LABELS,
-} from '../../../utils/reviewPrompts';
+import { ACTION_LABELS } from '../../../utils/reviewPrompts';
+import type { PRMeta, ClaudeChatContext } from '@lgtmai/backend/types';
 import type { ValidationStatus } from '../../ReviewList/components';
 
 export interface ValidationState {
@@ -18,11 +15,14 @@ export interface ValidationTarget {
   body: string;
   author: string;
   path?: string;
+  diffHunk?: string;
 }
 
 interface UseActivityChatOptions {
   workingDir: string;
+  projectId: string;
   prNumber: number;
+  prMeta: PRMeta;
   setValidations: React.Dispatch<
     React.SetStateAction<Record<string, ValidationState>>
   >;
@@ -33,7 +33,9 @@ interface UseActivityChatOptions {
 
 export function useActivityChat({
   workingDir,
+  projectId,
   prNumber,
+  prMeta,
   setValidations,
   setActiveTarget,
 }: UseActivityChatOptions) {
@@ -69,15 +71,37 @@ export function useActivityChat({
         [target.id]: { status: 'validating' },
       }));
 
-      const prompt =
-        customPrompt || buildPromptForAction(actionId, target, prNumber);
-      const executionMode = getExecutionMode(actionId);
-
       const userMessage = ACTION_LABELS[actionId] || customPrompt || actionId;
       addUserMessage(userMessage);
 
+      const chatContext: ClaudeChatContext = {
+        projectId,
+        prNumber,
+        scopeType: target.type === 'review' ? 'REVIEW' : 'COMMENT',
+        scopeTargetId: target.id,
+        title: userMessage,
+      };
+
       setMode('chat');
-      execute(prompt, workingDir, { executionMode });
+      execute(
+        {
+          type: 'command',
+          command: actionId as 'validate' | 'fix' | 'explain' | 'custom',
+          context: {
+            type: target.type,
+            author: target.author,
+            body: target.body,
+            ...(target.path ? { path: target.path } : {}),
+            ...(target.diffHunk ? { diffHunk: target.diffHunk } : {}),
+            prNumber,
+            prMeta,
+          },
+          ...(customPrompt ? { customPrompt } : {}),
+        },
+        workingDir,
+        { executionMode: 'bypassPermissions' },
+        chatContext
+      );
     });
 
     setMode('action-selection');
