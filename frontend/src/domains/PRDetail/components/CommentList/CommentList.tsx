@@ -51,12 +51,7 @@ export const CommentList = ({
   );
   const overlay = useOverlay();
 
-  const { mutate, isPending } = useMutation({
-    ...prsMutation.checkout(),
-    onError: (error) => {
-      console.error('Checkout failed:', error);
-    },
-  });
+  const { mutateAsync: checkoutPR } = useMutation(prsMutation.checkout());
 
   const {
     setTitle,
@@ -169,24 +164,14 @@ export const CommentList = ({
           isOpen={isOpen}
           close={close}
           onConfirm={async () => {
+            await checkoutPR({
+              projectId,
+              prNumber,
+              body: { force: true, origin },
+            });
             close();
-            mutate(
-              {
-                projectId,
-                prNumber,
-                body: { force: true, origin },
-              },
-              {
-                onSuccess: () => {
-                  executeAction(actionId, customPrompt, target);
-                },
-                onError: (error) => {
-                  console.error('Checkout failed:', error);
-                },
-              }
-            );
+            executeAction(actionId, customPrompt, target);
           }}
-          isPending={isPending}
         />
       ),
       'checkout-modal'

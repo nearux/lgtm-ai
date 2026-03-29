@@ -58,12 +58,7 @@ export function useActivityChat({
     addUserMessage,
   } = useChatPanelSync(workingDir);
   const overlay = useOverlay();
-  const { mutate, isPending } = useMutation({
-    ...prsMutation.checkout(),
-    onError: (error) => {
-      console.error('Checkout failed:', error);
-    },
-  });
+  const { mutateAsync: checkoutPR } = useMutation(prsMutation.checkout());
 
   const executeAction = (
     actionId: string,
@@ -122,25 +117,15 @@ export function useActivityChat({
         <CheckoutModal
           isOpen={isOpen}
           close={close}
-          onConfirm={() => {
-            mutate(
-              {
-                projectId,
-                prNumber,
-                body: { force: true, origin },
-              },
-              {
-                onSuccess: () => {
-                  close();
-                  executeAction(actionId, customPrompt, target);
-                },
-                onError: (error) => {
-                  console.error('Checkout failed:', error);
-                },
-              }
-            );
+          onConfirm={async () => {
+            await checkoutPR({
+              projectId,
+              prNumber,
+              body: { force: true, origin },
+            });
+            close();
+            executeAction(actionId, customPrompt, target);
           }}
-          isPending={isPending}
         />
       ),
       'checkout-modal'
