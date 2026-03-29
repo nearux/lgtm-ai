@@ -15,6 +15,7 @@ export interface ClaudeExecuteOptions {
 }
 
 export interface PRMeta {
+  number: number;
   title: string;
   body: string;
   baseBranch: string;
@@ -28,7 +29,6 @@ export interface CommandContext {
   body: string;
   path?: string;
   diffHunk?: string;
-  prNumber: number;
   prMeta: PRMeta;
 }
 

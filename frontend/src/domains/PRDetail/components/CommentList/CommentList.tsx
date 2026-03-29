@@ -142,7 +142,6 @@ export const CommentList = ({
           type: 'comment',
           author: target.author,
           body: target.body,
-          prNumber,
           prMeta,
         },
         ...(customPrompt ? { customPrompt } : {}),

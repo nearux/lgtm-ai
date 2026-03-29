@@ -37,6 +37,7 @@ export const PRDetailContent = ({ projectId, prNumber, origin }: Props) => {
     : '';
 
   const prMeta: PRMeta = {
+    number: pr.number,
     title: pr.title,
     body: pr.body ?? '',
     baseBranch: pr.baseBranch,

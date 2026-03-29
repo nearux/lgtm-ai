@@ -3,6 +3,7 @@ import { buildSystemPrompt, buildUserPrompt } from './promptBuilder.js';
 import type { CommandContext, PRMeta } from '../types/claude.js';
 
 const prMeta: PRMeta = {
+  number: 42,
   title: 'Add user authentication',
   body: 'Implements JWT-based auth with refresh tokens.',
   baseBranch: 'main',
@@ -14,7 +15,6 @@ const reviewContext: CommandContext = {
   type: 'review',
   author: 'alice',
   body: 'This variable name is unclear',
-  prNumber: 42,
   prMeta,
 };
 
@@ -25,7 +25,6 @@ const commentContext: CommandContext = {
   path: 'src/utils/helper.ts',
   diffHunk:
     '@@ -10,6 +10,8 @@\n function helper() {\n+  const x = getValue();\n+  x.doSomething();',
-  prNumber: 42,
   prMeta,
 };
 
@@ -119,7 +118,6 @@ describe('buildUserPrompt', () => {
       type: 'comment',
       author: 'x',
       body: 'y',
-      prNumber: 1,
       prMeta,
     };
     expect(() => buildUserPrompt('validate', noPath)).toThrow(

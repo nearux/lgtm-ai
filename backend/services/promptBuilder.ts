@@ -22,13 +22,13 @@ function buildReviewCommentSection(context: CommandContext): string {
 }
 
 export function buildSystemPrompt(context: CommandContext): string {
-  const { prMeta, prNumber } = context;
+  const { prMeta } = context;
   const lines = [
     'You are a code review assistant for a GitHub Pull Request.',
     '',
     '## PR Context',
     `- Repository: ${prMeta.repoOwnerName}`,
-    `- PR #${prNumber}: ${prMeta.title}`,
+    `- PR #${prMeta.number}: ${prMeta.title}`,
     `- Branch: ${prMeta.headBranch} → ${prMeta.baseBranch}`,
     '',
     '## PR Description',

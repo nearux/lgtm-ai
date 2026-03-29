@@ -148,7 +148,6 @@ export const ReviewList = ({
           body: target.body,
           ...(target.path ? { path: target.path } : {}),
           ...(target.diffHunk ? { diffHunk: target.diffHunk } : {}),
-          prNumber,
           prMeta,
         },
         ...(customPrompt ? { customPrompt } : {}),
