@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { buildSystemPrompt, buildUserPrompt } from './promptBuilder.js';
-import type { CommandContext, PRMeta } from '../types/claude.js';
+import type { CommandContext, PRMeta, ClaudeCommand } from '../types/claude.js';
 
 const prMeta: PRMeta = {
   number: 42,
@@ -41,7 +41,16 @@ describe('buildSystemPrompt', () => {
 
   it('includes guideline about using gh CLI', () => {
     const result = buildSystemPrompt(reviewContext);
-    expect(result).toContain('gh');
+    expect(result).toContain('`gh` CLI');
+  });
+
+  it('shows "(no description)" when prMeta.body is empty', () => {
+    const ctx: CommandContext = {
+      ...reviewContext,
+      prMeta: { ...prMeta, body: '' },
+    };
+    const result = buildSystemPrompt(ctx);
+    expect(result).toContain('(no description)');
   });
 });
 
@@ -123,5 +132,11 @@ describe('buildUserPrompt', () => {
     expect(() => buildUserPrompt('validate', noPath)).toThrow(
       'path is required'
     );
+  });
+
+  it('throws on unknown command', () => {
+    expect(() =>
+      buildUserPrompt('unknown' as ClaudeCommand, reviewContext)
+    ).toThrow('Unknown command: unknown');
   });
 });
