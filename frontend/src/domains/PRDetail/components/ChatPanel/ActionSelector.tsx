@@ -1,15 +1,16 @@
 import { useState } from 'react';
 import { CheckCircle, BookOpen, Wrench, Send, History } from 'lucide-react';
+import type { ClaudeCommand } from '@lgtmai/backend/types';
 
 interface ActionOption {
-  id: string;
+  id: ClaudeCommand;
   label: string;
   description: string;
   icon: React.ReactNode;
 }
 
 interface Props {
-  onSelect: (actionId: string, customPrompt?: string) => void;
+  onSelect: (command: ClaudeCommand, customPrompt?: string) => void;
   onShowHistory?: () => void;
 }
 
