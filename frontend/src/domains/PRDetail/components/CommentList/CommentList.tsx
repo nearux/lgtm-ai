@@ -8,11 +8,7 @@ import { useChatPanelSync, useChatPanelParams } from '../../hooks';
 import { useChatPanel } from '../../contexts';
 import { useOverlay } from '@/shared/hooks';
 import type { ClaudeMessage } from '../../hooks';
-import {
-  buildPromptForAction,
-  getExecutionMode,
-  ACTION_LABELS,
-} from '../../utils/reviewPrompts';
+import { ACTION_LABELS } from '../../utils/reviewPrompts';
 import { CheckoutModal } from '../ReviewList/components/CheckoutModal/CheckoutModal';
 import type {
   PRComment,
@@ -123,10 +119,6 @@ export const CommentList = ({
     customPrompt: string | undefined,
     target: ValidationTarget
   ) => {
-    const prompt =
-      customPrompt || buildPromptForAction(actionId, target, prNumber);
-    const executionMode = getExecutionMode(actionId);
-
     const userMessage = ACTION_LABELS[actionId] || customPrompt || actionId;
     addUserMessage(userMessage);
 
@@ -139,7 +131,22 @@ export const CommentList = ({
     };
 
     openChat();
-    execute(prompt, workingDir, { executionMode }, chatContext);
+    execute(
+      {
+        type: 'command',
+        command: actionId as 'validate' | 'fix' | 'explain' | 'custom',
+        context: {
+          type: 'comment',
+          author: target.author,
+          body: target.body,
+          prNumber,
+        },
+        ...(customPrompt ? { customPrompt } : {}),
+      },
+      workingDir,
+      { executionMode: 'bypassPermissions' },
+      chatContext
+    );
   };
 
   const handleFixAction = (

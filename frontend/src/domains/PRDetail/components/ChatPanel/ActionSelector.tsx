@@ -40,7 +40,7 @@ export const ActionSelector = ({ onSelect, onShowHistory }: Props) => {
   const handleChatSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!chatInput.trim()) return;
-    onSelect('chat', chatInput.trim());
+    onSelect('custom', chatInput.trim());
     setChatInput('');
   };
 
@@ -76,7 +76,7 @@ export const ActionSelector = ({ onSelect, onShowHistory }: Props) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 if (chatInput.trim()) {
-                  onSelect('chat', chatInput.trim());
+                  onSelect('custom', chatInput.trim());
                   setChatInput('');
                 }
               }

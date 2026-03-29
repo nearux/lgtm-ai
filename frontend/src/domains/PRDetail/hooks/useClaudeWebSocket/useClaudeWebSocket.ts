@@ -5,6 +5,8 @@ import type {
   ApprovalRequest,
   WsServerMessage,
   ClaudeExecuteOptions,
+  CommandPayload,
+  FollowUpPayload,
 } from './types';
 import type { ClaudeChatContext } from '@lgtmai/backend/types';
 
@@ -18,7 +20,7 @@ export interface UseClaudeWebSocketReturn {
   connect: () => void;
   disconnect: () => void;
   execute: (
-    prompt: string,
+    payload: CommandPayload | FollowUpPayload,
     workingDir: string,
     options?: ClaudeExecuteOptions,
     chatContext?: ClaudeChatContext
@@ -158,24 +160,37 @@ export function useClaudeWebSocket(): UseClaudeWebSocketReturn {
   };
 
   const execute = (
-    prompt: string,
+    payload: CommandPayload | FollowUpPayload,
     workingDir: string,
     options?: ClaudeExecuteOptions,
     chatContext?: ClaudeChatContext
   ): string => {
     const requestId = crypto.randomUUID();
-    // Add user message to chat when it's a follow-up (has sessionId)
-    if (options?.sessionId) {
-      addMessage({ type: 'user', content: prompt });
+
+    if (payload.type === 'followUp') {
+      // Follow-up: add to live UI and send as followUp shape
+      addMessage({ type: 'user', content: payload.message });
+      send({
+        type: 'followUp',
+        requestId,
+        message: payload.message,
+        workingDir,
+        options,
+      });
+    } else {
+      // Command-based: caller (ReviewList) already called addUserMessage before execute()
+      send({
+        type: 'execute',
+        requestId,
+        command: payload.command,
+        context: payload.context,
+        ...(payload.customPrompt ? { customPrompt: payload.customPrompt } : {}),
+        workingDir,
+        options,
+        chatContext,
+      });
     }
-    send({
-      type: 'execute',
-      requestId,
-      prompt,
-      workingDir,
-      options,
-      chatContext,
-    });
+
     return requestId;
   };
 

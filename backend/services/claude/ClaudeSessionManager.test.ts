@@ -79,7 +79,27 @@ describe('ClaudeSessionManager', () => {
         scopeTargetId: 'review-123',
         title: 'Validate review',
       },
-      'claude-session-1'
+      'claude-session-1',
+      undefined
+    );
+  });
+
+  it('passes commandMeta to createChatSessionFromExecution when provided', async () => {
+    const manager = new ClaudeSessionManager(ws as never);
+    manager.execute(
+      'request-meta',
+      'some prompt',
+      '/tmp/project',
+      { executionMode: 'default' },
+      { projectId: 'p', prNumber: 1, scopeType: 'REVIEW', scopeTargetId: 'r' },
+      { command: 'validate', customPrompt: undefined }
+    );
+    processInstances[0]!.emit('init', 'claude-session-meta');
+    await Promise.resolve();
+    expect(mockCreateChatSessionFromExecution).toHaveBeenCalledWith(
+      expect.objectContaining({ projectId: 'p' }),
+      'claude-session-meta',
+      { command: 'validate', customPrompt: undefined }
     );
   });
 

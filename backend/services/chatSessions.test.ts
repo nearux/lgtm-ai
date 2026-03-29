@@ -108,6 +108,28 @@ describe('chatSessions service', () => {
     expect(result.claudeSessionId).toBe('claude-session-1');
   });
 
+  it('persists commandMeta fields when provided to createChatSessionFromExecution', async () => {
+    const result = await chatSessionsService.createChatSessionFromExecution(
+      {
+        projectId: 'project-1',
+        prNumber: 45,
+        scopeType: 'REVIEW',
+        scopeTargetId: 'review-123',
+        title: 'Validate review',
+      },
+      'claude-session-meta',
+      { command: 'validate', customPrompt: 'custom instructions' }
+    );
+
+    const persisted = await prisma.chatSession.findUnique({
+      where: { claude_session_id: 'claude-session-meta' },
+    });
+
+    expect(persisted).not.toBeNull();
+    expect(result.command).toBe('validate');
+    expect(result.customPrompt).toBe('custom instructions');
+  });
+
   it('lists sessions sorted by last_used_at desc from sqlite data', async () => {
     const older = new Date('2026-03-10T00:00:00.000Z');
     const newer = new Date('2026-03-11T00:00:00.000Z');
@@ -232,10 +254,10 @@ describe('chatSessions service', () => {
       session.id
     );
 
-    expect(mockGetClaudeSessionHistory).toHaveBeenCalledWith(
-      'claude-session-1',
-      '/tmp/project'
-    );
+    expect(mockGetClaudeSessionHistory).toHaveBeenCalledWith({
+      claudeSessionId: 'claude-session-1',
+      workingDir: '/tmp/project',
+    });
     expect(result).toEqual({
       sessionId: session.id,
       claudeSessionId: 'claude-session-1',

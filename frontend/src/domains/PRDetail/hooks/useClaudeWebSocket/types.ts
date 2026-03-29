@@ -1,3 +1,5 @@
+import type { ClaudeCommand, CommandContext } from '@lgtmai/backend/types';
+
 export type {
   WsClientMessage,
   WsServerMessage,
@@ -15,6 +17,8 @@ export type {
   WsPlanApprovalRequestEvent,
   ClaudeExecuteOptions,
   ClaudeExecutionMode,
+  CommandContext,
+  ClaudeCommand,
 } from '@lgtmai/backend/types';
 
 export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
@@ -36,4 +40,16 @@ export interface ApprovalRequest {
   toolName: string;
   input: unknown;
   type: 'tool' | 'plan';
+}
+
+export interface CommandPayload {
+  type: 'command';
+  command: ClaudeCommand;
+  context: CommandContext;
+  customPrompt?: string;
+}
+
+export interface FollowUpPayload {
+  type: 'followUp';
+  message: string;
 }

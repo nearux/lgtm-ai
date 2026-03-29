@@ -7,11 +7,7 @@ import type {
   ChatSessionSummary,
   ClaudeChatContext,
 } from '@lgtmai/backend/types';
-import {
-  buildPromptForAction,
-  getExecutionMode,
-  ACTION_LABELS,
-} from '../../utils/reviewPrompts';
+import { ACTION_LABELS } from '../../utils/reviewPrompts';
 import { ReviewCard, type ValidationStatus } from './components';
 import { prsMutation, chatSessionsQuery } from '@/shared/apis';
 import { useOverlay } from '@/shared/hooks';
@@ -126,10 +122,6 @@ export const ReviewList = ({
       [target.id]: { status: 'validating' },
     }));
 
-    const prompt =
-      customPrompt || buildPromptForAction(actionId, target, prNumber);
-    const executionMode = getExecutionMode(actionId);
-
     const userMessage = ACTION_LABELS[actionId] || customPrompt || actionId;
     addUserMessage(userMessage);
 
@@ -142,7 +134,23 @@ export const ReviewList = ({
     };
 
     openChat();
-    execute(prompt, workingDir, { executionMode }, chatContext);
+    execute(
+      {
+        type: 'command',
+        command: actionId as 'validate' | 'fix' | 'explain' | 'custom',
+        context: {
+          type: target.type,
+          author: target.author,
+          body: target.body,
+          ...(target.path ? { path: target.path } : {}),
+          prNumber,
+        },
+        ...(customPrompt ? { customPrompt } : {}),
+      },
+      workingDir,
+      { executionMode: 'bypassPermissions' },
+      chatContext
+    );
   };
 
   const handleFixAction = (

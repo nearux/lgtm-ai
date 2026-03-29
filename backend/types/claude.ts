@@ -14,14 +14,39 @@ export interface ClaudeExecuteOptions {
   sessionId?: string;
 }
 
-export interface WsExecuteMessage {
+export interface CommandContext {
+  type: 'review' | 'comment';
+  author: string;
+  body: string;
+  path?: string;
+  prNumber: number;
+}
+
+export type ClaudeCommand = 'validate' | 'fix' | 'explain' | 'custom';
+
+export interface WsCommandExecuteMessage {
   type: 'execute';
   requestId: string;
-  prompt: string;
   workingDir: string;
+  command: ClaudeCommand;
+  context: CommandContext;
+  customPrompt?: string;
   options?: ClaudeExecuteOptions;
   chatContext?: ClaudeChatContext;
 }
+
+export interface WsFollowUpExecuteMessage {
+  type: 'followUp';
+  requestId: string;
+  workingDir: string;
+  message: string;
+  options?: ClaudeExecuteOptions;
+  chatContext?: ClaudeChatContext;
+}
+
+export type WsExecuteMessage =
+  | WsCommandExecuteMessage
+  | WsFollowUpExecuteMessage;
 
 export interface WsAbortMessage {
   type: 'abort';
@@ -47,7 +72,8 @@ export interface WsPlanApprovalResponseMessage {
 }
 
 export type WsClientMessage =
-  | WsExecuteMessage
+  | WsCommandExecuteMessage
+  | WsFollowUpExecuteMessage
   | WsAbortMessage
   | WsApprovalResponseMessage
   | WsPlanApprovalResponseMessage;

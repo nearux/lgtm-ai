@@ -28,6 +28,8 @@ model ChatSession {
   scope_target_id   String
   claude_session_id String               @unique
   title             String?
+  command           String?
+  custom_prompt     String?
   created_at        DateTime
   updated_at        DateTime
   last_used_at      DateTime

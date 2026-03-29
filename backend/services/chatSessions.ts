@@ -15,7 +15,8 @@ import type {
 
 export async function createChatSessionFromExecution(
   context: ClaudeChatContext,
-  claudeSessionId: string
+  claudeSessionId: string,
+  commandMeta?: { command?: string; customPrompt?: string }
 ): Promise<ChatSessionSummary> {
   const now = new Date();
   const record = await chatSessionRepository.create({
@@ -26,6 +27,8 @@ export async function createChatSessionFromExecution(
     scope_target_id: context.scopeTargetId,
     claude_session_id: claudeSessionId,
     title: context.title ?? null,
+    command: commandMeta?.command ?? null,
+    custom_prompt: commandMeta?.customPrompt ?? null,
     created_at: now,
     updated_at: now,
     last_used_at: now,
@@ -86,10 +89,12 @@ export async function getChatSessionHistory(
   }
 
   const session = await getChatSession(projectId, prNumber, sessionId);
-  const history = await getClaudeSessionHistory(
-    session.claudeSessionId,
-    workingDirectory
-  );
+  const history = await getClaudeSessionHistory({
+    claudeSessionId: session.claudeSessionId,
+    workingDir: workingDirectory,
+    command: session.command,
+    customPrompt: session.customPrompt,
+  });
 
   return ChatSessionHistoryResponseDto.of(
     session.id,
