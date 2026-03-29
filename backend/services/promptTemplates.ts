@@ -34,6 +34,36 @@ ${p.body || '(no description)'}
 - Focus on the specific review comment provided by the user.`;
 }
 
+// ── Review comment section ──────────────────────────────────────────
+
+export interface ReviewCommentParams {
+  author: string;
+  body: string;
+  path?: string;
+  diffHunk?: string;
+}
+
+export function reviewCommentSection(p: ReviewCommentParams): string {
+  const lines: string[] = [`Author: ${p.author}`];
+
+  if (p.path) {
+    lines.push(`File: ${p.path}`);
+  }
+
+  if (p.diffHunk) {
+    lines.push('### Code Change');
+    lines.push('```diff');
+    lines.push(p.diffHunk);
+    lines.push('```');
+  }
+
+  lines.push('');
+  lines.push('Comment:');
+  lines.push(p.body);
+
+  return lines.join('\n');
+}
+
 // ── User prompts (per command) ──────────────────────────────────────
 
 export function explainPrompt(reviewComment: string): string {

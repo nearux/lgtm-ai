@@ -1,27 +1,6 @@
 import type { CommandContext, ClaudeCommand } from '../types/claude.js';
 import * as templates from './promptTemplates.js';
 
-function buildReviewCommentSection(context: CommandContext): string {
-  const lines: string[] = [`Author: ${context.author}`];
-
-  if (context.path) {
-    lines.push(`File: ${context.path}`);
-  }
-
-  if (context.diffHunk) {
-    lines.push('### Code Change');
-    lines.push('```diff');
-    lines.push(context.diffHunk);
-    lines.push('```');
-  }
-
-  lines.push('');
-  lines.push('Comment:');
-  lines.push(context.body);
-
-  return lines.join('\n');
-}
-
 export function buildSystemPrompt(context: CommandContext): string {
   return templates.systemPrompt(context.prMeta);
 }
@@ -35,7 +14,7 @@ export function buildUserPrompt(
     throw new Error('path is required for comment context');
   }
 
-  const reviewComment = buildReviewCommentSection(context);
+  const reviewComment = templates.reviewCommentSection(context);
 
   switch (command) {
     case 'explain':
