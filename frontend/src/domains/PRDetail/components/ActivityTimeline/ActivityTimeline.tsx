@@ -19,6 +19,8 @@ interface Props {
   workingDir: string;
   projectId: string;
   prNumber: number;
+  prState: string;
+  origin?: string;
   prMeta: PRMeta;
 }
 
@@ -68,6 +70,8 @@ export const ActivityTimeline = ({
   workingDir,
   projectId,
   prNumber,
+  prState,
+  origin,
   prMeta,
 }: Props) => {
   const [validations, setValidations] = useState<
@@ -81,6 +85,8 @@ export const ActivityTimeline = ({
     workingDir,
     projectId,
     prNumber,
+    prState,
+    origin,
     prMeta,
     setValidations,
     setActiveTarget,
