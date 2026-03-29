@@ -51,10 +51,18 @@ export class ClaudeProcess extends EventEmitter<ClaudeStreamEvents> {
   private errored = false;
   private resultReceived = false;
 
-  constructor(workingDir: string, options: ClaudeExecuteOptions = {}) {
+  constructor(
+    workingDir: string,
+    options: ClaudeExecuteOptions = {},
+    systemPrompt?: string
+  ) {
     super();
 
-    const args = new ClaudeArgsBuilder().withOptions(options).build();
+    const builder = new ClaudeArgsBuilder().withOptions(options);
+    if (systemPrompt) {
+      builder.withSystemPrompt(systemPrompt);
+    }
+    const args = builder.build();
 
     let child: ChildProcess;
     try {
