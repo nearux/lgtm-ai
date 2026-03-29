@@ -6,6 +6,7 @@ import type {
   PRReview,
   ChatSessionSummary,
   ClaudeChatContext,
+  PRMeta,
 } from '@lgtmai/backend/types';
 import { ACTION_LABELS } from '../../utils/reviewPrompts';
 import { ReviewCard, type ValidationStatus } from './components';
@@ -20,6 +21,7 @@ interface Props {
   projectId: string;
   prNumber: number;
   prState: string;
+  prMeta: PRMeta;
   origin?: string;
 }
 
@@ -34,6 +36,7 @@ interface ValidationTarget {
   body: string;
   author: string;
   path?: string;
+  diffHunk?: string;
 }
 
 export const ReviewList = ({
@@ -42,6 +45,7 @@ export const ReviewList = ({
   projectId,
   prNumber,
   prState,
+  prMeta,
   origin,
 }: Props) => {
   const [validations, setValidations] = useState<
@@ -143,7 +147,9 @@ export const ReviewList = ({
           author: target.author,
           body: target.body,
           ...(target.path ? { path: target.path } : {}),
+          ...(target.diffHunk ? { diffHunk: target.diffHunk } : {}),
           prNumber,
+          prMeta,
         },
         ...(customPrompt ? { customPrompt } : {}),
       },
@@ -302,6 +308,7 @@ export const ReviewList = ({
                     body: comment.body,
                     author: comment.author.login,
                     path: comment.path,
+                    diffHunk: comment.diffHunk,
                   })
                 }
               />
