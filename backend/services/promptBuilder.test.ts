@@ -1,12 +1,21 @@
 import { describe, it, expect } from 'vitest';
-import { buildPrompt } from './promptBuilder.js';
-import type { CommandContext } from '../types/claude.js';
+import { buildSystemPrompt, buildUserPrompt } from './promptBuilder.js';
+import type { CommandContext, PRMeta } from '../types/claude.js';
+
+const prMeta: PRMeta = {
+  title: 'Add user authentication',
+  body: 'Implements JWT-based auth with refresh tokens.',
+  baseBranch: 'main',
+  headBranch: 'feature/auth',
+  repoOwnerName: 'acme/app',
+};
 
 const reviewContext: CommandContext = {
   type: 'review',
   author: 'alice',
   body: 'This variable name is unclear',
   prNumber: 42,
+  prMeta,
 };
 
 const commentContext: CommandContext = {
@@ -14,58 +23,107 @@ const commentContext: CommandContext = {
   author: 'bob',
   body: 'Missing null check here',
   path: 'src/utils/helper.ts',
+  diffHunk:
+    '@@ -10,6 +10,8 @@\n function helper() {\n+  const x = getValue();\n+  x.doSomething();',
   prNumber: 42,
+  prMeta,
 };
 
-describe('buildPrompt', () => {
-  it('validate - review: contains VALID/INVALID instruction', () => {
-    const result = buildPrompt('validate', reviewContext);
-    expect(result).toContain('PR review comment');
-    expect(result).toContain('alice');
-    expect(result).toContain('This variable name is unclear');
-    expect(result).toContain('VALID');
-    expect(result).toContain('INVALID');
-  });
-
-  it('validate - comment: uses inline comment phrasing and includes path', () => {
-    const result = buildPrompt('validate', commentContext);
-    expect(result).toContain('inline code comment');
-    expect(result).toContain('src/utils/helper.ts');
-  });
-
-  it('explain - review: contains explain instruction', () => {
-    const result = buildPrompt('explain', reviewContext);
-    expect(result).toContain('Explain this code review comment');
-    expect(result).toContain('alice');
-  });
-
-  it('fix - review: contains fix instruction', () => {
-    const result = buildPrompt('fix', reviewContext);
-    expect(result).toContain('Fix the code based on this review');
-    expect(result).toContain('Do NOT use git commands');
-  });
-
-  it('custom: wraps customPrompt with context preamble', () => {
-    const result = buildPrompt('custom', reviewContext, 'What is the impact?');
-    expect(result).toContain('What is the impact?');
-    expect(result).toContain('alice');
-    expect(result).toContain('This variable name is unclear');
+describe('buildSystemPrompt', () => {
+  it('includes PR title, branch info, and description', () => {
+    const result = buildSystemPrompt(reviewContext);
+    expect(result).toContain('acme/app');
     expect(result).toContain('#42');
+    expect(result).toContain('Add user authentication');
+    expect(result).toContain('feature/auth');
+    expect(result).toContain('main');
+    expect(result).toContain('JWT-based auth');
   });
 
-  it('custom: throws if customPrompt is missing', () => {
-    expect(() => buildPrompt('custom', reviewContext)).toThrow(
-      'customPrompt is required'
-    );
+  it('includes guideline about using gh CLI', () => {
+    const result = buildSystemPrompt(reviewContext);
+    expect(result).toContain('gh');
+  });
+});
+
+describe('buildUserPrompt', () => {
+  describe('explain', () => {
+    it('includes comment body and author', () => {
+      const result = buildUserPrompt('explain', reviewContext);
+      expect(result).toContain('alice');
+      expect(result).toContain('This variable name is unclear');
+    });
+
+    it('includes diff hunk when present', () => {
+      const result = buildUserPrompt('explain', commentContext);
+      expect(result).toContain('diff');
+      expect(result).toContain('x.doSomething()');
+    });
+
+    it('includes file path when present', () => {
+      const result = buildUserPrompt('explain', commentContext);
+      expect(result).toContain('src/utils/helper.ts');
+    });
+
+    it('omits diff section when no diffHunk', () => {
+      const result = buildUserPrompt('explain', reviewContext);
+      expect(result).not.toContain('Code Change');
+    });
   });
 
-  it('comment type: throws if path is missing', () => {
+  describe('fix', () => {
+    it('includes instruction to not use git', () => {
+      const result = buildUserPrompt('fix', commentContext);
+      expect(result).toContain('Do NOT use git commands');
+    });
+
+    it('includes instruction to explain changes', () => {
+      const result = buildUserPrompt('fix', commentContext);
+      expect(result).toContain('explain what you changed');
+    });
+
+    it('includes diff hunk for inline comment', () => {
+      const result = buildUserPrompt('fix', commentContext);
+      expect(result).toContain('x.doSomething()');
+    });
+  });
+
+  describe('validate', () => {
+    it('includes VALID/INVALID instructions', () => {
+      const result = buildUserPrompt('validate', reviewContext);
+      expect(result).toContain('VALID');
+      expect(result).toContain('INVALID');
+    });
+  });
+
+  describe('custom', () => {
+    it('includes custom prompt with context', () => {
+      const result = buildUserPrompt(
+        'custom',
+        reviewContext,
+        'What is the impact?'
+      );
+      expect(result).toContain('What is the impact?');
+      expect(result).toContain('alice');
+    });
+
+    it('throws if customPrompt is missing', () => {
+      expect(() => buildUserPrompt('custom', reviewContext)).toThrow(
+        'customPrompt is required'
+      );
+    });
+  });
+
+  it('comment type throws if path is missing', () => {
     const noPath: CommandContext = {
       type: 'comment',
       author: 'x',
       body: 'y',
       prNumber: 1,
+      prMeta,
     };
-    expect(() => buildPrompt('validate', noPath)).toThrow('path is required');
+    expect(() => buildUserPrompt('validate', noPath)).toThrow(
+      'path is required'
+    );
   });
 });
