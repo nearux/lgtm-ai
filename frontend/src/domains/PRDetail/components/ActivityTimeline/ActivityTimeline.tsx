@@ -3,6 +3,7 @@ import type {
   PRReview,
   PRComment,
   PRReviewInlineComment,
+  PRMeta,
 } from '@lgtmai/backend/types';
 import { ReviewCard } from '../ReviewList/components';
 import { CommentCard } from './components/CommentCard';
@@ -16,7 +17,9 @@ interface Props {
   reviews: PRReview[];
   comments: PRComment[];
   workingDir: string;
+  projectId: string;
   prNumber: number;
+  prMeta: PRMeta;
 }
 
 type ActivityItem =
@@ -63,7 +66,9 @@ export const ActivityTimeline = ({
   reviews,
   comments,
   workingDir,
+  projectId,
   prNumber,
+  prMeta,
 }: Props) => {
   const [validations, setValidations] = useState<
     Record<string, ValidationState>
@@ -74,7 +79,9 @@ export const ActivityTimeline = ({
 
   const { handleOpenChat, messages } = useActivityChat({
     workingDir,
+    projectId,
     prNumber,
+    prMeta,
     setValidations,
     setActiveTarget,
   });
@@ -167,6 +174,7 @@ export const ActivityTimeline = ({
                     body: comment.body,
                     author: comment.author.login,
                     path: comment.path,
+                    diffHunk: comment.diffHunk,
                   })
                 }
               />
