@@ -122,8 +122,7 @@ export function useActivityChat({
         <CheckoutModal
           isOpen={isOpen}
           close={close}
-          onConfirm={async () => {
-            close();
+          onConfirm={() => {
             mutate(
               {
                 projectId,
@@ -132,6 +131,7 @@ export function useActivityChat({
               },
               {
                 onSuccess: () => {
+                  close();
                   executeAction(actionId, customPrompt, target);
                 },
                 onError: (error) => {

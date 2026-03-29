@@ -174,8 +174,7 @@ export const ReviewList = ({
         <CheckoutModal
           isOpen={isOpen}
           close={close}
-          onConfirm={async () => {
-            close();
+          onConfirm={() => {
             mutate(
               {
                 projectId,
@@ -184,6 +183,7 @@ export const ReviewList = ({
               },
               {
                 onSuccess: () => {
+                  close();
                   executeAction(actionId, customPrompt, target);
                 },
                 onError: (error) => {
