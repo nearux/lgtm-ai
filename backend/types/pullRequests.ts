@@ -83,6 +83,8 @@ export type GhPRDetail = {
   number: number;
   title: string;
   body?: string | null;
+  baseRefName: string;
+  headRefName: string;
   assignees: GhPRAssignee[];
   author: GhPRAuthor;
   createdAt: string;
@@ -161,6 +163,8 @@ export interface PRCommit {
 }
 
 export interface PRDetail extends PRListItem {
+  baseBranch: string;
+  headBranch: string;
   comments: PRComment[];
   reviews: PRReview[];
   commits: PRCommit[];

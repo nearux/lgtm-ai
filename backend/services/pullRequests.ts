@@ -115,7 +115,7 @@ export async function fetchPRDetail(
       '--repo',
       repoOwnerName,
       '--json',
-      'number,title,body,assignees,author,createdAt,updatedAt,state,comments,reviews,commits',
+      'number,title,body,baseRefName,headRefName,assignees,author,createdAt,updatedAt,state,comments,reviews,commits',
     ]));
   } catch (error) {
     const errorMessage = getErrorMessage(error);

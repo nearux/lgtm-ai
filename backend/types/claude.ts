@@ -14,12 +14,22 @@ export interface ClaudeExecuteOptions {
   sessionId?: string;
 }
 
+export interface PRMeta {
+  title: string;
+  body: string;
+  baseBranch: string;
+  headBranch: string;
+  repoOwnerName: string;
+}
+
 export interface CommandContext {
   type: 'review' | 'comment';
   author: string;
   body: string;
   path?: string;
+  diffHunk?: string;
   prNumber: number;
+  prMeta: PRMeta;
 }
 
 export type ClaudeCommand = 'validate' | 'fix' | 'explain' | 'custom';
