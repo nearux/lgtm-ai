@@ -47,7 +47,12 @@ describe('pullRequests service', () => {
         title: 'Test PR',
         body: 'Test body',
         assignees: [{ id: '1', login: 'user1', name: 'User One' }],
-        author: { id: '2', login: 'author1', name: 'Author One' },
+        author: {
+          id: '2',
+          login: 'author1',
+          name: 'Author One',
+          avatarUrl: 'https://avatars.githubusercontent.com/u/2',
+        },
         createdAt: '2024-01-01T00:00:00Z',
         updatedAt: '2024-01-02T00:00:00Z',
         state: 'open',
@@ -61,6 +66,7 @@ describe('pullRequests service', () => {
           id: '3',
           login: 'author2',
           name: 'author2',
+          avatarUrl: 'https://avatars.githubusercontent.com/u/3',
           is_bot: true,
         },
         createdAt: '2024-01-03T00:00:00Z',
@@ -192,14 +198,24 @@ describe('pullRequests service', () => {
       title: 'Test PR',
       body: 'Test body',
       assignees: [{ id: '1', login: 'user1', name: 'User One' }],
-      author: { id: '2', login: 'author1', name: 'Author One' },
+      author: {
+        id: '2',
+        login: 'author1',
+        name: 'Author One',
+        avatarUrl: 'https://avatars.githubusercontent.com/u/2',
+      },
       createdAt: '2024-01-01T00:00:00Z',
       updatedAt: '2024-01-02T00:00:00Z',
       state: 'OPEN',
       comments: [
         {
           id: 'c1',
-          author: { id: '3', login: 'reviewer1', name: 'Reviewer One' },
+          author: {
+            id: '3',
+            login: 'reviewer1',
+            name: 'Reviewer One',
+            avatarUrl: 'https://avatars.githubusercontent.com/u/3',
+          },
           body: 'Looks good!',
           createdAt: '2024-01-01T10:00:00Z',
           updatedAt: '2024-01-01T10:00:00Z',
@@ -208,7 +224,12 @@ describe('pullRequests service', () => {
       reviews: [
         {
           id: 'r1',
-          author: { id: '3', login: 'reviewer1', name: 'Reviewer One' },
+          author: {
+            id: '3',
+            login: 'reviewer1',
+            name: 'Reviewer One',
+            avatarUrl: 'https://avatars.githubusercontent.com/u/3',
+          },
           state: 'APPROVED',
           body: 'LGTM',
           submittedAt: '2024-01-01T11:00:00Z',

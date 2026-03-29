@@ -3,8 +3,7 @@ import { projectsQuery, prsQuery } from '@/shared/apis';
 import { parseGitHubUrl, linkifyGitHubReferences } from '@/shared/utils';
 import { PRHeader } from '../PRHeader/PRHeader';
 import { PRDescription } from '../PRDescription/PRDescription';
-import { ReviewList } from '../ReviewList/ReviewList';
-import { CommentList } from '../CommentList/CommentList';
+import { ActivityTimeline } from '../ActivityTimeline/ActivityTimeline';
 import { CommitList } from '../CommitList/CommitList';
 
 interface Props {
@@ -44,21 +43,11 @@ export const PRDetailContent = ({ projectId, prNumber, origin }: Props) => {
 
       {linkedBody && <PRDescription body={linkedBody} />}
 
-      <ReviewList
+      <ActivityTimeline
         reviews={pr.reviews}
-        workingDir={project.working_dir}
-        projectId={projectId}
-        prNumber={pr.number}
-        prState={pr.state}
-        origin={origin}
-      />
-      <CommentList
         comments={pr.comments}
         workingDir={project.working_dir}
-        projectId={projectId}
         prNumber={pr.number}
-        prState={pr.state}
-        origin={origin}
       />
       <CommitList commits={pr.commits} githubBaseUrl={githubBaseUrl} />
     </>

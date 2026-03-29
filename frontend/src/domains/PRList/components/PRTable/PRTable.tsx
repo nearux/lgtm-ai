@@ -89,7 +89,14 @@ export const PRTable = ({
                   <span className="font-medium text-gray-900">{pr.title}</span>
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-600">
-                  {pr.author.login}
+                  <div className="flex items-center gap-2">
+                    <img
+                      src={pr.author.avatarUrl}
+                      alt={pr.author.login}
+                      className="h-6 w-6 rounded-full"
+                    />
+                    {pr.author.login}
+                  </div>
                 </td>
                 <td className="px-6 py-4">
                   <StatusBadge status={pr.state} />
