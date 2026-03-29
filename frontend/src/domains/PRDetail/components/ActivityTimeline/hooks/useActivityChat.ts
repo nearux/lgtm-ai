@@ -1,4 +1,4 @@
-import { useChatPanelSync } from '../../../hooks';
+import { useChatPanelSync, useChatPanelParams } from '../../../hooks';
 import { useChatPanel } from '../../../contexts';
 import { ACTION_LABELS } from '../../../utils/reviewPrompts';
 import type { PRMeta, ClaudeChatContext } from '@lgtmai/backend/types';
@@ -39,8 +39,8 @@ export function useActivityChat({
   setValidations,
   setActiveTarget,
 }: UseActivityChatOptions) {
-  const { openPanel, setMode, setTargetContext, setOnExecuteAction } =
-    useChatPanel();
+  const { setTargetContext, setOnExecuteAction } = useChatPanel();
+  const { openActionSelector, openChat } = useChatPanelParams();
   const {
     status: wsStatus,
     messages,
@@ -82,7 +82,7 @@ export function useActivityChat({
         title: userMessage,
       };
 
-      setMode('chat');
+      openChat();
       execute(
         {
           type: 'command',
@@ -103,12 +103,7 @@ export function useActivityChat({
       );
     });
 
-    setMode('action-selection');
-    openPanel(
-      target.type === 'review'
-        ? `Chat: ${target.author}'s review`
-        : `Chat: ${target.author}'s comment`
-    );
+    openActionSelector(target.type, target.id);
   };
 
   return { handleOpenChat, messages };
