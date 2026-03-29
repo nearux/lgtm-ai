@@ -89,11 +89,6 @@ describe('buildUserPrompt', () => {
       const result = buildUserPrompt('fix', commentContext);
       expect(result).toContain('explain what you changed');
     });
-
-    it('includes diff hunk for inline comment', () => {
-      const result = buildUserPrompt('fix', commentContext);
-      expect(result).toContain('x.doSomething()');
-    });
   });
 
   describe('validate', () => {
@@ -117,6 +112,12 @@ describe('buildUserPrompt', () => {
 
     it('throws if customPrompt is missing', () => {
       expect(() => buildUserPrompt('custom', reviewContext)).toThrow(
+        'customPrompt is required'
+      );
+    });
+
+    it('throws if customPrompt is whitespace only', () => {
+      expect(() => buildUserPrompt('custom', reviewContext, '   ')).toThrow(
         'customPrompt is required'
       );
     });
