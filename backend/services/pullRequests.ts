@@ -73,7 +73,7 @@ export async function fetchPRList(
     const errorMessage = error instanceof Error ? error.message : String(error);
     if (errorMessage.toLowerCase().includes('authentication')) {
       throw new AppError(
-        'GitHub CLI is not available or authenticated',
+        'GitHub CLI is not authenticated. Please check your account in the header.',
         HttpStatus.SERVICE_UNAVAILABLE,
         error
       );
@@ -121,7 +121,7 @@ export async function fetchPRDetail(
 
     if (errorMessage.toLowerCase().includes('authentication')) {
       throw new AppError(
-        'GitHub CLI is not available or authenticated',
+        'GitHub CLI is not authenticated. Please check your account in the header.',
         HttpStatus.SERVICE_UNAVAILABLE,
         error
       );
