@@ -158,7 +158,7 @@ export const ReviewList = ({
     );
   };
 
-  const handleFixAction = (
+  const handleActionWithCheckout = (
     actionId: string,
     customPrompt: string | undefined,
     target: ValidationTarget
@@ -230,11 +230,7 @@ export const ReviewList = ({
     setOnResumeSession(handleResumeSession);
 
     setOnExecuteAction((actionId: string, customPrompt?: string) => {
-      if (actionId === 'fix') {
-        handleFixAction(actionId, customPrompt, target);
-      } else {
-        executeAction(actionId, customPrompt, target);
-      }
+      handleActionWithCheckout(actionId, customPrompt, target);
     });
 
     setTitle(

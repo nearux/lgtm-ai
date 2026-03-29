@@ -107,7 +107,7 @@ export function useActivityChat({
     );
   };
 
-  const handleFixAction = (
+  const handleActionWithCheckout = (
     actionId: string,
     customPrompt: string | undefined,
     target: ValidationTarget
@@ -163,11 +163,7 @@ export function useActivityChat({
     });
 
     setOnExecuteAction((actionId: string, customPrompt?: string) => {
-      if (actionId === 'fix') {
-        handleFixAction(actionId, customPrompt, target);
-      } else {
-        executeAction(actionId, customPrompt, target);
-      }
+      handleActionWithCheckout(actionId, customPrompt, target);
     });
 
     openActionSelector(target.type, target.id);
