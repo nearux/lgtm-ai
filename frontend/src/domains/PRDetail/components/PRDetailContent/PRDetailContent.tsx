@@ -47,6 +47,7 @@ export const PRDetailContent = ({ projectId, prNumber, origin }: Props) => {
         reviews={pr.reviews}
         comments={pr.comments}
         workingDir={project.working_dir}
+        projectId={projectId}
         prNumber={pr.number}
       />
       <CommitList commits={pr.commits} githubBaseUrl={githubBaseUrl} />

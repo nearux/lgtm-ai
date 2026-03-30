@@ -16,6 +16,7 @@ interface Props {
   reviews: PRReview[];
   comments: PRComment[];
   workingDir: string;
+  projectId: string;
   prNumber: number;
 }
 
@@ -63,6 +64,7 @@ export const ActivityTimeline = ({
   reviews,
   comments,
   workingDir,
+  projectId,
   prNumber,
 }: Props) => {
   const [validations, setValidations] = useState<
@@ -74,6 +76,7 @@ export const ActivityTimeline = ({
 
   const { handleOpenChat, messages } = useActivityChat({
     workingDir,
+    projectId,
     prNumber,
     setValidations,
     setActiveTarget,
