@@ -75,11 +75,19 @@ export async function fetchPRList(
   try {
     ({ stdout } = await execFileAsync('gh', ['api', apiPath]));
   } catch (error) {
-    const errorMessage = getErrorMessage(error);
-    if (errorMessage.toLowerCase().includes('authentication')) {
+    const errorMessage = getErrorMessage(error).toLowerCase();
+    if (errorMessage.includes('authentication')) {
       throw new AppError(
         'GitHub CLI is not authenticated. Please check your account in the header.',
         HttpStatus.SERVICE_UNAVAILABLE,
+        error
+      );
+    }
+
+    if (errorMessage.includes('not found')) {
+      throw new AppError(
+        'Cannot access this repository. Try switching your GitHub account in the header.',
+        HttpStatus.FORBIDDEN,
         error
       );
     }
@@ -120,14 +128,20 @@ export async function fetchPRDetail(
   } catch (error) {
     const errorMessage = getErrorMessage(error);
 
-    if (errorMessage.toLowerCase().includes('could not resolve')) {
-      throw new AppError('Pull request not found', HttpStatus.NOT_FOUND, error);
-    }
+    const msg = errorMessage.toLowerCase();
 
-    if (errorMessage.toLowerCase().includes('authentication')) {
+    if (msg.includes('authentication')) {
       throw new AppError(
         'GitHub CLI is not authenticated. Please check your account in the header.',
         HttpStatus.SERVICE_UNAVAILABLE,
+        error
+      );
+    }
+
+    if (msg.includes('could not resolve') || msg.includes('not found')) {
+      throw new AppError(
+        'Cannot access this repository. Try switching your GitHub account in the header.',
+        HttpStatus.FORBIDDEN,
         error
       );
     }
