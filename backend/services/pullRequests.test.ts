@@ -485,12 +485,6 @@ describe('pullRequests service', () => {
   });
 
   describe('checkoutPRBranch', () => {
-    // New implementation flow:
-    // 1. git status --porcelain (check dirty)
-    // 2. (if dirty+force) git stash push
-    // 3. gh pr checkout <number> --repo <repo>
-    // 4. git branch --show-current
-
     it('should checkout PR branch when working tree is clean', async () => {
       mockExecAsync
         .mockResolvedValueOnce({ stdout: '', stderr: '' }) // git status (clean)
