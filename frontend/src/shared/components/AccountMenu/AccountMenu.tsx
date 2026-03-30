@@ -1,9 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import {
-  useMutation,
-  useQueryClient,
-  useSuspenseQuery,
-} from '@tanstack/react-query';
+import { useMutation, useSuspenseQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { authQuery } from '@/shared/apis/auth/queries';
 import { authMutation } from '@/shared/apis/auth/mutations';
@@ -11,17 +7,13 @@ import { authMutation } from '@/shared/apis/auth/mutations';
 export const AccountMenu = () => {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const queryClient = useQueryClient();
 
   const { data: authStatus } = useSuspenseQuery(authQuery.githubStatus());
 
   const { mutate: switchAccount, isPending } = useMutation({
     ...authMutation.switchAccount(),
-    onSuccess: (data) => {
-      queryClient.setQueryData(authQuery.githubStatus().queryKey, data);
-      queryClient.invalidateQueries();
-      setIsOpen(false);
-      toast.success('GitHub account switched');
+    onSuccess: () => {
+      window.location.reload();
     },
     onError: (error) => {
       toast.error(error.message);
