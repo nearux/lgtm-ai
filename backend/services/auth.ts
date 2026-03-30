@@ -44,16 +44,16 @@ function parseAuthStatus(output: string): GitHubAccount[] {
 }
 
 export async function getStatus(): Promise<GitHubAuthStatus> {
-  let stderr: string;
+  let output: string;
 
   try {
     const result = await execFileAsync('gh', ['auth', 'status']);
     // gh auth status outputs to stderr in some versions, stdout in others
-    stderr = result.stderr || result.stdout;
+    output = result.stderr || result.stdout;
   } catch (error) {
     // gh auth status exits with non-zero if not logged in, but still outputs info to stderr
     if (error && typeof error === 'object' && 'stderr' in error) {
-      stderr = (error as { stderr: string }).stderr;
+      output = (error as { stderr: string }).stderr;
     } else {
       throw new AppError(
         'GitHub CLI is not available',
@@ -63,7 +63,7 @@ export async function getStatus(): Promise<GitHubAuthStatus> {
     }
   }
 
-  const accounts = parseAuthStatus(stderr);
+  const accounts = parseAuthStatus(output);
 
   if (accounts.length === 0) {
     throw new AppError(
