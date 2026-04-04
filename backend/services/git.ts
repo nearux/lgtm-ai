@@ -14,10 +14,10 @@ export interface FileChangesResult {
   summary: FileChangesSummary;
 }
 
-function parseStatus(code: string): FileChangeStatus {
-  if (code === 'A' || code === '?' || code === '??') return 'added';
-  if (code === 'D') return 'deleted';
-  return 'modified';
+export interface CommitAndPushResult {
+  success: boolean;
+  commitHash?: string;
+  error?: string;
 }
 
 export async function getFileChanges(
@@ -84,24 +84,6 @@ export async function getFileChanges(
   return { files, summary };
 }
 
-function parsePerFileDiffs(diffOutput: string): Map<string, string> {
-  const result = new Map<string, string>();
-  if (!diffOutput.trim()) return result;
-
-  const parts = diffOutput.split(/^(?=diff --git )/m);
-  for (const part of parts) {
-    if (!part.trim()) continue;
-    // Extract b/path from "diff --git a/... b/..."
-    const headerMatch = part.match(/^diff --git a\/.+ b\/(.+)$/m);
-    if (headerMatch) {
-      result.set(headerMatch[1], part);
-    }
-  }
-  return result;
-}
-
-const CLAUDE_TIMEOUT_MS = 60_000;
-
 export async function generateCommitMessage(
   workingDir: string,
   prContext?: { title: string; body: string; reviewComment: string }
@@ -135,34 +117,6 @@ export async function generateCommitMessage(
     const message = err instanceof Error ? err.message : String(err);
     throw new Error(`Failed to generate commit message: ${message}`);
   }
-}
-
-const CONVENTIONAL_COMMIT_RE =
-  /^(?:feat|fix|refactor|chore|docs|style|test|perf|ci|build|revert)(?:\(.+?\))?[!]?:/m;
-
-function cleanCommitMessage(raw: string): string {
-  let msg = raw.trim();
-
-  // Strip markdown code fences (```commit\n...\n```)
-  msg = msg.replace(/^```\w*\n?/, '').replace(/\n?```$/, '');
-  msg = msg.trim();
-
-  // If the message doesn't start with a conventional commit prefix,
-  // find where it begins and discard everything before it.
-  if (!CONVENTIONAL_COMMIT_RE.test(msg.split('\n')[0])) {
-    const match = CONVENTIONAL_COMMIT_RE.exec(msg);
-    if (match) {
-      msg = msg.slice(match.index);
-    }
-  }
-
-  return msg.trim();
-}
-
-export interface CommitAndPushResult {
-  success: boolean;
-  commitHash?: string;
-  error?: string;
 }
 
 export async function commitAndPush(
@@ -203,7 +157,56 @@ export async function commitAndPush(
     const hash = await git(workingDir, ['rev-parse', '--short', 'HEAD']);
     return { success: true, commitHash: hash.trim() };
   } catch (err) {
-    console.warn('[commitAndPush] git rev-parse failed, but commit and push succeeded', err);
+    console.warn(
+      '[commitAndPush] git rev-parse failed, but commit and push succeeded',
+      err
+    );
     return { success: true };
   }
+}
+
+const CLAUDE_TIMEOUT_MS = 60_000;
+
+const CONVENTIONAL_COMMIT_RE =
+  /^(?:feat|fix|refactor|chore|docs|style|test|perf|ci|build|revert)(?:\(.+?\))?[!]?:/m;
+
+function parseStatus(code: string): FileChangeStatus {
+  if (code === 'A' || code === '?' || code === '??') return 'added';
+  if (code === 'D') return 'deleted';
+  return 'modified';
+}
+
+function parsePerFileDiffs(diffOutput: string): Map<string, string> {
+  const result = new Map<string, string>();
+  if (!diffOutput.trim()) return result;
+
+  const parts = diffOutput.split(/^(?=diff --git )/m);
+  for (const part of parts) {
+    if (!part.trim()) continue;
+    // Extract b/path from "diff --git a/... b/..."
+    const headerMatch = part.match(/^diff --git a\/.+ b\/(.+)$/m);
+    if (headerMatch) {
+      result.set(headerMatch[1], part);
+    }
+  }
+  return result;
+}
+
+function cleanCommitMessage(raw: string): string {
+  let msg = raw.trim();
+
+  // Strip markdown code fences (```commit\n...\n```)
+  msg = msg.replace(/^```\w*\n?/, '').replace(/\n?```$/, '');
+  msg = msg.trim();
+
+  // If the message doesn't start with a conventional commit prefix,
+  // find where it begins and discard everything before it.
+  if (!CONVENTIONAL_COMMIT_RE.test(msg.split('\n')[0])) {
+    const match = CONVENTIONAL_COMMIT_RE.exec(msg);
+    if (match) {
+      msg = msg.slice(match.index);
+    }
+  }
+
+  return msg.trim();
 }
