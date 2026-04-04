@@ -9,6 +9,7 @@ datasource db {
 enum ChatSessionScopeType {
   REVIEW
   COMMENT
+  PR
 }
 
 model Project {

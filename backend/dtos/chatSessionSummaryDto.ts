@@ -5,7 +5,7 @@ export class ChatSessionSummaryDto implements ChatSessionSummary {
   id: string;
   projectId: string;
   prNumber: number;
-  scopeType: 'REVIEW' | 'COMMENT';
+  scopeType: 'REVIEW' | 'COMMENT' | 'PR';
   scopeTargetId: string;
   claudeSessionId: string;
   title?: string;

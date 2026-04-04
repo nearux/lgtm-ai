@@ -1,4 +1,4 @@
-export type ChatSessionScopeType = 'REVIEW' | 'COMMENT';
+export type ChatSessionScopeType = 'REVIEW' | 'COMMENT' | 'PR';
 
 export interface ClaudeChatContext {
   projectId: string;
