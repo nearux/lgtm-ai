@@ -122,6 +122,11 @@ export class ClaudeSessionManager {
               '[ClaudeSessionManager] Failed to collect file changes:',
               err
             );
+            sender.send({
+              type: 'error',
+              requestId,
+              message: `Failed to collect file changes: ${err instanceof Error ? err.message : String(err)}`,
+            });
           });
       }
     });

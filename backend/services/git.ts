@@ -152,7 +152,7 @@ export async function commitAndPush(
   }
 
   try {
-    await git(workingDir, ['push']);
+    await git(workingDir, ['push', 'origin', 'HEAD']);
   } catch (err) {
     console.error('[commitAndPush] git push failed:', err);
     return {
