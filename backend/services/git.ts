@@ -1,9 +1,5 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { existsSync, statSync } from 'node:fs';
-import path from 'node:path';
-import HttpStatus from 'http-status';
-import { AppError } from '../errors/AppError.js';
 import type {
   FileChange,
   FileChangeStatus,
@@ -11,41 +7,6 @@ import type {
 } from '../types/claude.js';
 
 const execFileAsync = promisify(execFile);
-
-const BLOCKED_PATHS = [
-  '/etc',
-  '/bin',
-  '/sbin',
-  '/dev',
-  '/sys',
-  '/proc',
-  '/root',
-  '/boot',
-];
-
-export function validateWorkingDir(workingDir: string): void {
-  const absPath = path.resolve(workingDir);
-
-  if (!existsSync(absPath)) {
-    throw new AppError('Directory not found', HttpStatus.NOT_FOUND);
-  }
-
-  if (!statSync(absPath).isDirectory()) {
-    throw new AppError('Path is not a directory', HttpStatus.BAD_REQUEST);
-  }
-
-  if (
-    BLOCKED_PATHS.some(
-      (blocked) =>
-        absPath === blocked || absPath.startsWith(path.join(blocked, path.sep))
-    )
-  ) {
-    throw new AppError(
-      'Access to this path is not allowed',
-      HttpStatus.FORBIDDEN
-    );
-  }
-}
 
 async function git(workingDir: string, args: string[]): Promise<string> {
   const { stdout } = await execFileAsync('git', args, { cwd: workingDir });

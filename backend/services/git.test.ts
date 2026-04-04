@@ -6,19 +6,8 @@ vi.mock('node:util', () => ({
   promisify: () => mockExecFileAsync,
 }));
 
-vi.mock('node:fs', () => ({
-  existsSync: vi.fn(),
-  statSync: vi.fn(),
-}));
-
-import { existsSync, statSync } from 'node:fs';
-
-const {
-  getFileChanges,
-  generateCommitMessage,
-  commitAndPush,
-  validateWorkingDir,
-} = await import('./git.js');
+const { getFileChanges, generateCommitMessage, commitAndPush } =
+  await import('./git.js');
 
 // ── Helpers ─────────────────────────────────────────────────────────
 
@@ -39,58 +28,6 @@ function mockGitCommands(commands: Record<string, string | Error>): void {
 describe('git service', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  // ── validateWorkingDir ──────────────────────────────────────────
-
-  describe('validateWorkingDir', () => {
-    it('should throw NOT_FOUND for non-existent directory', () => {
-      vi.mocked(existsSync).mockReturnValue(false);
-
-      expect(() => validateWorkingDir('/nonexistent')).toThrow(
-        expect.objectContaining({
-          message: 'Directory not found',
-          statusCode: 404,
-        })
-      );
-    });
-
-    it('should throw BAD_REQUEST for non-directory path', () => {
-      vi.mocked(existsSync).mockReturnValue(true);
-      vi.mocked(statSync).mockReturnValue({
-        isDirectory: () => false,
-      } as ReturnType<typeof statSync>);
-
-      expect(() => validateWorkingDir('/some/file.txt')).toThrow(
-        expect.objectContaining({
-          message: 'Path is not a directory',
-          statusCode: 400,
-        })
-      );
-    });
-
-    it('should throw FORBIDDEN for blocked paths', () => {
-      vi.mocked(existsSync).mockReturnValue(true);
-      vi.mocked(statSync).mockReturnValue({
-        isDirectory: () => true,
-      } as ReturnType<typeof statSync>);
-
-      expect(() => validateWorkingDir('/etc')).toThrow(
-        expect.objectContaining({
-          message: 'Access to this path is not allowed',
-          statusCode: 403,
-        })
-      );
-    });
-
-    it('should pass for valid directory', () => {
-      vi.mocked(existsSync).mockReturnValue(true);
-      vi.mocked(statSync).mockReturnValue({
-        isDirectory: () => true,
-      } as ReturnType<typeof statSync>);
-
-      expect(() => validateWorkingDir('/home/user/project')).not.toThrow();
-    });
   });
 
   // ── getFileChanges ──────────────────────────────────────────────
