@@ -10,7 +10,7 @@ import type {
 } from './types';
 import type { ClaudeChatContext } from '@lgtmai/backend/types';
 
-const WS_URL = `ws://${window.location.hostname}:5051/api/claude/execute`;
+const WS_URL = `ws://${window.location.host}/api/claude/execute`;
 
 export interface UseClaudeWebSocketReturn {
   status: ConnectionStatus;
