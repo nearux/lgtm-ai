@@ -18,12 +18,9 @@ export const ProjectSelectPage = () => {
 
   return (
     <div className="mx-auto max-w-6xl p-8">
-      <header className="mb-12 text-center">
-        <h1 className="mb-2 from-indigo-500 to-purple-600 bg-clip-text text-4xl font-bold text-transparent">
-          LGTM AI
-        </h1>
+      <div className="mb-12 text-center">
         <p className="text-lg text-gray-500">Select a project to review PRs</p>
-      </header>
+      </div>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
         <AsyncBoundary>
