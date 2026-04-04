@@ -34,6 +34,23 @@ ${p.body || '(no description)'}
 - Focus on the specific review comment provided by the user.`;
 }
 
+export function systemPromptForPR(p: SystemPromptParams): string {
+  return `You are a code review assistant for a GitHub Pull Request.
+
+## PR Context
+- Repository: ${p.repoOwnerName}
+- PR #${p.number}: ${p.title}
+- Branch: ${p.headBranch} → ${p.baseBranch}
+
+## PR Description
+${p.body || '(no description)'}
+
+## Guidelines
+- You have access to the local codebase (already checked out to the PR branch).
+- Use \`gh\` CLI or file reading tools to explore additional context when needed.
+- Focus on the overall changes introduced in this pull request.`;
+}
+
 // ── Review comment section ──────────────────────────────────────────
 
 export interface ReviewCommentParams {
@@ -111,4 +128,57 @@ export function customPrompt(
 
 ## Review Comment Context
 ${reviewComment}`;
+}
+
+export function reviewPrPrompt(
+  repoOwnerName: string,
+  prNumber: number
+): string {
+  return `Please perform a comprehensive code review of this pull request.
+
+## Instructions
+1. First, retrieve the full PR diff using: \`gh pr diff ${prNumber} --repo ${repoOwnerName}\`
+2. Review the changes across ALL modified files
+3. For each issue found, provide:
+   - **File and line reference**
+   - **Severity** (critical / warning / suggestion)
+   - **Description** of the issue
+   - **Suggested fix** (code example if applicable)
+4. Organize your review by file
+5. End with a brief overall summary and your recommendation (approve / request changes)
+
+## Review Criteria
+- Correctness and potential bugs
+- Security vulnerabilities
+- Performance implications
+- Code readability and maintainability
+- Error handling
+- Adherence to existing code patterns in the repository`;
+}
+
+export function explainPrPrompt(
+  repoOwnerName: string,
+  prNumber: number
+): string {
+  return `Please explain the changes in this pull request.
+
+## Instructions
+1. First, retrieve the full PR diff using: \`gh pr diff ${prNumber} --repo ${repoOwnerName}\`
+2. Provide a high-level summary of what this PR does and why
+3. Walk through the changes file by file, explaining:
+   - What was changed
+   - Why it was likely changed
+   - How it connects to other changes in the PR
+4. Highlight any notable design decisions or trade-offs`;
+}
+
+export function customPrPrompt(
+  userPrompt: string,
+  repoOwnerName: string,
+  prNumber: number
+): string {
+  return `${userPrompt}
+
+## PR Context
+Use \`gh pr diff ${prNumber} --repo ${repoOwnerName}\` to view the full diff if needed.`;
 }
