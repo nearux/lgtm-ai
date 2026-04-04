@@ -23,16 +23,39 @@ export interface PRMeta {
   repoOwnerName: string;
 }
 
-export interface CommandContext {
-  type: 'review' | 'comment';
-  author: string;
-  body: string;
-  path?: string;
-  diffHunk?: string;
+interface BaseCommandContext {
   prMeta: PRMeta;
 }
 
-export type ClaudeCommand = 'validate' | 'fix' | 'explain' | 'custom';
+export interface ReviewCommandContext extends BaseCommandContext {
+  type: 'review';
+  author: string;
+  body: string;
+}
+
+export interface CommentCommandContext extends BaseCommandContext {
+  type: 'comment';
+  author: string;
+  body: string;
+  path: string;
+  diffHunk?: string;
+}
+
+export interface PRCommandContext extends BaseCommandContext {
+  type: 'pr';
+}
+
+export type CommandContext =
+  | ReviewCommandContext
+  | CommentCommandContext
+  | PRCommandContext;
+
+export type ClaudeCommand =
+  | 'validate'
+  | 'fix'
+  | 'explain'
+  | 'custom'
+  | 'review';
 
 export interface WsCommandExecuteMessage {
   type: 'execute';
