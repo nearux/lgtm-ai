@@ -1,3 +1,5 @@
+import type { ClaudeChatContext } from './chatSessions.js';
+
 // ── Client → Server ──────────────────────────────────────────────────
 
 export type ClaudeExecutionMode =
@@ -9,15 +11,52 @@ export type ClaudeExecutionMode =
 export interface ClaudeExecuteOptions {
   executionMode?: ClaudeExecutionMode;
   model?: string;
+  sessionId?: string;
 }
 
-export interface WsExecuteMessage {
+export interface PRMeta {
+  number: number;
+  title: string;
+  body: string;
+  baseBranch: string;
+  headBranch: string;
+  repoOwnerName: string;
+}
+
+export interface CommandContext {
+  type: 'review' | 'comment';
+  author: string;
+  body: string;
+  path?: string;
+  diffHunk?: string;
+  prMeta: PRMeta;
+}
+
+export type ClaudeCommand = 'validate' | 'fix' | 'explain' | 'custom';
+
+export interface WsCommandExecuteMessage {
   type: 'execute';
   requestId: string;
-  prompt: string;
   workingDir: string;
+  command: ClaudeCommand;
+  context: CommandContext;
+  customPrompt?: string;
   options?: ClaudeExecuteOptions;
+  chatContext?: ClaudeChatContext;
 }
+
+export interface WsFollowUpExecuteMessage {
+  type: 'followUp';
+  requestId: string;
+  workingDir: string;
+  message: string;
+  options?: ClaudeExecuteOptions;
+  chatContext?: ClaudeChatContext;
+}
+
+export type WsExecuteMessage =
+  | WsCommandExecuteMessage
+  | WsFollowUpExecuteMessage;
 
 export interface WsAbortMessage {
   type: 'abort';
@@ -43,7 +82,8 @@ export interface WsPlanApprovalResponseMessage {
 }
 
 export type WsClientMessage =
-  | WsExecuteMessage
+  | WsCommandExecuteMessage
+  | WsFollowUpExecuteMessage
   | WsAbortMessage
   | WsApprovalResponseMessage
   | WsPlanApprovalResponseMessage;
@@ -83,6 +123,13 @@ export interface WsDoneEvent {
   requestId: string;
   exitCode: number;
   result: string;
+  sessionId?: string;
+}
+
+export interface WsInitEvent {
+  type: 'init';
+  requestId: string;
+  sessionId: string;
 }
 
 export interface WsErrorEvent {
@@ -114,6 +161,7 @@ export type WsServerMessage =
   | WsToolMessageEvent
   | WsToolResultEvent
   | WsStderrEvent
+  | WsInitEvent
   | WsDoneEvent
   | WsErrorEvent
   | WsApprovalRequestEvent

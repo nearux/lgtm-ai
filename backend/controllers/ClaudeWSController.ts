@@ -1,6 +1,13 @@
 import type WebSocket from 'ws';
 import { ClaudeSessionManager } from '../services/claude/ClaudeSessionManager.js';
-import type { WsClientMessage } from '../types/claude.js';
+import {
+  buildSystemPrompt,
+  buildUserPrompt,
+} from '../services/promptBuilder.js';
+import type {
+  WsClientMessage,
+  WsCommandExecuteMessage,
+} from '../types/claude.js';
 
 export function handleClaudeWebSocket(ws: WebSocket): void {
   const manager = new ClaudeSessionManager(ws);
@@ -21,9 +28,54 @@ export function handleClaudeWebSocket(ws: WebSocket): void {
       return;
     }
 
+    if (msg.type === 'followUp') {
+      manager.execute(
+        msg.requestId,
+        msg.message,
+        msg.workingDir,
+        msg.options,
+        msg.chatContext
+      );
+      return;
+    }
+
     if (msg.type === 'execute') {
-      const { requestId, prompt, workingDir, options } = msg;
-      manager.execute(requestId, prompt, workingDir, options);
+      const { requestId, workingDir, options, chatContext } = msg;
+
+      const cmdMsg = msg as WsCommandExecuteMessage;
+      let userPrompt: string;
+      let systemPrompt: string;
+      try {
+        systemPrompt = buildSystemPrompt(cmdMsg.context);
+        userPrompt = buildUserPrompt(
+          cmdMsg.command,
+          cmdMsg.context,
+          cmdMsg.customPrompt
+        );
+      } catch (err) {
+        ws.send(
+          JSON.stringify({
+            type: 'error',
+            requestId,
+            message:
+              err instanceof Error ? err.message : 'Failed to build prompt',
+          })
+        );
+        return;
+      }
+
+      manager.execute(
+        requestId,
+        userPrompt,
+        workingDir,
+        options,
+        chatContext,
+        {
+          command: cmdMsg.command,
+          customPrompt: cmdMsg.customPrompt,
+        },
+        systemPrompt
+      );
       return;
     }
 

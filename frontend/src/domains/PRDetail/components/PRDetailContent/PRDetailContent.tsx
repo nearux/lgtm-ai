@@ -1,29 +1,49 @@
 import { useSuspenseQueries } from '@tanstack/react-query';
 import { projectsQuery, prsQuery } from '@/shared/apis';
-import { parseGitHubUrl, linkifyIssueReferences } from '@/shared/utils';
+import { parseGitHubUrl, linkifyGitHubReferences } from '@/shared/utils';
+import type { PRMeta } from '@lgtmai/backend/types';
 import { PRHeader } from '../PRHeader/PRHeader';
 import { PRDescription } from '../PRDescription/PRDescription';
-import { ReviewList } from '../ReviewList/ReviewList';
-import { CommentList } from '../CommentList/CommentList';
+import { ActivityTimeline } from '../ActivityTimeline/ActivityTimeline';
 import { CommitList } from '../CommitList/CommitList';
 
 interface Props {
   projectId: string;
   prNumber: string;
+  origin?: string;
 }
 
-export const PRDetailContent = ({ projectId, prNumber }: Props) => {
+export const PRDetailContent = ({ projectId, prNumber, origin }: Props) => {
   const [{ data: project }, { data: pr }] = useSuspenseQueries({
     queries: [
       projectsQuery.detail(projectId),
-      prsQuery.detail(projectId, Number(prNumber)),
+      prsQuery.detail(projectId, Number(prNumber), origin),
     ],
   });
 
-  const githubBaseUrl = parseGitHubUrl(project.gitInfo.remoteUrl);
+  const remote = project.gitInfo.remotes.find(
+    (r) => r.name === (origin ?? 'origin')
+  );
+  const githubBaseUrl = parseGitHubUrl(
+    remote?.url ?? project.gitInfo.remoteUrl
+  );
   const linkedBody = pr.body
-    ? linkifyIssueReferences(pr.body, githubBaseUrl)
+    ? linkifyGitHubReferences(pr.body, githubBaseUrl)
     : '';
+
+  // Extract "owner/repo" from the GitHub base URL (e.g. "https://github.com/owner/repo")
+  const repoOwnerName = githubBaseUrl
+    ? githubBaseUrl.replace('https://github.com/', '')
+    : '';
+
+  const prMeta: PRMeta = {
+    number: pr.number,
+    title: pr.title,
+    body: pr.body ?? '',
+    baseBranch: pr.baseBranch,
+    headBranch: pr.headBranch,
+    repoOwnerName,
+  };
 
   return (
     <>
@@ -32,13 +52,23 @@ export const PRDetailContent = ({ projectId, prNumber }: Props) => {
         projectName={project.name}
         prNumber={prNumber}
         pr={pr}
+        origin={origin}
+        githubBaseUrl={githubBaseUrl}
       />
 
       {linkedBody && <PRDescription body={linkedBody} />}
 
-      <ReviewList reviews={pr.reviews} />
-      <CommentList comments={pr.comments} />
-      <CommitList commits={pr.commits} />
+      <ActivityTimeline
+        reviews={pr.reviews}
+        comments={pr.comments}
+        workingDir={project.working_dir}
+        projectId={projectId}
+        prNumber={pr.number}
+        prState={pr.state}
+        origin={origin}
+        prMeta={prMeta}
+      />
+      <CommitList commits={pr.commits} githubBaseUrl={githubBaseUrl} />
     </>
   );
 };

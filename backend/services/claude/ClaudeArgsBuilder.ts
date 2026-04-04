@@ -30,6 +30,15 @@ export class ClaudeArgsBuilder {
       this.args.push(`--model=${options.model}`);
     }
 
+    if (options.sessionId) {
+      this.args.push(`--resume=${options.sessionId}`);
+    }
+
+    return this;
+  }
+
+  withSystemPrompt(prompt: string): this {
+    this.args.push('--append-system-prompt', prompt);
     return this;
   }
 

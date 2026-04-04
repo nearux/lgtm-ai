@@ -13,10 +13,16 @@
 
 export type ParsedStreamEvent =
   | { kind: 'text'; text: string }
+  | { kind: 'init'; sessionId: string }
   | { kind: 'tool_start'; toolId: string; toolName: string }
   | { kind: 'tool_complete'; toolId: string; toolName: string; input: unknown }
   | { kind: 'tool_result'; toolId: string; content: string; isError: boolean }
-  | { kind: 'result'; result: string; isError: boolean }
+  | {
+      kind: 'result';
+      result: string;
+      sessionId: string | undefined;
+      isError: boolean;
+    }
   | {
       kind: 'hook_callback';
       requestId: string;
@@ -127,10 +133,12 @@ export function parseStreamJsonLine(line: string): ParsedStreamEvent | null {
   // Response completion: result message emitted when a turn finishes
   if (parsed['type'] === 'result') {
     const result = parsed['result'];
+    const sessionId = parsed['session_id'];
     const isError = parsed['is_error'];
     return {
       kind: 'result',
       result: typeof result === 'string' ? result : '',
+      sessionId: typeof sessionId === 'string' ? sessionId : undefined,
       isError: isError === true,
     };
   }
@@ -174,6 +182,13 @@ export function parseStreamJsonLine(line: string): ParsedStreamEvent | null {
           input: toolInput,
         };
       }
+    }
+  }
+
+  if (parsed['type'] === 'system' && parsed['subtype'] === 'init') {
+    const sessionId = parsed['session_id'];
+    if (typeof sessionId === 'string') {
+      return { kind: 'init', sessionId };
     }
   }
 

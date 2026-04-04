@@ -10,9 +10,10 @@ import type {
 } from '../../types/claude.js';
 
 export interface ClaudeStreamEvents {
+  init: [sessionId: string];
   text: [chunk: string];
   stderr: [chunk: string];
-  done: [exitCode: number, result: string];
+  done: [exitCode: number, result: string, sessionId: string | undefined];
   error: [message: string];
   tool_message: [toolId: string, toolName: string, input: unknown];
   tool_result: [toolId: string, content: string, isError: boolean];
@@ -37,7 +38,8 @@ export interface ClaudeStreamEvents {
  * management via `abort()`.
  *
  * Emitted events:
- *  - `data`          – extracted text from an assistant message
+ *  - `init`          – session id observed from system/init payload
+ *  - `text`          – extracted text from an assistant message
  *  - `tool_message` – a tool call has completed with input (toolId, toolName, input)
  *  - `tool_result`   – tool execution result received (toolId, content, isError)
  *  - `done`          – process exited cleanly (payload: exit code)
@@ -49,16 +51,27 @@ export class ClaudeProcess extends EventEmitter<ClaudeStreamEvents> {
   private errored = false;
   private resultReceived = false;
 
-  constructor(workingDir: string, options: ClaudeExecuteOptions = {}) {
+  constructor(
+    workingDir: string,
+    options: ClaudeExecuteOptions = {},
+    systemPrompt?: string
+  ) {
     super();
 
-    const args = new ClaudeArgsBuilder().withOptions(options).build();
+    const builder = new ClaudeArgsBuilder().withOptions(options);
+    if (systemPrompt) {
+      builder.withSystemPrompt(systemPrompt);
+    }
+    const args = builder.build();
 
     let child: ChildProcess;
     try {
+      const env = { ...process.env };
+      delete env['CLAUDECODE'];
       child = spawn('claude', args, {
         cwd: workingDir,
         stdio: ['pipe', 'pipe', 'pipe'],
+        env,
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -242,7 +255,7 @@ export class ClaudeProcess extends EventEmitter<ClaudeStreamEvents> {
     if (isAbnormalExit) {
       this.emit('error', `Process exited with code ${code}`);
     } else {
-      this.emit('done', exitCode, '');
+      this.emit('done', exitCode, '', undefined);
     }
   }
 
@@ -253,6 +266,9 @@ export class ClaudeProcess extends EventEmitter<ClaudeStreamEvents> {
     switch (result.kind) {
       case 'text':
         this.emit('text', result.text);
+        break;
+      case 'init':
+        this.emit('init', result.sessionId);
         break;
       case 'tool_complete':
         this.emit('tool_message', result.toolId, result.toolName, result.input);
@@ -302,7 +318,7 @@ export class ClaudeProcess extends EventEmitter<ClaudeStreamEvents> {
         break;
       case 'result':
         this.resultReceived = true;
-        this.emit('done', 0, result.result);
+        this.emit('done', 0, result.result, result.sessionId);
         break;
     }
   }

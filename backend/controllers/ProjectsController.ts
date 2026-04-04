@@ -11,7 +11,7 @@ import {
   Response,
   Tags,
   SuccessResponse,
-} from 'tsoa';
+} from '@tsoa/runtime';
 import { z } from 'zod';
 import HttpStatus from 'http-status';
 import { AppError } from '../errors/AppError.js';
@@ -26,7 +26,7 @@ function parseUUID(id: string): string {
 }
 import * as projectsService from '../services/projects.js';
 import * as pullRequestsService from '../services/pullRequests.js';
-import * as gitUtils from '../utils/git.js';
+import * as chatSessionsService from '../services/chatSessions.js';
 import type {
   Project,
   ProjectDetail,
@@ -34,7 +34,18 @@ import type {
   UpdateProjectBody,
   ErrorResponse,
 } from '../types/projects.js';
-import type { PRListItem, PRDetail, PRState } from '../types/pullRequests.js';
+import type {
+  PRListItem,
+  PRDetail,
+  PRState,
+  CheckoutPRBranchBody,
+  CheckoutPRBranchResult,
+} from '../types/pullRequests.js';
+import type {
+  ChatSessionHistoryResponse,
+  ChatSessionScopeType,
+  ChatSessionSummary,
+} from '../types/chatSessions.js';
 
 export type {
   Project,
@@ -44,6 +55,9 @@ export type {
   ErrorResponse,
   PRListItem,
   PRDetail,
+  ChatSessionSummary,
+  ChatSessionHistoryResponse,
+  CheckoutPRBranchResult,
 };
 
 @Route('api/projects')
@@ -120,9 +134,11 @@ export class ProjectsController extends Controller {
    * @param page Page number (1-based)
    * @param limit Results per page (max 100)
    * @param state PR state filter: open, closed, or all (default: open)
+   * @param origin Git remote name to use (default: origin)
    */
   @Get('{projectId}/prs')
   @Response<ErrorResponse>(HttpStatus.BAD_REQUEST, 'Invalid remote URL')
+  @Response<ErrorResponse>(HttpStatus.BAD_REQUEST, 'Invalid remote name')
   @Response<ErrorResponse>(HttpStatus.NOT_FOUND, 'Project not found')
   @Response<ErrorResponse>(
     HttpStatus.UNPROCESSABLE_ENTITY,
@@ -136,18 +152,13 @@ export class ProjectsController extends Controller {
     @Path() projectId: string,
     @Query() page?: number,
     @Query() limit?: number,
-    @Query() state?: PRState
+    @Query() state?: PRState,
+    @Query() origin?: string
   ): Promise<PRListItem[]> {
-    const project = await projectsService.findById(parseUUID(projectId));
-
-    if (!project.gitInfo.remoteUrl) {
-      throw new AppError(
-        'Project does not have a configured Git remote',
-        HttpStatus.UNPROCESSABLE_ENTITY
-      );
-    }
-
-    const repoOwnerName = gitUtils.parseGitHubRepo(project.gitInfo.remoteUrl);
+    const repoOwnerName = await projectsService.resolveGitHubRepo(
+      parseUUID(projectId),
+      origin ?? 'origin'
+    );
     return pullRequestsService.fetchPRList(repoOwnerName, {
       page,
       limit,
@@ -159,9 +170,11 @@ export class ProjectsController extends Controller {
    * Get detailed information for a specific pull request
    * @param projectId Project UUID
    * @param prNumber Pull request number
+   * @param origin Git remote name to use (default: origin)
    */
   @Get('{projectId}/prs/{prNumber}')
   @Response<ErrorResponse>(HttpStatus.BAD_REQUEST, 'Invalid remote URL')
+  @Response<ErrorResponse>(HttpStatus.BAD_REQUEST, 'Invalid remote name')
   @Response<ErrorResponse>(
     HttpStatus.NOT_FOUND,
     'Project or pull request not found'
@@ -176,18 +189,109 @@ export class ProjectsController extends Controller {
   )
   public async getProjectPR(
     @Path() projectId: string,
-    @Path() prNumber: number
+    @Path() prNumber: number,
+    @Query() origin?: string
   ): Promise<PRDetail> {
-    const project = await projectsService.findById(parseUUID(projectId));
+    const repoOwnerName = await projectsService.resolveGitHubRepo(
+      parseUUID(projectId),
+      origin ?? 'origin'
+    );
+    return pullRequestsService.fetchPRDetail(repoOwnerName, prNumber);
+  }
 
-    if (!project.gitInfo.remoteUrl) {
+  /**
+   * Get saved chat sessions for a specific pull request
+   * @param projectId Project UUID
+   * @param prNumber Pull request number
+   * @param scopeType Optional chat target type filter
+   * @param scopeTargetId Optional chat target id filter
+   */
+  @Get('{projectId}/prs/{prNumber}/chat-sessions')
+  @Response<ErrorResponse>(HttpStatus.BAD_REQUEST, 'Invalid request')
+  @Response<ErrorResponse>(HttpStatus.NOT_FOUND, 'Project not found')
+  public async listChatSessions(
+    @Path() projectId: string,
+    @Path() prNumber: number,
+    @Query() scopeType?: ChatSessionScopeType,
+    @Query() scopeTargetId?: string
+  ): Promise<ChatSessionSummary[]> {
+    const parsedProjectId = parseUUID(projectId);
+    await projectsService.findById(parsedProjectId);
+
+    if ((scopeType && !scopeTargetId) || (!scopeType && scopeTargetId)) {
       throw new AppError(
-        'Project does not have a configured Git remote',
-        HttpStatus.UNPROCESSABLE_ENTITY
+        'scopeType and scopeTargetId must be provided together',
+        HttpStatus.BAD_REQUEST
       );
     }
 
-    const repoOwnerName = gitUtils.parseGitHubRepo(project.gitInfo.remoteUrl);
-    return pullRequestsService.fetchPRDetail(repoOwnerName, prNumber);
+    return chatSessionsService.listChatSessions(parsedProjectId, prNumber, {
+      scopeType,
+      scopeTargetId,
+    });
+  }
+
+  /**
+   * Get saved chat history for a specific pull request session
+   * @param projectId Project UUID
+   * @param prNumber Pull request number
+   * @param sessionId Saved chat session id
+   */
+  @Get('{projectId}/prs/{prNumber}/chat-sessions/{sessionId}/history')
+  @Response<ErrorResponse>(
+    HttpStatus.NOT_FOUND,
+    'Project or chat session not found'
+  )
+  public async getChatSessionHistory(
+    @Path() projectId: string,
+    @Path() prNumber: number,
+    @Path() sessionId: string
+  ): Promise<ChatSessionHistoryResponse> {
+    return chatSessionsService.getChatSessionHistory(
+      parseUUID(projectId),
+      prNumber,
+      sessionId
+    );
+  }
+
+  /**
+   * Checkout the branch associated with a pull request
+   * @param projectId Project UUID
+   * @param prNumber Pull request number
+   * @param body Checkout options (`force` stashes local changes including untracked files, `origin` selects git remote name)
+   */
+  @Post('{projectId}/prs/{prNumber}/checkout')
+  @Response<ErrorResponse>(HttpStatus.BAD_REQUEST, 'Invalid remote URL')
+  @Response<ErrorResponse>(HttpStatus.BAD_REQUEST, 'Invalid remote name')
+  @Response<ErrorResponse>(
+    HttpStatus.NOT_FOUND,
+    'Project or pull request not found'
+  )
+  @Response<ErrorResponse>(
+    HttpStatus.UNPROCESSABLE_ENTITY,
+    'Project does not have a configured Git remote'
+  )
+  @Response<ErrorResponse>(
+    HttpStatus.SERVICE_UNAVAILABLE,
+    'GitHub CLI unavailable'
+  )
+  @Response<ErrorResponse>(HttpStatus.CONFLICT, 'Local changes exist')
+  public async checkoutProjectPRBranch(
+    @Path() projectId: string,
+    @Path() prNumber: number,
+    @Body() body?: CheckoutPRBranchBody
+  ): Promise<CheckoutPRBranchResult> {
+    const normalizedProjectId = parseUUID(projectId);
+    const project = await projectsService.findById(normalizedProjectId);
+    const repoOwnerName = await projectsService.resolveGitHubRepo(
+      normalizedProjectId,
+      body?.origin ?? 'origin'
+    );
+    return pullRequestsService.checkoutPRBranch(
+      repoOwnerName,
+      prNumber,
+      project.working_dir,
+      { force: body?.force }
+    );
   }
 }

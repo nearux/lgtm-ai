@@ -1,4 +1,4 @@
-import { Controller, Route, Get, Query, Response, Tags } from 'tsoa';
+import { Controller, Route, Get, Query, Response, Tags } from '@tsoa/runtime';
 import * as fileSystemService from '../services/fileSystem.js';
 import type { BrowseResponse } from '../types/fileSystem.js';
 import type { ErrorResponse } from '../types/projects.js';

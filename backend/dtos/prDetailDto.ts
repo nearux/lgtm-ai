@@ -12,6 +12,8 @@ export class PRDetailDto implements PRDetail {
   number: number;
   title: string;
   body: string;
+  baseBranch: string;
+  headBranch: string;
   assignees: PRDetail['assignees'];
   author: PRDetail['author'];
   createdAt: string;
@@ -25,6 +27,8 @@ export class PRDetailDto implements PRDetail {
     this.number = data.number;
     this.title = data.title;
     this.body = data.body;
+    this.baseBranch = data.baseBranch;
+    this.headBranch = data.headBranch;
     this.assignees = data.assignees;
     this.author = data.author;
     this.createdAt = data.createdAt;
@@ -43,6 +47,8 @@ export class PRDetailDto implements PRDetail {
       number: raw.number,
       title: raw.title,
       body: isString(raw.body) ? raw.body : '',
+      baseBranch: raw.baseRefName,
+      headBranch: raw.headRefName,
       assignees: raw.assignees.map((a) => ({
         id: a.id ?? a.login,
         login: a.login,
