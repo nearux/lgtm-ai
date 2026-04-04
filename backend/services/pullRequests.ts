@@ -4,7 +4,7 @@ import HttpStatus from 'http-status';
 import { clamp } from 'remeda';
 import { AppError } from '../errors/AppError.js';
 import type {
-  PRListItem,
+  PaginatedPRList,
   PRDetail,
   PRState,
   CheckoutPRBranchResult,
@@ -54,13 +54,45 @@ function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+const GRAPHQL_PR_STATES: Record<PRState, string> = {
+  open: 'OPEN',
+  closed: 'CLOSED, MERGED',
+  all: 'OPEN, CLOSED, MERGED',
+};
+
+async function fetchPRTotalCount(
+  repoOwnerName: string,
+  state: PRState
+): Promise<number> {
+  const [owner, name] = repoOwnerName.split('/');
+  const query = `query { repository(owner: "${owner}", name: "${name}") { pullRequests(states: [${GRAPHQL_PR_STATES[state]}]) { totalCount } } }`;
+
+  const { stdout } = await execFileAsync('gh', [
+    'api',
+    'graphql',
+    '-f',
+    `query=${query}`,
+  ]);
+  const result = JSON.parse(stdout) as {
+    data?: { repository: { pullRequests: { totalCount: number } } };
+    errors?: { message: string }[];
+  };
+
+  if (result.errors || !result.data) {
+    const message = result.errors?.[0]?.message ?? 'Unknown GraphQL error';
+    throw new Error(`GraphQL query failed: ${message}`);
+  }
+
+  return result.data.repository.pullRequests.totalCount;
+}
+
 /**
  * Fetch PR list using GitHub API via gh
  */
 export async function fetchPRList(
   repoOwnerName: string,
   options: { page?: number; limit?: number; state?: PRState } = {}
-): Promise<PRListItem[]> {
+): Promise<PaginatedPRList> {
   validateRepoOwnerName(repoOwnerName);
 
   const page = normalizePositiveInt(options.page, DEFAULT_PAGE);
@@ -70,10 +102,14 @@ export async function fetchPRList(
   const state = normalizePRState(options.state);
   const apiPath = `repos/${repoOwnerName}/pulls?per_page=${limit}&page=${page}&state=${state}`;
 
-  let stdout: string;
+  let prsStdout: string;
+  let totalCount: number;
 
   try {
-    ({ stdout } = await execFileAsync('gh', ['api', apiPath]));
+    [{ stdout: prsStdout }, totalCount] = await Promise.all([
+      execFileAsync('gh', ['api', apiPath]),
+      fetchPRTotalCount(repoOwnerName, state),
+    ]);
   } catch (error) {
     const errorMessage = getErrorMessage(error).toLowerCase();
     if (errorMessage.includes('authentication')) {
@@ -99,9 +135,13 @@ export async function fetchPRList(
     );
   }
 
-  const prs = JSON.parse(stdout) as GitHubPullRequest[];
+  const prs = JSON.parse(prsStdout) as GitHubPullRequest[];
+  const lastPage = Math.max(1, Math.ceil(totalCount / limit));
 
-  return prs.map((pr) => PRListItemDto.fromGitHub(pr));
+  return {
+    items: prs.map((pr) => PRListItemDto.fromGitHub(pr)),
+    lastPage,
+  };
 }
 
 /**

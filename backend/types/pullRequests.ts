@@ -170,6 +170,11 @@ export interface PRDetail extends PRListItem {
   commits: PRCommit[];
 }
 
+export interface PaginatedPRList {
+  items: PRListItem[];
+  lastPage: number;
+}
+
 export interface CheckoutPRBranchBody {
   force?: boolean;
   origin?: string;

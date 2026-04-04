@@ -75,26 +75,63 @@ describe('pullRequests service', () => {
       },
     ];
 
-    it('should successfully fetch PR list', async () => {
-      mockExecAsync.mockResolvedValue({
-        stdout: JSON.stringify(mockApiPRListData),
-        stderr: '',
+    const mockGraphQLResponse = (totalCount: number) =>
+      JSON.stringify({
+        data: {
+          repository: { pullRequests: { totalCount } },
+        },
       });
+
+    function mockPRListAPI(totalCount: number) {
+      mockExecAsync
+        .mockResolvedValueOnce({
+          stdout: JSON.stringify(mockApiPRListData),
+          stderr: '',
+        })
+        .mockResolvedValueOnce({
+          stdout: mockGraphQLResponse(totalCount),
+          stderr: '',
+        });
+    }
+
+    it('should successfully fetch PR list', async () => {
+      mockPRListAPI(2);
 
       const result = await fetchPRList('owner/repo');
 
-      expect(result).toEqual(mockPRListData);
+      expect(result).toEqual({ items: mockPRListData, lastPage: 1 });
       expect(mockExecAsync).toHaveBeenCalledWith('gh', [
         'api',
         'repos/owner/repo/pulls?per_page=100&page=1&state=open',
       ]);
     });
 
+    it('should calculate lastPage from totalCount', async () => {
+      mockPRListAPI(250);
+
+      const result = await fetchPRList('owner/repo', { limit: 50 });
+
+      expect(result.lastPage).toBe(5);
+    });
+
+    it('should return lastPage 1 when totalCount is 0', async () => {
+      mockExecAsync
+        .mockResolvedValueOnce({
+          stdout: JSON.stringify([]),
+          stderr: '',
+        })
+        .mockResolvedValueOnce({
+          stdout: mockGraphQLResponse(0),
+          stderr: '',
+        });
+
+      const result = await fetchPRList('owner/repo');
+
+      expect(result).toEqual({ items: [], lastPage: 1 });
+    });
+
     it('should pass page and limit options', async () => {
-      mockExecAsync.mockResolvedValue({
-        stdout: JSON.stringify(mockApiPRListData),
-        stderr: '',
-      });
+      mockPRListAPI(100);
 
       await fetchPRList('owner/repo', { page: 2, limit: 50 });
 
@@ -105,10 +142,7 @@ describe('pullRequests service', () => {
     });
 
     it('should clamp invalid page and limit values', async () => {
-      mockExecAsync.mockResolvedValue({
-        stdout: JSON.stringify(mockApiPRListData),
-        stderr: '',
-      });
+      mockPRListAPI(2);
 
       await fetchPRList('owner/repo', { page: 0, limit: 250 });
 
@@ -118,11 +152,8 @@ describe('pullRequests service', () => {
       ]);
     });
 
-    it('should pass state=closed option', async () => {
-      mockExecAsync.mockResolvedValue({
-        stdout: JSON.stringify(mockApiPRListData),
-        stderr: '',
-      });
+    it('should pass state=closed option and query CLOSED+MERGED via GraphQL', async () => {
+      mockPRListAPI(2);
 
       await fetchPRList('owner/repo', { state: 'closed' });
 
@@ -130,13 +161,16 @@ describe('pullRequests service', () => {
         'api',
         'repos/owner/repo/pulls?per_page=100&page=1&state=closed',
       ]);
+      expect(mockExecAsync).toHaveBeenCalledWith('gh', [
+        'api',
+        'graphql',
+        '-f',
+        expect.stringContaining('states: [CLOSED, MERGED]'),
+      ]);
     });
 
-    it('should pass state=all option', async () => {
-      mockExecAsync.mockResolvedValue({
-        stdout: JSON.stringify(mockApiPRListData),
-        stderr: '',
-      });
+    it('should pass state=all option and query all states via GraphQL', async () => {
+      mockPRListAPI(2);
 
       await fetchPRList('owner/repo', { state: 'all' });
 
@@ -144,13 +178,16 @@ describe('pullRequests service', () => {
         'api',
         'repos/owner/repo/pulls?per_page=100&page=1&state=all',
       ]);
+      expect(mockExecAsync).toHaveBeenCalledWith('gh', [
+        'api',
+        'graphql',
+        '-f',
+        expect.stringContaining('states: [OPEN, CLOSED, MERGED]'),
+      ]);
     });
 
     it('should default to state=open for invalid state value', async () => {
-      mockExecAsync.mockResolvedValue({
-        stdout: JSON.stringify(mockApiPRListData),
-        stderr: '',
-      });
+      mockPRListAPI(2);
 
       await fetchPRList('owner/repo', { state: 'invalid' as never });
 
@@ -160,15 +197,20 @@ describe('pullRequests service', () => {
       ]);
     });
 
-    it('should return empty array when no PRs exist', async () => {
-      mockExecAsync.mockResolvedValue({
-        stdout: JSON.stringify([]),
-        stderr: '',
-      });
+    it('should return empty items when no PRs exist', async () => {
+      mockExecAsync
+        .mockResolvedValueOnce({
+          stdout: JSON.stringify([]),
+          stderr: '',
+        })
+        .mockResolvedValueOnce({
+          stdout: mockGraphQLResponse(0),
+          stderr: '',
+        });
 
       const result = await fetchPRList('owner/repo');
 
-      expect(result).toEqual([]);
+      expect(result).toEqual({ items: [], lastPage: 1 });
     });
 
     it('should throw SERVICE_UNAVAILABLE error for authentication failure', async () => {

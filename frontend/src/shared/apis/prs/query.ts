@@ -1,7 +1,7 @@
 import { queryOptions } from '@tanstack/react-query';
 import { apiGet } from '../client';
 import { prsQueryKey } from './queryKey';
-import type { PRListItem, PRDetail, PRState } from '@lgtmai/backend/types';
+import type { PaginatedPRList, PRDetail, PRState } from '@lgtmai/backend/types';
 
 export const prsQuery = {
   list: (
@@ -13,7 +13,7 @@ export const prsQuery = {
       origin?: string;
     }
   ) =>
-    queryOptions<PRListItem[]>({
+    queryOptions<PaginatedPRList>({
       queryKey: prsQueryKey.all(projectId, params),
       queryFn: () => {
         const searchParams = new URLSearchParams();
@@ -22,7 +22,7 @@ export const prsQuery = {
         if (params?.limit) searchParams.set('limit', String(params.limit));
         if (params?.origin) searchParams.set('origin', params.origin);
         const query = searchParams.toString();
-        return apiGet<PRListItem[]>(
+        return apiGet<PaginatedPRList>(
           `/api/projects/${projectId}/prs${query ? `?${query}` : ''}`
         );
       },

@@ -36,6 +36,7 @@ import type {
 } from '../types/projects.js';
 import type {
   PRListItem,
+  PaginatedPRList,
   PRDetail,
   PRState,
   CheckoutPRBranchBody,
@@ -54,6 +55,7 @@ export type {
   UpdateProjectBody,
   ErrorResponse,
   PRListItem,
+  PaginatedPRList,
   PRDetail,
   ChatSessionSummary,
   ChatSessionHistoryResponse,
@@ -154,7 +156,7 @@ export class ProjectsController extends Controller {
     @Query() limit?: number,
     @Query() state?: PRState,
     @Query() origin?: string
-  ): Promise<PRListItem[]> {
+  ): Promise<PaginatedPRList> {
     const repoOwnerName = await projectsService.resolveGitHubRepo(
       parseUUID(projectId),
       origin ?? 'origin'
