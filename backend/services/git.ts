@@ -24,7 +24,9 @@ export async function getFileChanges(
   workingDir: string
 ): Promise<FileChangesResult> {
   // Stage untracked files as intent-to-add so they appear in git diff
-  await git(workingDir, ['add', '-N', '.']).catch(() => {});
+  await git(workingDir, ['add', '-N', '.']).catch((err) => {
+    console.warn('[getFileChanges] git add -N failed:', err);
+  });
 
   const [statusOutput, numstatOutput, diffOutput] = await Promise.all([
     git(workingDir, ['status', '--porcelain']),
@@ -106,7 +108,9 @@ export async function generateCommitMessage(
   workingDir: string,
   prContext?: { title: string; body: string; reviewComment: string }
 ): Promise<string> {
-  await git(workingDir, ['add', '-N', '.']).catch(() => {});
+  await git(workingDir, ['add', '-N', '.']).catch((err) => {
+    console.warn('[generateCommitMessage] git add -N failed:', err);
+  });
   const diff = await git(workingDir, ['diff']);
 
   if (!diff.trim()) {
