@@ -28,6 +28,11 @@ const commentContext: CommandContext = {
   prMeta,
 };
 
+const prContext: CommandContext = {
+  type: 'pr',
+  prMeta,
+};
+
 describe('buildSystemPrompt', () => {
   it('includes PR title, branch info, and description', () => {
     const result = buildSystemPrompt(reviewContext);
@@ -51,6 +56,11 @@ describe('buildSystemPrompt', () => {
     };
     const result = buildSystemPrompt(ctx);
     expect(result).toContain('(no description)');
+  });
+
+  it('uses PR-specific system prompt for pr context', () => {
+    const result = buildSystemPrompt(prContext);
+    expect(result).toContain('overall changes introduced in this pull request');
   });
 });
 
@@ -119,6 +129,63 @@ describe('buildUserPrompt', () => {
     it('throws if customPrompt is whitespace only', () => {
       expect(() => buildUserPrompt('custom', reviewContext, '   ')).toThrow(
         'customPrompt is required'
+      );
+    });
+  });
+
+  describe('PR-level commands', () => {
+    describe('review', () => {
+      it('includes gh pr diff instruction', () => {
+        const result = buildUserPrompt('review', prContext);
+        expect(result).toContain('gh pr diff 42 --repo acme/app');
+      });
+
+      it('includes review criteria', () => {
+        const result = buildUserPrompt('review', prContext);
+        expect(result).toContain('Correctness and potential bugs');
+        expect(result).toContain('Security vulnerabilities');
+      });
+    });
+
+    describe('explain', () => {
+      it('includes gh pr diff instruction', () => {
+        const result = buildUserPrompt('explain', prContext);
+        expect(result).toContain('gh pr diff 42 --repo acme/app');
+      });
+
+      it('includes file-by-file walkthrough instruction', () => {
+        const result = buildUserPrompt('explain', prContext);
+        expect(result).toContain('file by file');
+      });
+    });
+
+    describe('custom', () => {
+      it('includes custom prompt with PR context', () => {
+        const result = buildUserPrompt(
+          'custom',
+          prContext,
+          'Check for security issues'
+        );
+        expect(result).toContain('Check for security issues');
+        expect(result).toContain('gh pr diff 42 --repo acme/app');
+      });
+
+      it('throws if customPrompt is missing', () => {
+        expect(() => buildUserPrompt('custom', prContext)).toThrow(
+          'customPrompt is required'
+        );
+      });
+    });
+
+    it('throws on unsupported command for PR context', () => {
+      expect(() => buildUserPrompt('fix', prContext)).toThrow(
+        "Command 'fix' is not supported for PR-level context"
+      );
+    });
+
+    it('throws on validate command for PR context', () => {
+      expect(() => buildUserPrompt('validate', prContext)).toThrow(
+        "Command 'validate' is not supported for PR-level context"
       );
     });
   });
