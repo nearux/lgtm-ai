@@ -112,7 +112,6 @@ export class ClaudeSessionManager {
       sender.send({ type: 'done', requestId, exitCode, result, sessionId });
       this.processes.delete(requestId);
 
-      // Collect and send file changes only after fix commands
       if (commandMeta?.command === 'fix') {
         getFileChanges(workingDir)
           .then((changes) => {
