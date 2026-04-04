@@ -156,6 +156,33 @@ export interface WsPlanApprovalRequestEvent {
   input: unknown;
 }
 
+// ── Post-fix file changes ───────────────────────────────────────────
+
+export type FileChangeStatus = 'added' | 'modified' | 'deleted';
+
+export interface FileChange {
+  path: string;
+  status: FileChangeStatus;
+  additions: number;
+  deletions: number;
+  diff: string;
+}
+
+export interface FileChangesSummary {
+  totalFiles: number;
+  totalAdditions: number;
+  totalDeletions: number;
+}
+
+export interface WsFileChangesEvent {
+  type: 'file_changes';
+  requestId: string;
+  changes: {
+    files: FileChange[];
+    summary: FileChangesSummary;
+  };
+}
+
 export type WsServerMessage =
   | WsTextEvent
   | WsToolMessageEvent
@@ -165,4 +192,5 @@ export type WsServerMessage =
   | WsDoneEvent
   | WsErrorEvent
   | WsApprovalRequestEvent
-  | WsPlanApprovalRequestEvent;
+  | WsPlanApprovalRequestEvent
+  | WsFileChangesEvent;
