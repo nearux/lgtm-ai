@@ -9,8 +9,6 @@ vi.mock('node:util', () => ({
 const { getFileChanges, generateCommitMessage, commitAndPush } =
   await import('./git.js');
 
-// ── Helpers ─────────────────────────────────────────────────────────
-
 /** Build a mock that resolves differently per call based on git args. */
 function mockGitCommands(commands: Record<string, string | Error>): void {
   mockExecFileAsync.mockImplementation((cmd: string, args: string[]) => {
@@ -29,8 +27,6 @@ describe('git service', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
-
-  // ── getFileChanges ──────────────────────────────────────────────
 
   describe('getFileChanges', () => {
     it('should return empty result when no changes', async () => {
@@ -201,8 +197,6 @@ new file mode 100644
     });
   });
 
-  // ── generateCommitMessage ───────────────────────────────────────
-
   describe('generateCommitMessage', () => {
     it('should generate commit message from diff', async () => {
       mockExecFileAsync.mockImplementation((cmd: string, args: string[]) => {
@@ -278,8 +272,6 @@ new file mode 100644
       );
     });
   });
-
-  // ── commitAndPush ───────────────────────────────────────────────
 
   describe('commitAndPush', () => {
     it('should execute add, commit, push and return commit hash', async () => {

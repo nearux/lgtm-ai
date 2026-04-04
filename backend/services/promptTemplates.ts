@@ -6,8 +6,6 @@
  * the assembly logic in promptBuilder.ts.
  */
 
-// ── System prompt ───────────────────────────────────────────────────
-
 export interface SystemPromptParams {
   repoOwnerName: string;
   number: number;
@@ -33,8 +31,6 @@ ${p.body || '(no description)'}
 - Use \`gh\` CLI or file reading tools to explore additional context when needed.
 - Focus on the specific review comment provided by the user.`;
 }
-
-// ── Review comment section ──────────────────────────────────────────
 
 export interface ReviewCommentParams {
   author: string;
@@ -63,8 +59,6 @@ export function reviewCommentSection(p: ReviewCommentParams): string {
 
   return lines.join('\n');
 }
-
-// ── User prompts (per command) ──────────────────────────────────────
 
 export function explainPrompt(reviewComment: string): string {
   return `A reviewer left the following comment. Explain what the reviewer is pointing out and why it matters.
