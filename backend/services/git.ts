@@ -100,8 +100,6 @@ function parsePerFileDiffs(diffOutput: string): Map<string, string> {
   return result;
 }
 
-// ── Commit message generation ───────────────────────────────────────
-
 const CLAUDE_TIMEOUT_MS = 60_000;
 
 export async function generateCommitMessage(
