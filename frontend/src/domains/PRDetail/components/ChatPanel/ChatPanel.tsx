@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import {
   X,
   Terminal,
@@ -29,8 +30,19 @@ interface Props {
   onBackToChat: () => void;
 }
 
+interface TextChunk {
+  id: string;
+  content: string;
+}
+
 type GroupedItem =
-  | { kind: 'text'; id: string; content: string }
+  | {
+      kind: 'text';
+      id: string;
+      content: string;
+      chunks: TextChunk[];
+      isStreaming: boolean;
+    }
   | { kind: 'user'; id: string; content: string }
   | {
       kind: 'tool';
@@ -42,29 +54,39 @@ type GroupedItem =
       isError?: boolean;
     };
 
-const groupMessages = (messages: ClaudeMessage[]): GroupedItem[] => {
+const groupMessages = (
+  messages: ClaudeMessage[],
+  isConnected: boolean
+): GroupedItem[] => {
   const result: GroupedItem[] = [];
   const toolMap = new Map<string, GroupedItem & { kind: 'tool' }>();
-  let textBuffer = '';
+  let textChunks: TextChunk[] = [];
   let textId = '';
 
-  const flushText = () => {
-    if (textBuffer.trim()) {
-      result.push({ kind: 'text', id: textId, content: textBuffer.trim() });
+  const flushText = (isStreaming: boolean) => {
+    const content = textChunks.map((c) => c.content).join('');
+    if (content.trim()) {
+      result.push({
+        kind: 'text',
+        id: textId,
+        content: content.trim(),
+        chunks: [...textChunks],
+        isStreaming,
+      });
     }
-    textBuffer = '';
+    textChunks = [];
     textId = '';
   };
 
   for (const msg of messages) {
     if (msg.type === 'text') {
       if (!textId) textId = msg.id;
-      textBuffer += msg.content;
+      textChunks.push({ id: msg.id, content: msg.content });
     } else if (msg.type === 'user') {
-      flushText();
+      flushText(false);
       result.push({ kind: 'user', id: msg.id, content: msg.content });
     } else if (msg.type === 'tool' && msg.toolId) {
-      flushText();
+      flushText(false);
       const toolItem: GroupedItem & { kind: 'tool' } = {
         kind: 'tool',
         id: msg.id,
@@ -81,16 +103,19 @@ const groupMessages = (messages: ClaudeMessage[]): GroupedItem[] => {
         tool.isError = msg.isError;
       }
     } else if (msg.type === 'error') {
-      flushText();
+      flushText(false);
       result.push({
         kind: 'text',
         id: msg.id,
         content: `Error: ${msg.content}`,
+        chunks: [{ id: msg.id, content: `Error: ${msg.content}` }],
+        isStreaming: false,
       });
     }
   }
 
-  flushText();
+  // The last text block is still streaming only if we're connected
+  flushText(isConnected);
   return result;
 };
 
@@ -137,7 +162,7 @@ export const ChatPanel = ({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const grouped = groupMessages(messages);
+  const grouped = groupMessages(messages, status === 'connected');
 
   const toggleTool = (id: string) => {
     setExpandedTools((prev) => {
@@ -225,90 +250,126 @@ export const ChatPanel = ({
           </div>
         ) : (
           <div className="space-y-3 p-4">
-            {grouped.map((item) => {
-              if (item.kind === 'text') {
-                return (
-                  <div
-                    key={item.id}
-                    className="rounded-lg border border-gray-200 bg-white p-3"
-                  >
-                    <GFMMarkdown className="prose-sm">
-                      {item.content}
-                    </GFMMarkdown>
-                  </div>
-                );
-              }
-              if (item.kind === 'user') {
-                return (
-                  <div key={item.id} className="flex justify-end">
-                    <div className="max-w-[85%] rounded-lg bg-indigo-600 px-3 py-2 text-sm text-white">
-                      {item.content}
-                    </div>
-                  </div>
-                );
-              }
-              return (
-                <div
-                  key={item.id}
-                  className="overflow-hidden rounded-lg border border-purple-200 bg-purple-50"
-                >
-                  <button
-                    type="button"
-                    onClick={() => toggleTool(item.id)}
-                    className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-sm hover:bg-purple-100"
-                  >
-                    {expandedTools.has(item.id) ? (
-                      <ChevronDown className="h-4 w-4 text-purple-500" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4 text-purple-500" />
-                    )}
-                    <Terminal className="h-4 w-4 text-purple-600" />
-                    <span className="font-medium text-purple-800">
-                      {item.toolName}
-                    </span>
-                    <span className="ml-auto">
-                      {item.result === undefined ? (
-                        <Loader2 className="h-4 w-4 animate-spin text-purple-500" />
-                      ) : item.isError ? (
-                        <XCircle className="h-4 w-4 text-red-500" />
+            <AnimatePresence initial={false}>
+              {grouped.map((item) => {
+                if (item.kind === 'text') {
+                  return (
+                    <motion.div
+                      key={item.id}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.3 }}
+                      className="rounded-lg border border-gray-200 bg-white p-3"
+                    >
+                      {item.isStreaming ? (
+                        <p className="prose-sm text-sm leading-relaxed whitespace-pre-wrap">
+                          {item.chunks.map((chunk) => (
+                            <motion.span
+                              key={chunk.id}
+                              initial={{ opacity: 0, filter: 'blur(2px)' }}
+                              animate={{ opacity: 1, filter: 'blur(0px)' }}
+                              transition={{ duration: 0.2, ease: 'easeOut' }}
+                            >
+                              {chunk.content}
+                            </motion.span>
+                          ))}
+                        </p>
                       ) : (
-                        <Check className="h-4 w-4 text-green-500" />
+                        <GFMMarkdown className="prose-sm">
+                          {item.content}
+                        </GFMMarkdown>
                       )}
-                    </span>
-                  </button>
-                  {expandedTools.has(item.id) && (
-                    <div className="border-t border-purple-200 bg-purple-100/50 p-2">
-                      <div className="mb-1 text-xs font-medium text-purple-600">
-                        Input:
+                    </motion.div>
+                  );
+                }
+                if (item.kind === 'user') {
+                  return (
+                    <motion.div
+                      key={item.id}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className="flex justify-end"
+                    >
+                      <div className="max-w-[85%] rounded-lg bg-indigo-600 px-3 py-2 text-sm text-white">
+                        {item.content}
                       </div>
-                      <pre className="max-h-24 overflow-auto text-xs whitespace-pre-wrap text-purple-900">
-                        {item.input}
-                      </pre>
-                      {item.result !== undefined && (
-                        <>
-                          <div className="mt-2 mb-1 text-xs font-medium text-purple-600">
-                            Result:
-                          </div>
-                          <pre
-                            className={`max-h-32 overflow-auto text-xs whitespace-pre-wrap ${
-                              item.isError ? 'text-red-700' : 'text-purple-900'
-                            }`}
-                          >
-                            {item.result.slice(0, 500)}
-                            {item.result.length > 500 && '...'}
-                          </pre>
-                        </>
+                    </motion.div>
+                  );
+                }
+                return (
+                  <motion.div
+                    key={item.id}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="overflow-hidden rounded-lg border border-purple-200 bg-purple-50"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => toggleTool(item.id)}
+                      className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-sm hover:bg-purple-100"
+                    >
+                      {expandedTools.has(item.id) ? (
+                        <ChevronDown className="h-4 w-4 text-purple-500" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4 text-purple-500" />
                       )}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                      <Terminal className="h-4 w-4 text-purple-600" />
+                      <span className="font-medium text-purple-800">
+                        {item.toolName}
+                      </span>
+                      <span className="ml-auto">
+                        {item.result === undefined ? (
+                          <Loader2 className="h-4 w-4 animate-spin text-purple-500" />
+                        ) : item.isError ? (
+                          <XCircle className="h-4 w-4 text-red-500" />
+                        ) : (
+                          <Check className="h-4 w-4 text-green-500" />
+                        )}
+                      </span>
+                    </button>
+                    {expandedTools.has(item.id) && (
+                      <div className="border-t border-purple-200 bg-purple-100/50 p-2">
+                        <div className="mb-1 text-xs font-medium text-purple-600">
+                          Input:
+                        </div>
+                        <pre className="max-h-24 overflow-auto text-xs whitespace-pre-wrap text-purple-900">
+                          {item.input}
+                        </pre>
+                        {item.result !== undefined && (
+                          <>
+                            <div className="mt-2 mb-1 text-xs font-medium text-purple-600">
+                              Result:
+                            </div>
+                            <pre
+                              className={`max-h-32 overflow-auto text-xs whitespace-pre-wrap ${
+                                item.isError
+                                  ? 'text-red-700'
+                                  : 'text-purple-900'
+                              }`}
+                            >
+                              {item.result.slice(0, 500)}
+                              {item.result.length > 500 && '...'}
+                            </pre>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
             {isWaitingForResponse && (
-              <div className="flex items-center gap-2 px-1 py-2">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
+                className="flex items-center gap-2 px-1 py-2"
+              >
                 <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
                 <span className="text-sm text-gray-400">Thinking...</span>
-              </div>
+              </motion.div>
             )}
             <div ref={messagesEndRef} />
           </div>
