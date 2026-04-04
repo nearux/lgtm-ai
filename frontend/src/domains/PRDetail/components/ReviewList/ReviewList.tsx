@@ -6,6 +6,7 @@ import type {
   PRReview,
   ChatSessionSummary,
   ClaudeChatContext,
+  PRMeta,
 } from '@lgtmai/backend/types';
 import { ACTION_LABELS } from '../../utils/reviewPrompts';
 import { ReviewCard, type ValidationStatus } from './components';
@@ -20,6 +21,7 @@ interface Props {
   projectId: string;
   prNumber: number;
   prState: string;
+  prMeta: PRMeta;
   origin?: string;
 }
 
@@ -34,6 +36,7 @@ interface ValidationTarget {
   body: string;
   author: string;
   path?: string;
+  diffHunk?: string;
 }
 
 export const ReviewList = ({
@@ -42,6 +45,7 @@ export const ReviewList = ({
   projectId,
   prNumber,
   prState,
+  prMeta,
   origin,
 }: Props) => {
   const [validations, setValidations] = useState<
@@ -55,12 +59,7 @@ export const ReviewList = ({
   );
   const overlay = useOverlay();
 
-  const { mutate, isPending } = useMutation({
-    ...prsMutation.checkout(),
-    onError: (error) => {
-      console.error('Checkout failed:', error);
-    },
-  });
+  const { mutateAsync: checkoutPR } = useMutation(prsMutation.checkout());
 
   const {
     setTitle,
@@ -143,7 +142,8 @@ export const ReviewList = ({
           author: target.author,
           body: target.body,
           ...(target.path ? { path: target.path } : {}),
-          prNumber,
+          ...(target.diffHunk ? { diffHunk: target.diffHunk } : {}),
+          prMeta,
         },
         ...(customPrompt ? { customPrompt } : {}),
       },
@@ -153,7 +153,7 @@ export const ReviewList = ({
     );
   };
 
-  const handleFixAction = (
+  const handleActionWithCheckout = (
     actionId: string,
     customPrompt: string | undefined,
     target: ValidationTarget
@@ -170,24 +170,14 @@ export const ReviewList = ({
           isOpen={isOpen}
           close={close}
           onConfirm={async () => {
+            await checkoutPR({
+              projectId,
+              prNumber,
+              body: { force: true, origin },
+            });
             close();
-            mutate(
-              {
-                projectId,
-                prNumber,
-                body: { force: true, origin },
-              },
-              {
-                onSuccess: () => {
-                  executeAction(actionId, customPrompt, target);
-                },
-                onError: (error) => {
-                  console.error('Checkout failed:', error);
-                },
-              }
-            );
+            executeAction(actionId, customPrompt, target);
           }}
-          isPending={isPending}
         />
       ),
       'checkout-modal'
@@ -225,11 +215,7 @@ export const ReviewList = ({
     setOnResumeSession(handleResumeSession);
 
     setOnExecuteAction((actionId: string, customPrompt?: string) => {
-      if (actionId === 'fix') {
-        handleFixAction(actionId, customPrompt, target);
-      } else {
-        executeAction(actionId, customPrompt, target);
-      }
+      handleActionWithCheckout(actionId, customPrompt, target);
     });
 
     setTitle(
@@ -302,6 +288,7 @@ export const ReviewList = ({
                     body: comment.body,
                     author: comment.author.login,
                     path: comment.path,
+                    diffHunk: comment.diffHunk,
                   })
                 }
               />

@@ -15,7 +15,8 @@ class MockClaudeProcess extends EventEmitter {
 
   constructor(
     public readonly workingDir: string,
-    public readonly options: Record<string, unknown> = {}
+    public readonly options: Record<string, unknown> = {},
+    public readonly systemPrompt?: string
   ) {
     super();
     processInstances.push(this);
@@ -139,6 +140,31 @@ describe('ClaudeSessionManager', () => {
 
     expect(mockMarkChatSessionAsUsed).toHaveBeenCalledWith('claude-session-1');
     expect(mockCreateChatSessionFromExecution).not.toHaveBeenCalled();
+  });
+
+  it('passes systemPrompt to ClaudeProcess when provided', () => {
+    const manager = new ClaudeSessionManager(ws as never);
+    manager.execute(
+      'request-sp',
+      'some prompt',
+      '/tmp/project',
+      { executionMode: 'default' },
+      undefined,
+      undefined,
+      'You are a code review assistant.'
+    );
+
+    const proc = processInstances[0];
+    expect(proc).toBeDefined();
+    expect(proc!.systemPrompt).toBe('You are a code review assistant.');
+  });
+
+  it('leaves systemPrompt undefined when not provided', () => {
+    const manager = new ClaudeSessionManager(ws as never);
+    manager.execute('request-no-sp', 'prompt', '/tmp/project');
+
+    const proc = processInstances[0];
+    expect(proc!.systemPrompt).toBeUndefined();
   });
 
   it('forwards init events from the claude process to websocket', () => {

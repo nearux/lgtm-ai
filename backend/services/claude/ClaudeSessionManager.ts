@@ -22,7 +22,8 @@ export class ClaudeSessionManager {
     workingDir: string,
     options: ClaudeExecuteOptions = {},
     chatContext?: ClaudeChatContext,
-    commandMeta?: { command?: string; customPrompt?: string }
+    commandMeta?: { command?: string; customPrompt?: string },
+    systemPrompt?: string
   ): void {
     const { sender } = this;
     if (this.processes.has(requestId)) {
@@ -43,7 +44,7 @@ export class ClaudeSessionManager {
       return;
     }
 
-    const proc = new ClaudeProcess(workingDir, options);
+    const proc = new ClaudeProcess(workingDir, options, systemPrompt);
     this.processes.set(requestId, proc);
 
     if (options.sessionId) {

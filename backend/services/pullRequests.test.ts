@@ -197,6 +197,8 @@ describe('pullRequests service', () => {
       number: 1,
       title: 'Test PR',
       body: 'Test body',
+      baseBranch: 'main',
+      headBranch: 'feature/test',
       assignees: [{ id: '1', login: 'user1', name: 'User One' }],
       author: {
         id: '2',
@@ -247,11 +249,17 @@ describe('pullRequests service', () => {
         },
       ],
     };
+    // Raw GH response shape — includes baseRefName/headRefName instead of baseBranch/headBranch
+    const mockGhPRDetailData = {
+      ...mockPRDetailData,
+      baseRefName: 'main',
+      headRefName: 'feature/test',
+    };
 
     it('should successfully fetch PR detail', async () => {
       mockExecAsync
         .mockResolvedValueOnce({
-          stdout: JSON.stringify(mockPRDetailData),
+          stdout: JSON.stringify(mockGhPRDetailData),
           stderr: '',
         })
         .mockResolvedValueOnce({ stdout: JSON.stringify([]), stderr: '' });
@@ -266,7 +274,7 @@ describe('pullRequests service', () => {
         '--repo',
         'owner/repo',
         '--json',
-        'number,title,body,assignees,author,createdAt,updatedAt,state,comments,reviews,commits',
+        'number,title,body,baseRefName,headRefName,assignees,author,createdAt,updatedAt,state,comments,reviews,commits',
       ]);
     });
 
@@ -311,8 +319,8 @@ describe('pullRequests service', () => {
     });
 
     it('should handle PR with empty comments, reviews, and commits', async () => {
-      const emptyDetailData: PRDetail = {
-        ...mockPRDetailData,
+      const emptyDetailData = {
+        ...mockGhPRDetailData,
         comments: [],
         reviews: [],
         commits: [],

@@ -1,6 +1,7 @@
 import { useSuspenseQueries } from '@tanstack/react-query';
 import { projectsQuery, prsQuery } from '@/shared/apis';
 import { parseGitHubUrl, linkifyGitHubReferences } from '@/shared/utils';
+import type { PRMeta } from '@lgtmai/backend/types';
 import { PRHeader } from '../PRHeader/PRHeader';
 import { PRDescription } from '../PRDescription/PRDescription';
 import { ActivityTimeline } from '../ActivityTimeline/ActivityTimeline';
@@ -30,6 +31,20 @@ export const PRDetailContent = ({ projectId, prNumber, origin }: Props) => {
     ? linkifyGitHubReferences(pr.body, githubBaseUrl)
     : '';
 
+  // Extract "owner/repo" from the GitHub base URL (e.g. "https://github.com/owner/repo")
+  const repoOwnerName = githubBaseUrl
+    ? githubBaseUrl.replace('https://github.com/', '')
+    : '';
+
+  const prMeta: PRMeta = {
+    number: pr.number,
+    title: pr.title,
+    body: pr.body ?? '',
+    baseBranch: pr.baseBranch,
+    headBranch: pr.headBranch,
+    repoOwnerName,
+  };
+
   return (
     <>
       <PRHeader
@@ -49,6 +64,9 @@ export const PRDetailContent = ({ projectId, prNumber, origin }: Props) => {
         workingDir={project.working_dir}
         projectId={projectId}
         prNumber={pr.number}
+        prState={pr.state}
+        origin={origin}
+        prMeta={prMeta}
       />
       <CommitList commits={pr.commits} githubBaseUrl={githubBaseUrl} />
     </>

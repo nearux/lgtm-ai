@@ -37,6 +37,11 @@ export class ClaudeArgsBuilder {
     return this;
   }
 
+  withSystemPrompt(prompt: string): this {
+    this.args.push('--append-system-prompt', prompt);
+    return this;
+  }
+
   build(): string[] {
     return [...this.args];
   }

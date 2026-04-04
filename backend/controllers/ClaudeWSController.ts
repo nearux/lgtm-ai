@@ -1,6 +1,9 @@
 import type WebSocket from 'ws';
 import { ClaudeSessionManager } from '../services/claude/ClaudeSessionManager.js';
-import { buildPrompt } from '../services/promptBuilder.js';
+import {
+  buildSystemPrompt,
+  buildUserPrompt,
+} from '../services/promptBuilder.js';
 import type {
   WsClientMessage,
   WsCommandExecuteMessage,
@@ -39,11 +42,12 @@ export function handleClaudeWebSocket(ws: WebSocket): void {
     if (msg.type === 'execute') {
       const { requestId, workingDir, options, chatContext } = msg;
 
-      // Shape A: command-based new session
       const cmdMsg = msg as WsCommandExecuteMessage;
-      let prompt: string;
+      let userPrompt: string;
+      let systemPrompt: string;
       try {
-        prompt = buildPrompt(
+        systemPrompt = buildSystemPrompt(cmdMsg.context);
+        userPrompt = buildUserPrompt(
           cmdMsg.command,
           cmdMsg.context,
           cmdMsg.customPrompt
@@ -60,10 +64,18 @@ export function handleClaudeWebSocket(ws: WebSocket): void {
         return;
       }
 
-      manager.execute(requestId, prompt, workingDir, options, chatContext, {
-        command: cmdMsg.command,
-        customPrompt: cmdMsg.customPrompt,
-      });
+      manager.execute(
+        requestId,
+        userPrompt,
+        workingDir,
+        options,
+        chatContext,
+        {
+          command: cmdMsg.command,
+          customPrompt: cmdMsg.customPrompt,
+        },
+        systemPrompt
+      );
       return;
     }
 

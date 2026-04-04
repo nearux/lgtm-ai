@@ -12,6 +12,7 @@ import { ACTION_LABELS } from '../../utils/reviewPrompts';
 import { CheckoutModal } from '../ReviewList/components/CheckoutModal/CheckoutModal';
 import type {
   PRComment,
+  PRMeta,
   ClaudeChatContext,
   ChatSessionSummary,
 } from '@lgtmai/backend/types';
@@ -23,6 +24,7 @@ interface Props {
   prNumber: number;
   prState: string;
   origin?: string;
+  prMeta: PRMeta;
 }
 
 interface ValidationTarget {
@@ -39,6 +41,7 @@ export const CommentList = ({
   prNumber,
   prState,
   origin,
+  prMeta,
 }: Props) => {
   const [activeTarget, setActiveTarget] = useState<ValidationTarget | null>(
     null
@@ -48,12 +51,7 @@ export const CommentList = ({
   );
   const overlay = useOverlay();
 
-  const { mutate, isPending } = useMutation({
-    ...prsMutation.checkout(),
-    onError: (error) => {
-      console.error('Checkout failed:', error);
-    },
-  });
+  const { mutateAsync: checkoutPR } = useMutation(prsMutation.checkout());
 
   const {
     setTitle,
@@ -139,7 +137,7 @@ export const CommentList = ({
           type: 'comment',
           author: target.author,
           body: target.body,
-          prNumber,
+          prMeta,
         },
         ...(customPrompt ? { customPrompt } : {}),
       },
@@ -166,24 +164,14 @@ export const CommentList = ({
           isOpen={isOpen}
           close={close}
           onConfirm={async () => {
+            await checkoutPR({
+              projectId,
+              prNumber,
+              body: { force: true, origin },
+            });
             close();
-            mutate(
-              {
-                projectId,
-                prNumber,
-                body: { force: true, origin },
-              },
-              {
-                onSuccess: () => {
-                  executeAction(actionId, customPrompt, target);
-                },
-                onError: (error) => {
-                  console.error('Checkout failed:', error);
-                },
-              }
-            );
+            executeAction(actionId, customPrompt, target);
           }}
-          isPending={isPending}
         />
       ),
       'checkout-modal'
