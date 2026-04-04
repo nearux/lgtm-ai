@@ -156,8 +156,6 @@ export interface WsPlanApprovalRequestEvent {
   input: unknown;
 }
 
-// ── Post-fix file changes ───────────────────────────────────────────
-
 export type FileChangeStatus = 'added' | 'modified' | 'deleted';
 
 export interface FileChange {
