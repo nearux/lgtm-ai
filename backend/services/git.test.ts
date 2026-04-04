@@ -13,13 +13,9 @@ const { getFileChanges, generateCommitMessage, commitAndPush } =
 function mockGitCommands(commands: Record<string, string | Error>): void {
   mockExecFileAsync.mockImplementation((cmd: string, args: string[]) => {
     const key = cmd === 'git' ? args.join(' ') : cmd;
-    for (const [pattern, value] of Object.entries(commands)) {
-      if (key.includes(pattern)) {
-        if (value instanceof Error) return Promise.reject(value);
-        return Promise.resolve({ stdout: value, stderr: '' });
-      }
-    }
-    return Promise.resolve({ stdout: '', stderr: '' });
+    const value = commands[key] ?? '';
+    if (value instanceof Error) return Promise.reject(value);
+    return Promise.resolve({ stdout: value, stderr: '' });
   });
 }
 
@@ -31,9 +27,9 @@ describe('git service', () => {
   describe('getFileChanges', () => {
     it('should return empty result when no changes', async () => {
       mockGitCommands({
-        'add -N': '',
+        'add -N .': '',
         'status --porcelain': '',
-        '--numstat': '',
+        'diff --numstat': '',
         diff: '',
       });
 
@@ -48,8 +44,6 @@ describe('git service', () => {
     });
 
     it('should parse modified file changes', async () => {
-      const statusOutput = ' M src/index.ts\n';
-      const numstatOutput = '10\t3\tsrc/index.ts\n';
       const diffOutput = `diff --git a/src/index.ts b/src/index.ts
 index abc1234..def5678 100644
 --- a/src/index.ts
@@ -59,22 +53,10 @@ index abc1234..def5678 100644
 `;
 
       mockGitCommands({
-        'add -N': '',
-        'status --porcelain': statusOutput,
-        '--numstat': numstatOutput,
-      });
-      // diff (without --numstat) needs separate handling
-      mockExecFileAsync.mockImplementation((cmd: string, args: string[]) => {
-        const joined = args.join(' ');
-        if (joined === 'add -N .')
-          return Promise.resolve({ stdout: '', stderr: '' });
-        if (joined === 'status --porcelain')
-          return Promise.resolve({ stdout: statusOutput, stderr: '' });
-        if (joined === 'diff --numstat')
-          return Promise.resolve({ stdout: numstatOutput, stderr: '' });
-        if (joined === 'diff')
-          return Promise.resolve({ stdout: diffOutput, stderr: '' });
-        return Promise.resolve({ stdout: '', stderr: '' });
+        'add -N .': '',
+        'status --porcelain': ' M src/index.ts\n',
+        'diff --numstat': '10\t3\tsrc/index.ts\n',
+        diff: diffOutput,
       });
 
       const result = await getFileChanges('/workspace');
@@ -95,27 +77,17 @@ index abc1234..def5678 100644
     });
 
     it('should parse untracked (added) files', async () => {
-      const statusOutput = '?? newfile.ts\n';
-      const numstatOutput = '5\t0\tnewfile.ts\n';
-      const diffOutput = `diff --git a/newfile.ts b/newfile.ts
+      mockGitCommands({
+        'add -N .': '',
+        'status --porcelain': '?? newfile.ts\n',
+        'diff --numstat': '5\t0\tnewfile.ts\n',
+        diff: `diff --git a/newfile.ts b/newfile.ts
 new file mode 100644
 --- /dev/null
 +++ b/newfile.ts
 @@ -0,0 +1,5 @@
 +content
-`;
-
-      mockExecFileAsync.mockImplementation((_cmd: string, args: string[]) => {
-        const joined = args.join(' ');
-        if (joined === 'add -N .')
-          return Promise.resolve({ stdout: '', stderr: '' });
-        if (joined === 'status --porcelain')
-          return Promise.resolve({ stdout: statusOutput, stderr: '' });
-        if (joined === 'diff --numstat')
-          return Promise.resolve({ stdout: numstatOutput, stderr: '' });
-        if (joined === 'diff')
-          return Promise.resolve({ stdout: diffOutput, stderr: '' });
-        return Promise.resolve({ stdout: '', stderr: '' });
+`,
       });
 
       const result = await getFileChanges('/workspace');
@@ -125,19 +97,11 @@ new file mode 100644
     });
 
     it('should parse deleted files', async () => {
-      const statusOutput = ' D old.ts\n';
-
-      mockExecFileAsync.mockImplementation((_cmd: string, args: string[]) => {
-        const joined = args.join(' ');
-        if (joined === 'add -N .')
-          return Promise.resolve({ stdout: '', stderr: '' });
-        if (joined === 'status --porcelain')
-          return Promise.resolve({ stdout: statusOutput, stderr: '' });
-        if (joined === 'diff --numstat')
-          return Promise.resolve({ stdout: '0\t15\told.ts\n', stderr: '' });
-        if (joined === 'diff')
-          return Promise.resolve({ stdout: '', stderr: '' });
-        return Promise.resolve({ stdout: '', stderr: '' });
+      mockGitCommands({
+        'add -N .': '',
+        'status --porcelain': ' D old.ts\n',
+        'diff --numstat': '0\t15\told.ts\n',
+        diff: '',
       });
 
       const result = await getFileChanges('/workspace');
@@ -147,20 +111,11 @@ new file mode 100644
     });
 
     it('should handle multiple file changes', async () => {
-      const statusOutput = ' M a.ts\n?? b.ts\n D c.ts\n';
-      const numstatOutput = '2\t1\ta.ts\n5\t0\tb.ts\n0\t10\tc.ts\n';
-
-      mockExecFileAsync.mockImplementation((_cmd: string, args: string[]) => {
-        const joined = args.join(' ');
-        if (joined === 'add -N .')
-          return Promise.resolve({ stdout: '', stderr: '' });
-        if (joined === 'status --porcelain')
-          return Promise.resolve({ stdout: statusOutput, stderr: '' });
-        if (joined === 'diff --numstat')
-          return Promise.resolve({ stdout: numstatOutput, stderr: '' });
-        if (joined === 'diff')
-          return Promise.resolve({ stdout: '', stderr: '' });
-        return Promise.resolve({ stdout: '', stderr: '' });
+      mockGitCommands({
+        'add -N .': '',
+        'status --porcelain': ' M a.ts\n?? b.ts\n D c.ts\n',
+        'diff --numstat': '2\t1\ta.ts\n5\t0\tb.ts\n0\t10\tc.ts\n',
+        diff: '',
       });
 
       const result = await getFileChanges('/workspace');
@@ -174,20 +129,11 @@ new file mode 100644
     });
 
     it('should handle binary files in numstat (- - notation)', async () => {
-      const statusOutput = ' M image.png\n';
-      const numstatOutput = '-\t-\timage.png\n';
-
-      mockExecFileAsync.mockImplementation((_cmd: string, args: string[]) => {
-        const joined = args.join(' ');
-        if (joined === 'add -N .')
-          return Promise.resolve({ stdout: '', stderr: '' });
-        if (joined === 'status --porcelain')
-          return Promise.resolve({ stdout: statusOutput, stderr: '' });
-        if (joined === 'diff --numstat')
-          return Promise.resolve({ stdout: numstatOutput, stderr: '' });
-        if (joined === 'diff')
-          return Promise.resolve({ stdout: '', stderr: '' });
-        return Promise.resolve({ stdout: '', stderr: '' });
+      mockGitCommands({
+        'add -N .': '',
+        'status --porcelain': ' M image.png\n',
+        'diff --numstat': '-\t-\timage.png\n',
+        diff: '',
       });
 
       const result = await getFileChanges('/workspace');
