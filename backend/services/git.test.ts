@@ -148,7 +148,7 @@ new file mode 100644
       mockExecFileAsync.mockImplementation((cmd: string, args: string[]) => {
         if (cmd === 'git' && args.join(' ') === 'add -N .')
           return Promise.resolve({ stdout: '', stderr: '' });
-        if (cmd === 'git' && args.join(' ') === 'diff')
+        if (cmd === 'git' && args.join(' ') === 'diff HEAD')
           return Promise.resolve({ stdout: '+new line\n', stderr: '' });
         if (cmd === 'claude')
           return Promise.resolve({ stdout: 'fix: update logic\n', stderr: '' });
@@ -166,7 +166,7 @@ new file mode 100644
       mockExecFileAsync.mockImplementation((cmd: string, args: string[]) => {
         if (cmd === 'git' && args.join(' ') === 'add -N .')
           return Promise.resolve({ stdout: '', stderr: '' });
-        if (cmd === 'git' && args.join(' ') === 'diff')
+        if (cmd === 'git' && args.join(' ') === 'diff HEAD')
           return Promise.resolve({ stdout: '+change\n', stderr: '' });
         if (cmd === 'claude') {
           capturedArgs = args;
@@ -193,7 +193,7 @@ new file mode 100644
       mockExecFileAsync.mockImplementation((cmd: string, args: string[]) => {
         if (cmd === 'git' && args.join(' ') === 'add -N .')
           return Promise.resolve({ stdout: '', stderr: '' });
-        if (cmd === 'git' && args.join(' ') === 'diff')
+        if (cmd === 'git' && args.join(' ') === 'diff HEAD')
           return Promise.resolve({ stdout: '', stderr: '' });
         return Promise.resolve({ stdout: '', stderr: '' });
       });
@@ -207,7 +207,7 @@ new file mode 100644
       mockExecFileAsync.mockImplementation((cmd: string, args: string[]) => {
         if (cmd === 'git' && args.join(' ') === 'add -N .')
           return Promise.resolve({ stdout: '', stderr: '' });
-        if (cmd === 'git' && args.join(' ') === 'diff')
+        if (cmd === 'git' && args.join(' ') === 'diff HEAD')
           return Promise.resolve({ stdout: '+change\n', stderr: '' });
         if (cmd === 'claude') return Promise.reject(new Error('CLI not found'));
         return Promise.resolve({ stdout: '', stderr: '' });

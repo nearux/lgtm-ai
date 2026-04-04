@@ -1,10 +1,12 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import HttpStatus from 'http-status';
 import type {
   FileChange,
   FileChangeStatus,
   FileChangesSummary,
 } from '../types/claude.js';
+import { AppError } from '../errors/AppError.js';
 import { git } from '../utils/git.js';
 
 const execFileAsync = promisify(execFile);
@@ -94,7 +96,10 @@ export async function generateCommitMessage(
   const diff = await git(workingDir, ['diff', 'HEAD']);
 
   if (!diff.trim()) {
-    throw new Error('No changes to generate a commit message for');
+    throw new AppError(
+      'No changes to generate a commit message for',
+      HttpStatus.UNPROCESSABLE_ENTITY
+    );
   }
 
   let prompt = `Generate a concise git commit message for the following changes. Use conventional commit format (e.g., fix:, feat:, refactor:). Return ONLY the commit message, nothing else.\n\n`;
@@ -115,7 +120,10 @@ export async function generateCommitMessage(
     return cleanCommitMessage(stdout);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    throw new Error(`Failed to generate commit message: ${message}`);
+    throw new AppError(
+      `Failed to generate commit message: ${message}`,
+      HttpStatus.BAD_GATEWAY
+    );
   }
 }
 
