@@ -2,6 +2,9 @@ import type { CommandContext, ClaudeCommand } from '../types/claude.js';
 import * as templates from './promptTemplates.js';
 
 export function buildSystemPrompt(context: CommandContext): string {
+  if (context.type === 'pr') {
+    return templates.systemPromptForPR(context.prMeta);
+  }
   return templates.systemPrompt(context.prMeta);
 }
 
@@ -10,6 +13,29 @@ export function buildUserPrompt(
   context: CommandContext,
   customPrompt?: string
 ): string {
+  // PR-level commands
+  if (context.type === 'pr') {
+    const { repoOwnerName, number: prNumber } = context.prMeta;
+
+    switch (command) {
+      case 'review':
+        return templates.reviewPrPrompt(repoOwnerName, prNumber);
+      case 'explain':
+        return templates.explainPrPrompt(repoOwnerName, prNumber);
+      case 'custom': {
+        if (!customPrompt || customPrompt.trim() === '') {
+          throw new Error('customPrompt is required for custom command');
+        }
+        return templates.customPrPrompt(customPrompt, repoOwnerName, prNumber);
+      }
+      default:
+        throw new Error(
+          `Command '${command}' is not supported for PR-level context`
+        );
+    }
+  }
+
+  // Review/Comment-level commands
   if (context.type === 'comment' && !context.path) {
     throw new Error('path is required for comment context');
   }
