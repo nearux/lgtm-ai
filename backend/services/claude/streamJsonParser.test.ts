@@ -282,4 +282,29 @@ describe('parseStreamJsonLine', () => {
       });
     });
   });
+
+  describe('init discovery', () => {
+    it('returns init event for system/init payload with session_id', () => {
+      const line = JSON.stringify({
+        type: 'system',
+        subtype: 'init',
+        session_id: 'claude-session-early',
+      });
+
+      expect(parseStreamJsonLine(line)).toEqual({
+        kind: 'init',
+        sessionId: 'claude-session-early',
+      });
+    });
+
+    it('returns null for non-init system payloads', () => {
+      const line = JSON.stringify({
+        type: 'system',
+        subtype: 'hook_started',
+        session_id: 'claude-session-early',
+      });
+
+      expect(parseStreamJsonLine(line)).toBeNull();
+    });
+  });
 });

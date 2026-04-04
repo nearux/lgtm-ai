@@ -1,0 +1,233 @@
+import { mkdtemp, mkdir, writeFile } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { afterEach, describe, expect, it } from 'vitest';
+import {
+  getClaudeSessionHistory,
+  replaceFirstUserMessage,
+} from './claudeSessionHistory.js';
+
+describe('claudeSessionHistory', () => {
+  const tempDirs: string[] = [];
+
+  afterEach(async () => {
+    await Promise.all(
+      tempDirs.map(async (dir) => {
+        await import('node:fs/promises').then(({ rm }) =>
+          rm(dir, { recursive: true, force: true })
+        );
+      })
+    );
+    tempDirs.length = 0;
+  });
+
+  it('fetches history for a claude session id', async () => {
+    const rootDir = await mkdtemp(path.join(os.tmpdir(), 'claude-history-'));
+    tempDirs.push(rootDir);
+
+    const projectDir = '/Users/kimyoungho/project/lgtm-ai';
+    const projectTranscriptDir = path.join(
+      rootDir,
+      '-Users-kimyoungho-project-lgtm-ai'
+    );
+    await mkdir(projectTranscriptDir, { recursive: true });
+    await writeFile(
+      path.join(projectTranscriptDir, 'session-1.jsonl'),
+      [
+        JSON.stringify({
+          type: 'user',
+          sessionId: 'session-1',
+          timestamp: '2026-03-11T00:00:00.000Z',
+          message: { role: 'user', content: 'Validate this review' },
+        }),
+        JSON.stringify({
+          type: 'assistant',
+          sessionId: 'session-1',
+          timestamp: '2026-03-11T00:00:02.000Z',
+          message: {
+            role: 'assistant',
+            content: [{ type: 'text', text: 'This review is actionable.' }],
+          },
+        }),
+      ].join('\n')
+    );
+
+    const result = await getClaudeSessionHistory({
+      claudeSessionId: 'session-1',
+      workingDir: projectDir,
+      transcriptsRoot: rootDir,
+    });
+
+    expect(result).toEqual({
+      claudeSessionId: 'session-1',
+      entries: [
+        {
+          role: 'user',
+          content: 'Validate this review',
+          timestamp: '2026-03-11T00:00:00.000Z',
+        },
+        {
+          role: 'assistant',
+          content: 'This review is actionable.',
+          timestamp: '2026-03-11T00:00:02.000Z',
+        },
+      ],
+    });
+  });
+
+  it('maps missing transcripts to not found', async () => {
+    const rootDir = await mkdtemp(path.join(os.tmpdir(), 'claude-history-'));
+    tempDirs.push(rootDir);
+
+    await expect(
+      getClaudeSessionHistory({
+        claudeSessionId: 'missing-session',
+        workingDir: '/tmp/project',
+        transcriptsRoot: rootDir,
+      })
+    ).rejects.toMatchObject({
+      message: 'Claude session transcript not found',
+      statusCode: 404,
+    });
+  });
+
+  it('applies command label substitution when command is provided', async () => {
+    const rootDir = await mkdtemp(path.join(os.tmpdir(), 'claude-history-'));
+    tempDirs.push(rootDir);
+
+    const projectDir = '/tmp/project';
+    const projectTranscriptDir = path.join(rootDir, '-tmp-project');
+    await mkdir(projectTranscriptDir, { recursive: true });
+    await writeFile(
+      path.join(projectTranscriptDir, 'session-cmd.jsonl'),
+      [
+        JSON.stringify({
+          type: 'user',
+          sessionId: 'session-cmd',
+          timestamp: '2026-03-11T00:00:00.000Z',
+          message: { role: 'user', content: 'some long generated prompt' },
+        }),
+        JSON.stringify({
+          type: 'assistant',
+          sessionId: 'session-cmd',
+          timestamp: '2026-03-11T00:00:02.000Z',
+          message: {
+            role: 'assistant',
+            content: [{ type: 'text', text: 'Done.' }],
+          },
+        }),
+      ].join('\n')
+    );
+
+    const result = await getClaudeSessionHistory({
+      claudeSessionId: 'session-cmd',
+      workingDir: projectDir,
+      transcriptsRoot: rootDir,
+      command: 'validate',
+    });
+
+    expect(result.entries[0].content).toBe('Validate this review');
+  });
+
+  it('skips non-chat events and preserves tool text when present', async () => {
+    const rootDir = await mkdtemp(path.join(os.tmpdir(), 'claude-history-'));
+    tempDirs.push(rootDir);
+
+    const projectDir = '/tmp/project';
+    const projectTranscriptDir = path.join(rootDir, '-tmp-project');
+    await mkdir(projectTranscriptDir, { recursive: true });
+    await writeFile(
+      path.join(projectTranscriptDir, 'session-2.jsonl'),
+      [
+        JSON.stringify({
+          type: 'queue-operation',
+          timestamp: '2026-03-11T00:00:00.000Z',
+        }),
+        JSON.stringify({
+          type: 'assistant',
+          sessionId: 'session-2',
+          timestamp: '2026-03-11T00:00:02.000Z',
+          message: {
+            role: 'assistant',
+            content: [
+              {
+                type: 'tool_use',
+                name: 'Read',
+                input: { file_path: 'foo.ts' },
+              },
+              { type: 'text', text: 'Done.' },
+            ],
+          },
+        }),
+      ].join('\n')
+    );
+
+    const result = await getClaudeSessionHistory({
+      claudeSessionId: 'session-2',
+      workingDir: projectDir,
+      transcriptsRoot: rootDir,
+    });
+
+    expect(result.entries).toEqual([
+      {
+        role: 'assistant',
+        content: '[tool:Read] {"file_path":"foo.ts"}\nDone.',
+        timestamp: '2026-03-11T00:00:02.000Z',
+      },
+    ]);
+  });
+});
+
+describe('replaceFirstUserMessage', () => {
+  const baseEntries = [
+    {
+      role: 'user',
+      content: 'some long generated prompt',
+      timestamp: '2026-03-11T00:00:00.000Z',
+    },
+    {
+      role: 'assistant',
+      content: 'Done.',
+      timestamp: '2026-03-11T00:00:02.000Z',
+    },
+  ];
+
+  it('returns entries unchanged when no command is provided', () => {
+    const result = replaceFirstUserMessage(baseEntries);
+    expect(result).toEqual(baseEntries);
+  });
+
+  it.each([
+    ['validate', undefined, 'Validate this review'],
+    ['explain', undefined, 'Explain this review'],
+    ['fix', undefined, 'Fix code based on this review'],
+    ['custom', 'My custom instruction', 'My custom instruction'],
+  ])(
+    'replaces the first user message for command %s',
+    (command, customPrompt, expectedContent) => {
+      const result = replaceFirstUserMessage(
+        baseEntries,
+        command,
+        customPrompt
+      );
+
+      expect(result[0].content).toBe(expectedContent);
+      expect(result[1]).toEqual(baseEntries[1]);
+    }
+  );
+
+  it('falls back to original content when command is custom and no customPrompt', () => {
+    const result = replaceFirstUserMessage(baseEntries, 'custom');
+    expect(result[0].content).toBe('some long generated prompt');
+  });
+
+  it('falls back to original content for unknown command', () => {
+    const result = replaceFirstUserMessage(baseEntries, 'unknown-command');
+    expect(result[0].content).toBe('some long generated prompt');
+  });
+
+  it('returns empty array unchanged', () => {
+    const result = replaceFirstUserMessage([], 'validate');
+    expect(result).toEqual([]);
+  });
+});

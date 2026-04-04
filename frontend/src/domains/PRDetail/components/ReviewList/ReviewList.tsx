@@ -1,105 +1,301 @@
-import Markdown from 'react-markdown';
-import { formatDateTime } from '@/shared/utils';
-import type { PRReview } from '@lgtmai/backend/types';
-import { DiffHunk } from './components/DiffHunk/DiffHunk';
+import { useState, useEffect } from 'react';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { useChatPanelSync, useChatPanelParams } from '../../hooks';
+import { useChatPanel } from '../../contexts';
+import type {
+  PRReview,
+  ChatSessionSummary,
+  ClaudeChatContext,
+  PRMeta,
+} from '@lgtmai/backend/types';
+import { ACTION_LABELS } from '../../utils/reviewPrompts';
+import { ReviewCard, type ValidationStatus } from './components';
+import { prsMutation, chatSessionsQuery } from '@/shared/apis';
+import { useOverlay } from '@/shared/hooks';
+import { CheckoutModal } from './components/CheckoutModal/CheckoutModal';
+import type { ClaudeMessage } from '../../hooks';
 
 interface Props {
   reviews: PRReview[];
+  workingDir: string;
+  projectId: string;
+  prNumber: number;
+  prState: string;
+  prMeta: PRMeta;
+  origin?: string;
 }
 
-const reviewStateStyles = {
-  APPROVED: {
-    bg: 'bg-green-50 border-green-200',
-    badge: 'bg-green-100 text-green-800',
-  },
-  CHANGES_REQUESTED: {
-    bg: 'bg-red-50 border-red-200',
-    badge: 'bg-red-100 text-red-800',
-  },
-  COMMENTED: {
-    bg: 'bg-blue-50 border-blue-200',
-    badge: 'bg-blue-100 text-blue-800',
-  },
-  PENDING: {
-    bg: 'bg-yellow-50 border-yellow-200',
-    badge: 'bg-yellow-100 text-yellow-800',
-  },
-  DISMISSED: {
-    bg: 'bg-gray-50 border-gray-200',
-    badge: 'bg-gray-100 text-gray-800',
-  },
-};
+interface ValidationState {
+  status: ValidationStatus;
+  result?: string;
+}
 
-export const ReviewList = ({ reviews }: Props) => {
+interface ValidationTarget {
+  type: 'review' | 'comment';
+  id: string;
+  body: string;
+  author: string;
+  path?: string;
+  diffHunk?: string;
+}
+
+export const ReviewList = ({
+  reviews,
+  workingDir,
+  projectId,
+  prNumber,
+  prState,
+  prMeta,
+  origin,
+}: Props) => {
+  const [validations, setValidations] = useState<
+    Record<string, ValidationState>
+  >({});
+  const [activeTarget, setActiveTarget] = useState<ValidationTarget | null>(
+    null
+  );
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(
+    null
+  );
+  const overlay = useOverlay();
+
+  const { mutateAsync: checkoutPR } = useMutation(prsMutation.checkout());
+
+  const {
+    setTitle,
+    setTargetContext,
+    setPRContext,
+    setOnExecuteAction,
+    setOnResumeSession,
+    setClaudeSessionId,
+  } = useChatPanel();
+
+  const {
+    openActionSelector,
+    openChat,
+    resumeSession: resumeSessionUrl,
+  } = useChatPanelParams();
+
+  const {
+    status: wsStatus,
+    messages,
+    sessionId,
+    connect,
+    execute,
+    clearMessages,
+    addUserMessage,
+    loadHistoryMessages,
+  } = useChatPanelSync(workingDir);
+
+  // Fetch history for selected session
+  const { data: historyData } = useQuery({
+    ...chatSessionsQuery.history(projectId, prNumber, selectedSessionId ?? ''),
+    enabled: !!selectedSessionId,
+  });
+
+  // When history data is loaded, convert to messages and display
+  useEffect(() => {
+    if (historyData && selectedSessionId) {
+      const convertedMessages: ClaudeMessage[] = historyData.entries.map(
+        (entry, index) => ({
+          id: `history-${index}`,
+          type: entry.role === 'user' ? 'user' : 'text',
+          content: entry.content,
+          timestamp: entry.timestamp ? new Date(entry.timestamp) : new Date(),
+        })
+      );
+
+      loadHistoryMessages(convertedMessages);
+      setClaudeSessionId(historyData.claudeSessionId);
+      setSelectedSessionId(null);
+    }
+  }, [historyData, selectedSessionId, loadHistoryMessages, setClaudeSessionId]);
+
+  const executeAction = (
+    actionId: string,
+    customPrompt: string | undefined,
+    target: ValidationTarget
+  ) => {
+    setValidations((prev) => ({
+      ...prev,
+      [target.id]: { status: 'validating' },
+    }));
+
+    const userMessage = ACTION_LABELS[actionId] || customPrompt || actionId;
+    addUserMessage(userMessage);
+
+    const chatContext: ClaudeChatContext = {
+      projectId,
+      prNumber,
+      scopeType: target.type === 'review' ? 'REVIEW' : 'COMMENT',
+      scopeTargetId: target.id,
+      title: userMessage,
+    };
+
+    openChat();
+    execute(
+      {
+        type: 'command',
+        command: actionId as 'validate' | 'fix' | 'explain' | 'custom',
+        context: {
+          type: target.type,
+          author: target.author,
+          body: target.body,
+          ...(target.path ? { path: target.path } : {}),
+          ...(target.diffHunk ? { diffHunk: target.diffHunk } : {}),
+          prMeta,
+        },
+        ...(customPrompt ? { customPrompt } : {}),
+      },
+      workingDir,
+      { executionMode: 'bypassPermissions' },
+      chatContext
+    );
+  };
+
+  const handleActionWithCheckout = (
+    actionId: string,
+    customPrompt: string | undefined,
+    target: ValidationTarget
+  ) => {
+    // Skip checkout for closed/merged PRs
+    if (prState !== 'OPEN') {
+      executeAction(actionId, customPrompt, target);
+      return;
+    }
+
+    overlay.open(
+      ({ isOpen, close }) => (
+        <CheckoutModal
+          isOpen={isOpen}
+          close={close}
+          onConfirm={async () => {
+            await checkoutPR({
+              projectId,
+              prNumber,
+              body: { force: true, origin },
+            });
+            close();
+            executeAction(actionId, customPrompt, target);
+          }}
+        />
+      ),
+      'checkout-modal'
+    );
+  };
+
+  const handleResumeSession = (session: ChatSessionSummary) => {
+    if (wsStatus !== 'connected') {
+      connect();
+    }
+    setSelectedSessionId(session.id);
+    setTitle(session.title || `Chat ${session.id.slice(0, 8)}`);
+    resumeSessionUrl(
+      session.scopeType === 'REVIEW' ? 'review' : 'comment',
+      session.scopeTargetId
+    );
+  };
+
+  const handleOpenChat = (target: ValidationTarget) => {
+    if (wsStatus !== 'connected') {
+      connect();
+    }
+    setActiveTarget(target);
+    clearMessages();
+
+    setTargetContext({
+      type: target.type === 'review' ? 'review' : 'inline',
+      author: target.author,
+      body: target.body,
+      path: target.path,
+      prNumber,
+    });
+
+    setPRContext({ projectId, prNumber });
+    setOnResumeSession(handleResumeSession);
+
+    setOnExecuteAction((actionId: string, customPrompt?: string) => {
+      handleActionWithCheckout(actionId, customPrompt, target);
+    });
+
+    setTitle(
+      target.type === 'review'
+        ? `Chat: ${target.author}'s review`
+        : `Chat: ${target.author}'s comment on ${target.path}`
+    );
+
+    openActionSelector(target.type, target.id);
+  };
+
+  useEffect(() => {
+    if (!activeTarget) return;
+
+    const isDone = messages.some((m) => m.type === 'done');
+    if (isDone) {
+      const textMessages = messages.filter((m) => m.type === 'text');
+      const fullText = textMessages.map((m) => m.content).join('');
+      const isValid =
+        fullText.toUpperCase().includes('VALID') &&
+        !fullText.toUpperCase().startsWith('INVALID');
+      setValidations((prev) => ({
+        ...prev,
+        [activeTarget.id]: {
+          status: isValid ? 'valid' : 'invalid',
+          result: fullText.trim(),
+        },
+      }));
+      setActiveTarget(null);
+    }
+  }, [messages, activeTarget]);
+
+  // Sync sessionId to claudeSessionId when a new session completes
+  useEffect(() => {
+    if (sessionId) {
+      setClaudeSessionId(sessionId);
+    }
+  }, [sessionId, setClaudeSessionId]);
+
   return (
-    <section className="mb-8">
-      <h2 className="mb-4 text-xl font-semibold text-gray-900">
-        Reviews ({reviews.length})
-      </h2>
+    <>
+      <section className="mb-8">
+        <h2 className="mb-4 text-xl font-semibold text-gray-900">
+          Reviews ({reviews.length})
+        </h2>
 
-      {reviews.length === 0 ? (
-        <div className="rounded-xl border border-gray-200 bg-white p-8 text-center">
-          <p className="text-gray-500">No reviews yet.</p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {reviews.map((review) => (
-            <div
-              key={review.id}
-              className={`rounded-xl border p-4 ${reviewStateStyles[review.state as keyof typeof reviewStateStyles]?.bg || 'border-gray-200 bg-gray-50'}`}
-            >
-              <div className="mb-3 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span
-                    className={`rounded px-2 py-1 text-xs font-medium ${reviewStateStyles[review.state as keyof typeof reviewStateStyles]?.badge || 'bg-gray-100 text-gray-800'}`}
-                  >
-                    {review.state}
-                  </span>
-                  <span className="text-sm font-medium text-gray-700">
-                    {review.author.login}
-                  </span>
-                </div>
-                <span className="text-xs text-gray-500">
-                  {formatDateTime(review.submittedAt)}
-                </span>
-              </div>
-              {review.body && (
-                <div className="prose prose-gray max-w-none">
-                  <Markdown>{review.body}</Markdown>
-                </div>
-              )}
-              {review.inlineComments.length > 0 && (
-                <div className="mt-3 space-y-2">
-                  {review.inlineComments.map((comment) => (
-                    <div
-                      key={comment.id}
-                      className="rounded-lg border border-gray-200 bg-white text-sm"
-                    >
-                      <div className="flex items-center gap-2 border-b border-gray-100 px-3 py-2">
-                        <code className="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-700">
-                          {comment.path}
-                        </code>
-                        <span className="text-xs text-gray-500">
-                          {comment.author.login}
-                        </span>
-                      </div>
-                      {comment.diffHunk && (
-                        <DiffHunk
-                          diffHunk={comment.diffHunk}
-                          filePath={comment.path}
-                        />
-                      )}
-                      <div className="prose prose-gray max-w-none px-3 py-2 text-sm">
-                        <Markdown>{comment.body}</Markdown>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-    </section>
+        {reviews.length === 0 ? (
+          <div className="rounded-xl border border-gray-200 bg-white p-8 text-center">
+            <p className="text-gray-500">No reviews yet.</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {reviews.map((review) => (
+              <ReviewCard
+                key={review.id}
+                review={review}
+                validations={validations}
+                onChatReview={() =>
+                  handleOpenChat({
+                    type: 'review',
+                    id: review.id,
+                    body: review.body,
+                    author: review.author.login,
+                  })
+                }
+                onChatComment={(comment) =>
+                  handleOpenChat({
+                    type: 'comment',
+                    id: comment.id,
+                    body: comment.body,
+                    author: comment.author.login,
+                    path: comment.path,
+                    diffHunk: comment.diffHunk,
+                  })
+                }
+              />
+            ))}
+          </div>
+        )}
+      </section>
+    </>
   );
 };

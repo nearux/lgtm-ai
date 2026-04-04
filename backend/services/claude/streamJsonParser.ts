@@ -13,6 +13,7 @@
 
 export type ParsedStreamEvent =
   | { kind: 'text'; text: string }
+  | { kind: 'init'; sessionId: string }
   | { kind: 'tool_start'; toolId: string; toolName: string }
   | { kind: 'tool_complete'; toolId: string; toolName: string; input: unknown }
   | { kind: 'tool_result'; toolId: string; content: string; isError: boolean }
@@ -181,6 +182,13 @@ export function parseStreamJsonLine(line: string): ParsedStreamEvent | null {
           input: toolInput,
         };
       }
+    }
+  }
+
+  if (parsed['type'] === 'system' && parsed['subtype'] === 'init') {
+    const sessionId = parsed['session_id'];
+    if (typeof sessionId === 'string') {
+      return { kind: 'init', sessionId };
     }
   }
 

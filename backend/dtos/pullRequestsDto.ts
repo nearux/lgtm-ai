@@ -44,6 +44,7 @@ export class PRListItemDto implements PRListItem {
         id: String(pr.user.id),
         login: pr.user.login,
         name: pr.user.name ?? pr.user.login,
+        avatarUrl: `https://avatars.githubusercontent.com/u/${pr.user.id}`,
         ...(authorIsBot ? { is_bot: true } : {}),
       },
       createdAt: pr.created_at,

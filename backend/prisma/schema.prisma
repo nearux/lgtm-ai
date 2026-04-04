@@ -6,6 +6,11 @@ datasource db {
   provider = "sqlite"
 }
 
+enum ChatSessionScopeType {
+  REVIEW
+  COMMENT
+}
+
 model Project {
   id          String  @id
   name        String
@@ -13,4 +18,22 @@ model Project {
   working_dir String
   created_at  DateTime
   updated_at  DateTime
+}
+
+model ChatSession {
+  id                String               @id
+  project_id        String
+  pr_number         Int
+  scope_type        ChatSessionScopeType
+  scope_target_id   String
+  claude_session_id String               @unique
+  title             String?
+  command           String?
+  custom_prompt     String?
+  created_at        DateTime
+  updated_at        DateTime
+  last_used_at      DateTime
+
+  @@index([project_id, pr_number])
+  @@index([project_id, pr_number, scope_type, scope_target_id])
 }

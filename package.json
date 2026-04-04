@@ -1,6 +1,6 @@
 {
   "name": "lgtmai",
-  "version": "0.0.3",
+  "version": "0.1.5",
   "description": "Auto-apply PR reviews with Claude Code",
   "main": "cli/dist/index.js",
   "types": "cli/dist/index.d.ts",
@@ -34,12 +34,14 @@
   "files": [
     "cli/dist/index.js",
     "backend/dist/index.js",
+    "backend/prisma.config.ts",
     "backend/prisma/schema.prisma",
+    "backend/prisma/migrations",
     "frontend/dist",
     "bin"
   ],
   "engines": {
-    "node": ">=18",
+    "node": "^20.19 || ^22.12 || >=24.0",
     "pnpm": ">=9"
   },
   "pnpm": {

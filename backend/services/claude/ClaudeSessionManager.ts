@@ -2,6 +2,11 @@ import type WebSocket from 'ws';
 import { ClaudeProcess } from './ClaudeProcess.js';
 import { WebSocketSender } from './WebSocketSender.js';
 import type { ClaudeExecuteOptions } from '../../types/claude.js';
+import type { ClaudeChatContext } from '../../types/chatSessions.js';
+import {
+  createChatSessionFromExecution,
+  markChatSessionAsUsed,
+} from '../chatSessions.js';
 
 export class ClaudeSessionManager {
   private processes = new Map<string, ClaudeProcess>();
@@ -15,7 +20,10 @@ export class ClaudeSessionManager {
     requestId: string,
     prompt: string,
     workingDir: string,
-    options: ClaudeExecuteOptions = {}
+    options: ClaudeExecuteOptions = {},
+    chatContext?: ClaudeChatContext,
+    commandMeta?: { command?: string; customPrompt?: string },
+    systemPrompt?: string
   ): void {
     const { sender } = this;
     if (this.processes.has(requestId)) {
@@ -36,11 +44,17 @@ export class ClaudeSessionManager {
       return;
     }
 
-    const proc = new ClaudeProcess(workingDir, options);
+    const proc = new ClaudeProcess(workingDir, options, systemPrompt);
     this.processes.set(requestId, proc);
-    proc.sendInitialize(requestId, options.executionMode);
-    proc.sendPermissionMode(options.executionMode ?? 'default');
-    proc.sendPrompt(prompt);
+
+    if (options.sessionId) {
+      void markChatSessionAsUsed(options.sessionId).catch((error) => {
+        console.error(
+          '[ClaudeSessionManager] Failed to mark chat session as used:',
+          error
+        );
+      });
+    }
 
     proc.on('text', (chunk) => sender.send({ type: 'text', requestId, chunk }));
     proc.on('tool_message', (toolId, toolName, input) =>
@@ -78,6 +92,21 @@ export class ClaudeSessionManager {
     proc.on('stderr', (chunk) =>
       sender.send({ type: 'stderr', requestId, chunk })
     );
+    proc.on('init', (sessionId) => {
+      if (!options.sessionId && chatContext) {
+        void createChatSessionFromExecution(
+          chatContext,
+          sessionId,
+          commandMeta
+        ).catch((error) => {
+          console.error(
+            '[ClaudeSessionManager] Failed to persist chat session:',
+            error
+          );
+        });
+      }
+      sender.send({ type: 'init', requestId, sessionId });
+    });
     proc.on('done', (exitCode, result, sessionId) => {
       sender.send({ type: 'done', requestId, exitCode, result, sessionId });
       this.processes.delete(requestId);
@@ -86,6 +115,10 @@ export class ClaudeSessionManager {
       sender.send({ type: 'error', requestId, message });
       this.processes.delete(requestId);
     });
+
+    proc.sendInitialize(requestId, options.executionMode);
+    proc.sendPermissionMode(options.executionMode ?? 'default');
+    proc.sendPrompt(prompt);
   }
 
   respondToToolApproval(

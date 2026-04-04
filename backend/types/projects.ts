@@ -11,6 +11,17 @@ export interface ProjectGitInfo {
   remoteUrl: string | null;
   currentBranch: string | null;
   branches: string[];
+  remotes: ProjectGitRemote[];
+}
+
+export interface ProjectGitRemote {
+  name: string;
+  url: string;
+}
+
+export interface GitHubRepo {
+  owner: string;
+  repo: string;
 }
 
 export interface ProjectDetail extends Project {

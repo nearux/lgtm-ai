@@ -4,10 +4,14 @@ export class GhInlineCommentDto {
   static fromGh(c: GhReviewInlineComment): PRReview['inlineComments'][number] {
     return {
       id: String(c.id),
+      ...(c.in_reply_to_id != null
+        ? { inReplyToId: String(c.in_reply_to_id) }
+        : {}),
       author: {
         id: String(c.user.id),
         login: c.user.login,
         name: c.user.login,
+        avatarUrl: `https://avatars.githubusercontent.com/u/${c.user.id}`,
         ...(c.user.type?.toLowerCase() === 'bot' ? { is_bot: true } : {}),
       },
       body: c.body,

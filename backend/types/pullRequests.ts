@@ -66,6 +66,8 @@ export type GhPRCommit = {
 export type GhReviewInlineComment = {
   id: number;
   node_id: string;
+  /** ID of the comment this is a reply to. Absent if this is the first comment in the thread */
+  in_reply_to_id?: number;
   user: {
     login: string;
     id: number;
@@ -83,6 +85,8 @@ export type GhPRDetail = {
   number: number;
   title: string;
   body?: string | null;
+  baseRefName: string;
+  headRefName: string;
   assignees: GhPRAssignee[];
   author: GhPRAuthor;
   createdAt: string;
@@ -97,6 +101,7 @@ export interface PRAuthor {
   id: string;
   login: string;
   name: string;
+  avatarUrl: string;
   is_bot?: boolean;
 }
 
@@ -129,6 +134,7 @@ export interface PRComment {
 
 export interface PRReviewInlineComment {
   id: string;
+  inReplyToId?: string;
   author: PRAuthor;
   body: string;
   path: string;
@@ -161,7 +167,21 @@ export interface PRCommit {
 }
 
 export interface PRDetail extends PRListItem {
+  baseBranch: string;
+  headBranch: string;
   comments: PRComment[];
   reviews: PRReview[];
   commits: PRCommit[];
+}
+
+export interface CheckoutPRBranchBody {
+  force?: boolean;
+  origin?: string;
+}
+
+export interface CheckoutPRBranchResult {
+  success: boolean;
+  message: string;
+  targetBranch: string;
+  stashed: boolean;
 }

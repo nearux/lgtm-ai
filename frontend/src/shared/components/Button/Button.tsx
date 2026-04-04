@@ -1,4 +1,5 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import { cn } from '@/shared/lib';
 import { Spinner } from '../Spinner/Spinner';
 
 type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost';
@@ -8,6 +9,7 @@ interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
   size?: ButtonSize;
   loading?: boolean;
+  block?: boolean;
   children: ReactNode;
 }
 
@@ -28,14 +30,23 @@ export const Button = ({
   variant = 'primary',
   size = 'md',
   loading = false,
+  block = false,
   disabled,
   children,
-  className = '',
+  className,
   ...props
 }: Props) => {
   return (
     <button
-      className={`inline-flex items-center justify-center gap-2 font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
+      className={cn(
+        'inline-flex items-center justify-center gap-2 font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50',
+        variantClasses[variant],
+        sizeClasses[size],
+        className,
+        {
+          'w-full': block,
+        }
+      )}
       disabled={disabled || loading}
       {...props}
     >
