@@ -5,15 +5,9 @@ import type {
   FileChangeStatus,
   FileChangesSummary,
 } from '../types/claude.js';
+import { git } from '../utils/git.js';
 
 const execFileAsync = promisify(execFile);
-
-async function git(workingDir: string, args: string[]): Promise<string> {
-  const { stdout } = await execFileAsync('git', args, { cwd: workingDir });
-  return stdout;
-}
-
-// ── File changes collection ─────────────────────────────────────────
 
 export interface FileChangesResult {
   files: FileChange[];
