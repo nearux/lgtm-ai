@@ -161,8 +161,6 @@ function cleanCommitMessage(raw: string): string {
   return msg.trim();
 }
 
-// ── Commit and push ─────────────────────────────────────────────────
-
 export interface CommitAndPushResult {
   success: boolean;
   commitHash?: string;
@@ -176,6 +174,7 @@ export async function commitAndPush(
   try {
     await git(workingDir, ['add', '-A']);
   } catch (err) {
+    console.error('[commitAndPush] git add failed:', err);
     return {
       success: false,
       error: `git add: ${err instanceof Error ? err.message : String(err)}`,
@@ -185,6 +184,7 @@ export async function commitAndPush(
   try {
     await git(workingDir, ['commit', '-m', commitMessage]);
   } catch (err) {
+    console.error('[commitAndPush] git commit failed:', err);
     return {
       success: false,
       error: `git commit: ${err instanceof Error ? err.message : String(err)}`,
@@ -194,6 +194,7 @@ export async function commitAndPush(
   try {
     await git(workingDir, ['push']);
   } catch (err) {
+    console.error('[commitAndPush] git push failed:', err);
     return {
       success: false,
       error: `git push: ${err instanceof Error ? err.message : String(err)}`,
@@ -203,7 +204,8 @@ export async function commitAndPush(
   try {
     const hash = await git(workingDir, ['rev-parse', '--short', 'HEAD']);
     return { success: true, commitHash: hash.trim() };
-  } catch {
+  } catch (err) {
+    console.warn('[commitAndPush] git rev-parse failed, but commit and push succeeded', err);
     return { success: true };
   }
 }
