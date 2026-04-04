@@ -91,7 +91,7 @@ export async function generateCommitMessage(
   await git(workingDir, ['add', '-N', '.']).catch((err) => {
     console.warn('[generateCommitMessage] git add -N failed:', err);
   });
-  const diff = await git(workingDir, ['diff']);
+  const diff = await git(workingDir, ['diff', 'HEAD']);
 
   if (!diff.trim()) {
     throw new Error('No changes to generate a commit message for');
