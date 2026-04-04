@@ -3,6 +3,7 @@ import type {
   ClaudeCommand,
   ReviewCommandContext,
   CommentCommandContext,
+  PRCommandContext,
 } from '../types/claude.js';
 import * as templates from './promptTemplates.js';
 
@@ -26,7 +27,7 @@ export function buildUserPrompt(
 
 function buildPrUserPrompt(
   command: ClaudeCommand,
-  context: CommandContext,
+  context: PRCommandContext,
   customPrompt?: string
 ): string {
   const { repoOwnerName, number: prNumber } = context.prMeta;
