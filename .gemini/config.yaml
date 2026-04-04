@@ -5,4 +5,4 @@ code_review:
     help: false
     summary: true
     code_review: true
-ignore_patterns: ["views"]
+ignore_patterns: ['views']
