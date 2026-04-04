@@ -132,11 +132,33 @@ export async function generateCommitMessage(
       { cwd: workingDir, timeout: CLAUDE_TIMEOUT_MS }
     );
 
-    return stdout.trim();
+    return cleanCommitMessage(stdout);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     throw new Error(`Failed to generate commit message: ${message}`);
   }
+}
+
+const CONVENTIONAL_COMMIT_RE =
+  /^(?:feat|fix|refactor|chore|docs|style|test|perf|ci|build|revert)(?:\(.+?\))?[!]?:/m;
+
+function cleanCommitMessage(raw: string): string {
+  let msg = raw.trim();
+
+  // Strip markdown code fences (```commit\n...\n```)
+  msg = msg.replace(/^```\w*\n?/, '').replace(/\n?```$/, '');
+  msg = msg.trim();
+
+  // If the message doesn't start with a conventional commit prefix,
+  // find where it begins and discard everything before it.
+  if (!CONVENTIONAL_COMMIT_RE.test(msg.split('\n')[0])) {
+    const match = CONVENTIONAL_COMMIT_RE.exec(msg);
+    if (match) {
+      msg = msg.slice(match.index);
+    }
+  }
+
+  return msg.trim();
 }
 
 // ── Commit and push ─────────────────────────────────────────────────
