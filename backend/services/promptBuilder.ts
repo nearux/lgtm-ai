@@ -13,7 +13,6 @@ export function buildUserPrompt(
   context: CommandContext,
   customPrompt?: string
 ): string {
-  // PR-level commands
   if (context.type === 'pr') {
     const { repoOwnerName, number: prNumber } = context.prMeta;
 
@@ -35,7 +34,6 @@ export function buildUserPrompt(
     }
   }
 
-  // Review/Comment-level commands
   if (context.type === 'comment' && !context.path) {
     throw new Error('path is required for comment context');
   }
