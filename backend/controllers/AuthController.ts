@@ -1,5 +1,13 @@
 // backend/controllers/AuthController.ts
-import { Controller, Route, Get, Post, Body, Response, Tags } from 'tsoa';
+import {
+  Controller,
+  Route,
+  Get,
+  Post,
+  Body,
+  Response,
+  Tags,
+} from '@tsoa/runtime';
 import HttpStatus from 'http-status';
 import * as authService from '../services/auth.js';
 import type {

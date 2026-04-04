@@ -39,6 +39,10 @@ The CLI requires these tools installed and authenticated:
 
 `bin/lgtmai.js` wraps `cli/dist/index.js`. `prepublishOnly` builds all workspaces.
 
+# Coding Rules
+
+- **Backend tsoa imports**: Always import from `@tsoa/runtime`, never from `tsoa`. The `tsoa` package is a build-time code generation tool and is excluded from the production bundle via esbuild externals.
+
 # GitHub Write Actions Policy
 
 Never perform GitHub write actions (creating PRs/comments/issues, committing, pushing, etc.) unless explicitly instructed in the immediately preceding user message. Always ask first.
