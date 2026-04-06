@@ -1,24 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import {
-  X,
-  Terminal,
-  ChevronDown,
-  ChevronRight,
-  Check,
-  XCircle,
-  Loader2,
-  Send,
-  ArrowLeft,
-} from 'lucide-react';
-import { IconButton, Spinner, GFMMarkdown } from '@/shared/components';
-import type { ClaudeMessage } from '../../hooks';
+import { Loader2 } from 'lucide-react';
+import { Spinner } from '@/shared/components';
 import type {
   ChatPanelMode,
   ChatPanelState,
 } from '../../contexts/ChatPanelContext';
 import { ActionSelector } from './ActionSelector';
 import { ChatHistoryList } from './ChatHistoryList';
+import { groupMessages } from './utils/groupMessages';
+import { ChatHeader } from './components/ChatHeader';
+import { TextBubble } from './components/TextBubble';
+import { UserBubble } from './components/UserBubble';
+import { ToolBubble } from './components/ToolBubble';
+import { FollowUpInput } from './components/FollowUpInput';
 
 interface Props {
   isOpen: boolean;
@@ -29,95 +24,6 @@ interface Props {
   onHideHistory: () => void;
   onBackToChat: () => void;
 }
-
-interface TextChunk {
-  id: string;
-  content: string;
-}
-
-type GroupedItem =
-  | {
-      kind: 'text';
-      id: string;
-      content: string;
-      chunks: TextChunk[];
-      isStreaming: boolean;
-    }
-  | { kind: 'user'; id: string; content: string }
-  | {
-      kind: 'tool';
-      id: string;
-      toolId: string;
-      toolName: string;
-      input: string;
-      result?: string;
-      isError?: boolean;
-    };
-
-const groupMessages = (
-  messages: ClaudeMessage[],
-  isConnected: boolean
-): GroupedItem[] => {
-  const result: GroupedItem[] = [];
-  const toolMap = new Map<string, GroupedItem & { kind: 'tool' }>();
-  let textChunks: TextChunk[] = [];
-  let textId = '';
-
-  const flushText = (isStreaming: boolean) => {
-    const content = textChunks.map((c) => c.content).join('');
-    if (content.trim()) {
-      result.push({
-        kind: 'text',
-        id: textId,
-        content: content.trim(),
-        chunks: [...textChunks],
-        isStreaming,
-      });
-    }
-    textChunks = [];
-    textId = '';
-  };
-
-  for (const msg of messages) {
-    if (msg.type === 'text') {
-      if (!textId) textId = msg.id;
-      textChunks.push({ id: msg.id, content: msg.content });
-    } else if (msg.type === 'user') {
-      flushText(false);
-      result.push({ kind: 'user', id: msg.id, content: msg.content });
-    } else if (msg.type === 'tool' && msg.toolId) {
-      flushText(false);
-      const toolItem: GroupedItem & { kind: 'tool' } = {
-        kind: 'tool',
-        id: msg.id,
-        toolId: msg.toolId,
-        toolName: msg.toolName || 'Unknown',
-        input: msg.content,
-      };
-      toolMap.set(msg.toolId, toolItem);
-      result.push(toolItem);
-    } else if (msg.type === 'tool_result' && msg.toolId) {
-      const tool = toolMap.get(msg.toolId);
-      if (tool) {
-        tool.result = msg.content;
-        tool.isError = msg.isError;
-      }
-    } else if (msg.type === 'error') {
-      flushText(false);
-      result.push({
-        kind: 'text',
-        id: msg.id,
-        content: `Error: ${msg.content}`,
-        chunks: [{ id: msg.id, content: `Error: ${msg.content}` }],
-        isStreaming: false,
-      });
-    }
-  }
-
-  // The last text block is still streaming only if we're connected
-  flushText(isConnected);
-  return result;
-};
 
 export const ChatPanel = ({
   isOpen,
@@ -140,7 +46,6 @@ export const ChatPanel = ({
   } = state;
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [expandedTools, setExpandedTools] = useState<Set<string>>(new Set());
-  const [followUpInput, setFollowUpInput] = useState('');
 
   const lastMessage = messages[messages.length - 1];
   const isWaitingForResponse =
@@ -150,13 +55,6 @@ export const ChatPanel = ({
     mode === 'action-selection' && messages.length === 0 && onExecuteAction;
 
   const showHistory = mode === 'history' && prContext;
-
-  const handleSubmitFollowUp = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!followUpInput.trim() || !onSendFollowUp) return;
-    onSendFollowUp(followUpInput.trim());
-    setFollowUpInput('');
-  };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -179,48 +77,16 @@ export const ChatPanel = ({
         isOpen ? 'translate-x-0' : 'translate-x-full'
       }`}
     >
-      {/* Header */}
-      <div className="flex shrink-0 items-center justify-between border-b border-gray-200 bg-white px-4 py-3">
-        <div className="flex items-center gap-3">
-          {mode === 'chat' && messages.length > 0 && onBackToChat && (
-            <button
-              type="button"
-              onClick={onBackToChat}
-              className="cursor-pointer rounded p-1 hover:bg-gray-100"
-              aria-label="Back"
-            >
-              <ArrowLeft className="h-5 w-5 text-gray-600" />
-            </button>
-          )}
-          {mode === 'history' && onHideHistory && (
-            <button
-              type="button"
-              onClick={onHideHistory}
-              className="cursor-pointer rounded p-1 hover:bg-gray-100"
-              aria-label="Back"
-            >
-              <ArrowLeft className="h-5 w-5 text-gray-600" />
-            </button>
-          )}
-          <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
-          {!showActionSelector && !showHistory && (
-            <span
-              className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                status === 'connected'
-                  ? 'bg-green-100 text-green-700'
-                  : status === 'connecting'
-                    ? 'bg-yellow-100 text-yellow-700'
-                    : 'bg-gray-100 text-gray-600'
-              }`}
-            >
-              {status}
-            </span>
-          )}
-        </div>
-        <IconButton onClick={onClose} aria-label="Close panel">
-          <X className="h-5 w-5" />
-        </IconButton>
-      </div>
+      <ChatHeader
+        title={title}
+        mode={mode}
+        status={status}
+        hasMessages={messages.length > 0}
+        showStatusBadge={!showActionSelector && !showHistory}
+        onClose={onClose}
+        onBackToChat={onBackToChat}
+        onHideHistory={onHideHistory}
+      />
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
@@ -253,110 +119,18 @@ export const ChatPanel = ({
             <AnimatePresence initial={false}>
               {grouped.map((item) => {
                 if (item.kind === 'text') {
-                  return (
-                    <motion.div
-                      key={item.id}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ duration: 0.3 }}
-                      className="rounded-lg border border-gray-200 bg-white p-3"
-                    >
-                      {item.isStreaming ? (
-                        <p className="prose-sm text-sm leading-relaxed whitespace-pre-wrap">
-                          {item.chunks.map((chunk) => (
-                            <motion.span
-                              key={chunk.id}
-                              initial={{ opacity: 0, filter: 'blur(2px)' }}
-                              animate={{ opacity: 1, filter: 'blur(0px)' }}
-                              transition={{ duration: 0.2, ease: 'easeOut' }}
-                            >
-                              {chunk.content}
-                            </motion.span>
-                          ))}
-                        </p>
-                      ) : (
-                        <GFMMarkdown className="prose-sm">
-                          {item.content}
-                        </GFMMarkdown>
-                      )}
-                    </motion.div>
-                  );
+                  return <TextBubble key={item.id} item={item} />;
                 }
                 if (item.kind === 'user') {
-                  return (
-                    <motion.div
-                      key={item.id}
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3 }}
-                      className="flex justify-end"
-                    >
-                      <div className="max-w-[85%] rounded-lg bg-indigo-600 px-3 py-2 text-sm text-white">
-                        {item.content}
-                      </div>
-                    </motion.div>
-                  );
+                  return <UserBubble key={item.id} item={item} />;
                 }
                 return (
-                  <motion.div
+                  <ToolBubble
                     key={item.id}
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="overflow-hidden rounded-lg border border-purple-200 bg-purple-50"
-                  >
-                    <button
-                      type="button"
-                      onClick={() => toggleTool(item.id)}
-                      className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-sm hover:bg-purple-100"
-                    >
-                      {expandedTools.has(item.id) ? (
-                        <ChevronDown className="h-4 w-4 text-purple-500" />
-                      ) : (
-                        <ChevronRight className="h-4 w-4 text-purple-500" />
-                      )}
-                      <Terminal className="h-4 w-4 text-purple-600" />
-                      <span className="font-medium text-purple-800">
-                        {item.toolName}
-                      </span>
-                      <span className="ml-auto">
-                        {item.result === undefined ? (
-                          <Loader2 className="h-4 w-4 animate-spin text-purple-500" />
-                        ) : item.isError ? (
-                          <XCircle className="h-4 w-4 text-red-500" />
-                        ) : (
-                          <Check className="h-4 w-4 text-green-500" />
-                        )}
-                      </span>
-                    </button>
-                    {expandedTools.has(item.id) && (
-                      <div className="border-t border-purple-200 bg-purple-100/50 p-2">
-                        <div className="mb-1 text-xs font-medium text-purple-600">
-                          Input:
-                        </div>
-                        <pre className="max-h-24 overflow-auto text-xs whitespace-pre-wrap text-purple-900">
-                          {item.input}
-                        </pre>
-                        {item.result !== undefined && (
-                          <>
-                            <div className="mt-2 mb-1 text-xs font-medium text-purple-600">
-                              Result:
-                            </div>
-                            <pre
-                              className={`max-h-32 overflow-auto text-xs whitespace-pre-wrap ${
-                                item.isError
-                                  ? 'text-red-700'
-                                  : 'text-purple-900'
-                              }`}
-                            >
-                              {item.result.slice(0, 500)}
-                              {item.result.length > 500 && '...'}
-                            </pre>
-                          </>
-                        )}
-                      </div>
-                    )}
-                  </motion.div>
+                    item={item}
+                    isExpanded={expandedTools.has(item.id)}
+                    onToggle={() => toggleTool(item.id)}
+                  />
                 );
               })}
             </AnimatePresence>
@@ -376,34 +150,14 @@ export const ChatPanel = ({
         )}
       </div>
 
-      {/* Follow-up Input - always show when in chat mode */}
       {!showActionSelector &&
         !showHistory &&
         messages.length > 0 &&
         onSendFollowUp && (
-          <form
-            onSubmit={handleSubmitFollowUp}
-            className="shrink-0 border-t border-gray-200 bg-white p-4"
-          >
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={followUpInput}
-                onChange={(e) => setFollowUpInput(e.target.value)}
-                placeholder="Ask a follow-up question..."
-                className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
-              />
-              <button
-                type="submit"
-                disabled={
-                  !followUpInput.trim() || !sessionId || !onSendFollowUp
-                }
-                className="cursor-pointer rounded-lg bg-indigo-600 px-4 py-2 text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-gray-300"
-              >
-                <Send className="h-4 w-4" />
-              </button>
-            </div>
-          </form>
+          <FollowUpInput
+            sessionId={sessionId}
+            onSendFollowUp={onSendFollowUp}
+          />
         )}
     </div>
   );
