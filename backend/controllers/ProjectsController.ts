@@ -27,12 +27,17 @@ function parseUUID(id: string): string {
 import * as projectsService from '../services/projects.js';
 import * as pullRequestsService from '../services/pullRequests.js';
 import * as chatSessionsService from '../services/chatSessions.js';
+import * as gitService from '../services/git.js';
 import type {
   Project,
   ProjectDetail,
   CreateProjectBody,
   UpdateProjectBody,
   ErrorResponse,
+  GenerateCommitMessageBody,
+  CommitMessageResponse,
+  CommitAndPushBody,
+  CommitAndPushResponse,
 } from '../types/projects.js';
 import type {
   PRListItem,
@@ -58,6 +63,8 @@ export type {
   ChatSessionSummary,
   ChatSessionHistoryResponse,
   CheckoutPRBranchResult,
+  CommitMessageResponse,
+  CommitAndPushResponse,
 };
 
 @Route('api/projects')
@@ -293,5 +300,45 @@ export class ProjectsController extends Controller {
       project.working_dir,
       { force: body?.force }
     );
+  }
+
+  /**
+   * Generate a commit message based on current changes using Claude
+   * @param projectId Project UUID
+   */
+  @Post('{projectId}/commit-message')
+  @Response<ErrorResponse>(HttpStatus.NOT_FOUND, 'Project not found')
+  @Response<ErrorResponse>(
+    HttpStatus.INTERNAL_SERVER_ERROR,
+    'Failed to generate commit message'
+  )
+  public async generateCommitMessage(
+    @Path() projectId: string,
+    @Body() body: GenerateCommitMessageBody
+  ): Promise<CommitMessageResponse> {
+    const project = await projectsService.findById(parseUUID(projectId));
+    const message = await gitService.generateCommitMessage(
+      project.working_dir,
+      body.prContext
+    );
+    return { message };
+  }
+
+  /**
+   * Stage all changes, commit, and push to remote
+   * @param projectId Project UUID
+   */
+  @Post('{projectId}/commit-and-push')
+  @Response<ErrorResponse>(HttpStatus.NOT_FOUND, 'Project not found')
+  @Response<ErrorResponse>(
+    HttpStatus.INTERNAL_SERVER_ERROR,
+    'Git operation failed'
+  )
+  public async commitAndPush(
+    @Path() projectId: string,
+    @Body() body: CommitAndPushBody
+  ): Promise<CommitAndPushResponse> {
+    const project = await projectsService.findById(parseUUID(projectId));
+    return gitService.commitAndPush(project.working_dir, body.commitMessage);
   }
 }

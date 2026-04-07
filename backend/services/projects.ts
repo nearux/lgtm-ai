@@ -1,12 +1,11 @@
 import HttpStatus from 'http-status';
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
 import { existsSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { AppError } from '../errors/AppError.js';
 import { ProjectGitRemoteDto } from '../dtos/projectGitInfoDto.js';
 import { GitHubRepoDto } from '../dtos/gitHubRepoDto.js';
 import * as projectRepository from '../repositories/projectRepository.js';
+import { git } from '../utils/git.js';
 import type {
   Project,
   ProjectDetail,
@@ -15,8 +14,6 @@ import type {
   UpdateProjectBody,
 } from '../types/projects.js';
 
-const execFileAsync = promisify(execFile);
-
 async function getGitInfo(workingDir: string): Promise<ProjectGitInfo> {
   let remoteUrl: string | null = null;
   let currentBranch: string | null = null;
@@ -24,38 +21,30 @@ async function getGitInfo(workingDir: string): Promise<ProjectGitInfo> {
   let remotes: Array<{ name: string; url: string }> = [];
 
   try {
-    const result = await execFileAsync('git', ['remote', 'get-url', 'origin'], {
-      cwd: workingDir,
-    });
-    remoteUrl = result.stdout.trim();
+    remoteUrl = (await git(workingDir, ['remote', 'get-url', 'origin'])).trim();
   } catch (error) {
     console.error('[getGitInfo] Failed to resolve origin remote URL:', error);
     remoteUrl = null;
   }
 
   try {
-    const result = await execFileAsync('git', ['remote', '-v'], {
-      cwd: workingDir,
-    });
-    remotes = ProjectGitRemoteDto.fromGitRemoteList(result.stdout);
+    const raw = await git(workingDir, ['remote', '-v']);
+    remotes = ProjectGitRemoteDto.fromGitRemoteList(raw);
   } catch (error) {
     console.error('[getGitInfo] Failed to list git remotes:', error);
     remotes = [];
   }
 
   try {
-    const result = await execFileAsync('git', ['branch', '--show-current'], {
-      cwd: workingDir,
-    });
-    currentBranch = result.stdout.trim() || null;
+    currentBranch =
+      (await git(workingDir, ['branch', '--show-current'])).trim() || null;
   } catch (error) {
     console.error('[getGitInfo] Failed to get current branch:', error);
     currentBranch = null;
   }
 
   try {
-    const result = await execFileAsync('git', ['branch'], { cwd: workingDir });
-    const raw = result.stdout;
+    const raw = await git(workingDir, ['branch']);
     branches = raw
       .split('\n')
       .map((line) => line.replace(/^\*?\s+/, '').trim())
