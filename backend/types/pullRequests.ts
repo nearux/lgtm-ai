@@ -9,6 +9,8 @@ export type GitHubPullRequest = {
   number: number;
   title: string;
   body?: string | null;
+  comments?: number | null;
+  review_comments?: number | null;
   assignees: GitHubUser[];
   user: GitHubUser;
   created_at: string;
@@ -113,6 +115,8 @@ export interface PRListItem {
   number: number;
   title: string;
   body: string;
+  commentsCount: number;
+  reviewCommentsCount: number;
   assignees: PRAssignee[];
   author: PRAuthor;
   createdAt: string;

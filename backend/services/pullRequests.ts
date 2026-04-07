@@ -3,6 +3,7 @@ import { promisify } from 'node:util';
 import HttpStatus from 'http-status';
 import { clamp } from 'remeda';
 import { AppError } from '../errors/AppError.js';
+import { batchAsync } from '../utils/batchAsync.js';
 import type {
   PRListItem,
   PRDetail,
@@ -100,8 +101,56 @@ export async function fetchPRList(
   }
 
   const prs = JSON.parse(stdout) as GitHubPullRequest[];
+  const prsWithCounts = await enrichMissingConversationCounts(
+    repoOwnerName,
+    prs
+  );
 
-  return prs.map((pr) => PRListItemDto.fromGitHub(pr));
+  return prsWithCounts.map((pr) => PRListItemDto.fromGitHub(pr));
+}
+
+const ENRICH_BATCH_SIZE = 10;
+
+async function enrichMissingConversationCounts(
+  repoOwnerName: string,
+  prs: GitHubPullRequest[]
+): Promise<GitHubPullRequest[]> {
+  return batchAsync(prs, ENRICH_BATCH_SIZE, async (pr) => {
+    const hasCommentsCount = typeof pr.comments === 'number';
+    const hasReviewCommentsCount = typeof pr.review_comments === 'number';
+
+    if (hasCommentsCount && hasReviewCommentsCount) {
+      return pr;
+    }
+
+    try {
+      const { stdout } = await execFileAsync('gh', [
+        'api',
+        `repos/${repoOwnerName}/pulls/${pr.number}`,
+      ]);
+      const prDetail = JSON.parse(stdout) as {
+        comments?: number | null;
+        review_comments?: number | null;
+      };
+
+      return {
+        ...pr,
+        comments: pr.comments ?? prDetail.comments ?? 0,
+        review_comments: pr.review_comments ?? prDetail.review_comments ?? 0,
+      };
+    } catch (err) {
+      console.error(
+        `[fetchPRList] Failed to fetch conversation counts for PR #${pr.number}:`,
+        err
+      );
+
+      return {
+        ...pr,
+        comments: pr.comments ?? 0,
+        review_comments: pr.review_comments ?? 0,
+      };
+    }
+  });
 }
 
 /**
