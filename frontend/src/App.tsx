@@ -12,7 +12,7 @@ import { PRDetailPage } from './domains/PRDetail/page';
 const Layout = () => (
   <div className="flex min-h-screen flex-col">
     <AppHeader />
-    <main className="flex-1 pt-14">
+    <main className="flex-1 pt-(--header-height)">
       <Outlet />
     </main>
   </div>
