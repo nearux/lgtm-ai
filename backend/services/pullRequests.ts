@@ -73,7 +73,7 @@ async function resolvePageCursor(
   skip: number
 ): Promise<string | null> {
   const [owner, name] = repoOwnerName.split('/');
-  const query = `query($owner: String!, $name: String!, $skip: Int!, $states: [PullRequestState!]!) { repository(owner: $owner, name: $name) { pullRequests(first: $skip, states: $states) { pageInfo { endCursor } } } }`;
+  const query = `query($owner: String!, $name: String!, $skip: Int!, $states: [PullRequestState!]!) { repository(owner: $owner, name: $name) { pullRequests(first: $skip, states: $states, orderBy: {field: CREATED_AT, direction: DESC}) { pageInfo { endCursor } } } }`;
 
   const { stdout } = await execFileAsync('gh', [
     'api',
@@ -107,7 +107,7 @@ async function fetchPRListGraphQL(
   const [owner, name] = repoOwnerName.split('/');
   const query = `query($owner: String!, $name: String!, $limit: Int!, $states: [PullRequestState!]!, $after: String) {
   repository(owner: $owner, name: $name) {
-    pullRequests(first: $limit, states: $states, after: $after) {
+    pullRequests(first: $limit, states: $states, after: $after, orderBy: {field: CREATED_AT, direction: DESC}) {
       totalCount
       nodes {
         number
