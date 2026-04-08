@@ -64,6 +64,7 @@ export interface CommitMessageResponse {
 
 export interface CommitAndPushBody {
   commitMessage: string;
+  push?: boolean;
 }
 
 export interface CommitAndPushResponse {

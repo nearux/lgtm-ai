@@ -129,7 +129,8 @@ export async function generateCommitMessage(
 
 export async function commitAndPush(
   workingDir: string,
-  commitMessage: string
+  commitMessage: string,
+  push = true
 ): Promise<CommitAndPushResult> {
   try {
     await git(workingDir, ['add', '-A']);
@@ -151,14 +152,16 @@ export async function commitAndPush(
     };
   }
 
-  try {
-    await git(workingDir, ['push', 'origin', 'HEAD']);
-  } catch (err) {
-    console.error('[commitAndPush] git push failed:', err);
-    return {
-      success: false,
-      error: `git push: ${err instanceof Error ? err.message : String(err)}`,
-    };
+  if (push) {
+    try {
+      await git(workingDir, ['push', 'origin', 'HEAD']);
+    } catch (err) {
+      console.error('[commitAndPush] git push failed:', err);
+      return {
+        success: false,
+        error: `git push: ${err instanceof Error ? err.message : String(err)}`,
+      };
+    }
   }
 
   try {
@@ -166,7 +169,7 @@ export async function commitAndPush(
     return { success: true, commitHash: hash.trim() };
   } catch (err) {
     console.warn(
-      '[commitAndPush] git rev-parse failed, but commit and push succeeded',
+      '[commitAndPush] git rev-parse failed, but commit succeeded',
       err
     );
     return { success: true };
