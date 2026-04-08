@@ -1,23 +1,3 @@
-export type GitHubUser = {
-  id: number;
-  login: string;
-  name?: string | null;
-  type?: string | null;
-};
-
-export type GitHubPullRequest = {
-  number: number;
-  title: string;
-  body?: string | null;
-  comments?: number | null;
-  review_comments?: number | null;
-  assignees: GitHubUser[];
-  user: GitHubUser;
-  created_at: string;
-  updated_at: string;
-  state: string;
-};
-
 export type PRState = 'open' | 'closed' | 'all';
 
 export type GhPRAuthor = {
@@ -189,4 +169,55 @@ export interface CheckoutPRBranchResult {
   message: string;
   targetBranch: string;
   stashed: boolean;
+}
+
+export interface GraphQLPRAuthor {
+  login: string;
+  avatarUrl: string;
+  id?: string;
+  name?: string | null;
+}
+
+export interface GraphQLPRAssignee {
+  id: string;
+  login: string;
+  name?: string | null;
+}
+
+export interface GraphQLPRNode {
+  number: number;
+  title: string;
+  body?: string | null;
+  state: string;
+  createdAt: string;
+  updatedAt: string;
+  comments: { totalCount: number };
+  reviewThreads: { totalCount: number };
+  assignees: { nodes: GraphQLPRAssignee[] };
+  author: GraphQLPRAuthor;
+}
+
+export interface GraphQLPRListResponse {
+  data?: {
+    repository: {
+      pullRequests: {
+        totalCount: number;
+        nodes: GraphQLPRNode[];
+      };
+    };
+  };
+  errors?: { message: string }[];
+}
+
+export interface GraphQLCursorResponse {
+  data?: {
+    repository: {
+      pullRequests: {
+        pageInfo: {
+          endCursor: string | null;
+        };
+      };
+    };
+  };
+  errors?: { message: string }[];
 }
