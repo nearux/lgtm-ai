@@ -15,11 +15,19 @@ export type {
   WsErrorEvent,
   WsApprovalRequestEvent,
   WsPlanApprovalRequestEvent,
+  WsFileChangesEvent,
+  FileChange,
+  FileChangesSummary,
   ClaudeExecuteOptions,
   ClaudeExecutionMode,
   CommandContext,
   ClaudeCommand,
 } from '@lgtmai/backend/types';
+
+export interface FileChangesData {
+  files: import('@lgtmai/backend/types').FileChange[];
+  summary: import('@lgtmai/backend/types').FileChangesSummary;
+}
 
 export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
 

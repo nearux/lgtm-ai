@@ -8,4 +8,5 @@ export type {
   ConnectionStatus,
   ClaudeMessage,
   ApprovalRequest,
+  FileChangesData,
 } from './useClaudeWebSocket';

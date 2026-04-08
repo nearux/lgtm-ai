@@ -14,25 +14,38 @@ import { TextBubble } from './components/TextBubble';
 import { UserBubble } from './components/UserBubble';
 import { ToolBubble } from './components/ToolBubble';
 import { FollowUpInput } from './components/FollowUpInput';
+import { FileChangesCard } from './components/FileChangesCard';
+import type { FileChangesData } from '../../hooks';
+
+export interface CommitState {
+  isCommitting: boolean;
+  result?: { success: boolean; commitHash?: string; error?: string };
+}
 
 interface Props {
   isOpen: boolean;
   state: ChatPanelState;
   mode: ChatPanelMode;
+  fileChanges: FileChangesData | null;
   onClose: () => void;
   onShowHistory: () => void;
   onHideHistory: () => void;
   onBackToChat: () => void;
+  onCommitAndPush?: () => void;
+  commitState?: CommitState;
 }
 
 export const ChatPanel = ({
   isOpen,
   state,
   mode,
+  fileChanges,
   onClose,
   onShowHistory,
   onHideHistory,
   onBackToChat,
+  onCommitAndPush,
+  commitState,
 }: Props) => {
   const {
     title,
@@ -144,6 +157,14 @@ export const ChatPanel = ({
                 <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
                 <span className="text-sm text-gray-400">Thinking...</span>
               </motion.div>
+            )}
+            {fileChanges && (
+              <FileChangesCard
+                data={fileChanges}
+                onCommitAndPush={onCommitAndPush}
+                isCommitting={commitState?.isCommitting}
+                commitResult={commitState?.result}
+              />
             )}
             <div ref={messagesEndRef} />
           </div>

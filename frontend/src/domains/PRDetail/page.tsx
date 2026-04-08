@@ -3,8 +3,9 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { AsyncBoundary } from '@/shared/components';
 import { PRDetailContent } from './components/PRDetailContent/PRDetailContent';
 import { ChatPanel } from './components/ChatPanel';
-import { ChatPanelProvider } from './contexts';
+import { ChatPanelProvider, useChatPanel } from './contexts';
 import { useChatPanelController, useChatPanelParams } from './hooks';
+import { useCommitAndPush } from './hooks/useCommitAndPush';
 
 export const PRDetailPage = () => {
   return (
@@ -25,6 +26,8 @@ const PRDetailPageContent = () => {
 
   const { closePanel } = useChatPanelParams();
   const chatPanel = useChatPanelController();
+  const { state } = useChatPanel();
+  const { commitState, handleCommitAndPush } = useCommitAndPush(projectId);
 
   // NOTE: Clear panel params on mount (page refresh)
   useEffect(() => {
@@ -49,7 +52,12 @@ const PRDetailPageContent = () => {
           </AsyncBoundary>
         </div>
       </div>
-      <ChatPanel {...chatPanel} />
+      <ChatPanel
+        {...chatPanel}
+        fileChanges={state.fileChanges}
+        onCommitAndPush={state.fileChanges ? handleCommitAndPush : undefined}
+        commitState={commitState}
+      />
     </div>
   );
 };

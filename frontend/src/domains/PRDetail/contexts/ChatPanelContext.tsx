@@ -1,5 +1,9 @@
 import { createContext, useContext, useState, type ReactNode } from 'react';
-import type { ClaudeMessage, ConnectionStatus } from '../hooks';
+import type {
+  ClaudeMessage,
+  ConnectionStatus,
+  FileChangesData,
+} from '../hooks';
 import type { ClaudeCommand, ChatSessionSummary } from '@lgtmai/backend/types';
 
 export type ChatPanelMode = 'action-selection' | 'chat' | 'history';
@@ -34,6 +38,7 @@ export interface ChatPanelState {
     | null;
   onResumeSession: ((session: ChatSessionSummary) => void) | null;
   isResumedSession: boolean;
+  fileChanges: FileChangesData | null;
 }
 
 interface ChatPanelContextValue {
@@ -57,6 +62,7 @@ interface ChatPanelContextValue {
     callback: ((session: ChatSessionSummary) => void) | null
   ) => void;
   setIsResumedSession: (isResumed: boolean) => void;
+  setFileChanges: (fileChanges: FileChangesData | null) => void;
 }
 
 const ChatPanelContext = createContext<ChatPanelContextValue | null>(null);
@@ -77,6 +83,7 @@ export const ChatPanelProvider = ({ children }: { children: ReactNode }) => {
     onExecuteAction: null,
     onResumeSession: null,
     isResumedSession: false,
+    fileChanges: null,
   });
 
   const openPanel = (title: string) => {
@@ -143,6 +150,10 @@ export const ChatPanelProvider = ({ children }: { children: ReactNode }) => {
     setState((prev) => ({ ...prev, isResumedSession }));
   };
 
+  const setFileChanges = (fileChanges: FileChangesData | null) => {
+    setState((prev) => ({ ...prev, fileChanges }));
+  };
+
   return (
     <ChatPanelContext.Provider
       value={{
@@ -162,6 +173,7 @@ export const ChatPanelProvider = ({ children }: { children: ReactNode }) => {
         setOnExecuteAction,
         setOnResumeSession,
         setIsResumedSession,
+        setFileChanges,
       }}
     >
       {children}
