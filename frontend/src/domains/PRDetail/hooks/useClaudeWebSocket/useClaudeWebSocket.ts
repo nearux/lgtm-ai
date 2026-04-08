@@ -3,6 +3,7 @@ import type {
   ConnectionStatus,
   ClaudeMessage,
   ApprovalRequest,
+  FileChangesData,
   WsServerMessage,
   ClaudeExecuteOptions,
   CommandPayload,
@@ -15,6 +16,7 @@ const WS_URL = `ws://${window.location.host}/api/claude/execute`;
 export interface UseClaudeWebSocketReturn {
   status: ConnectionStatus;
   messages: ClaudeMessage[];
+  fileChanges: FileChangesData | null;
   pendingApproval: ApprovalRequest | null;
   sessionId: string | null;
   connect: () => void;
@@ -46,6 +48,7 @@ export interface UseClaudeWebSocketReturn {
 export function useClaudeWebSocket(): UseClaudeWebSocketReturn {
   const [status, setStatus] = useState<ConnectionStatus>('disconnected');
   const [messages, setMessages] = useState<ClaudeMessage[]>([]);
+  const [fileChanges, setFileChanges] = useState<FileChangesData | null>(null);
   const [pendingApproval, setPendingApproval] =
     useState<ApprovalRequest | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -119,6 +122,9 @@ export function useClaudeWebSocket(): UseClaudeWebSocketReturn {
           input: data.input,
           type: 'plan',
         });
+        break;
+      case 'file_changes':
+        setFileChanges(data.changes);
         break;
     }
   };
@@ -232,6 +238,7 @@ export function useClaudeWebSocket(): UseClaudeWebSocketReturn {
 
   const clearMessages = () => {
     setMessages([]);
+    setFileChanges(null);
   };
 
   const addUserMessage = (content: string) => {
@@ -245,6 +252,7 @@ export function useClaudeWebSocket(): UseClaudeWebSocketReturn {
   return {
     status,
     messages,
+    fileChanges,
     pendingApproval,
     sessionId,
     connect,

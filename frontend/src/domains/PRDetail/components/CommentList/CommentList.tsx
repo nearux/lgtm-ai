@@ -134,9 +134,10 @@ export const CommentList = ({
         type: 'command',
         command: actionId as 'validate' | 'fix' | 'explain' | 'custom',
         context: {
-          type: 'comment',
+          type: 'comment' as const,
           author: target.author,
           body: target.body,
+          path: '',
           prMeta,
         },
         ...(customPrompt ? { customPrompt } : {}),

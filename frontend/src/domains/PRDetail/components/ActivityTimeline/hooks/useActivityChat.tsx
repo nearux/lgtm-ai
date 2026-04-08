@@ -86,14 +86,22 @@ export function useActivityChat({
       {
         type: 'command',
         command: actionId as 'validate' | 'fix' | 'explain' | 'custom',
-        context: {
-          type: target.type,
-          author: target.author,
-          body: target.body,
-          ...(target.path ? { path: target.path } : {}),
-          ...(target.diffHunk ? { diffHunk: target.diffHunk } : {}),
-          prMeta,
-        },
+        context:
+          target.type === 'comment'
+            ? {
+                type: 'comment' as const,
+                author: target.author,
+                body: target.body,
+                path: target.path ?? '',
+                diffHunk: target.diffHunk,
+                prMeta,
+              }
+            : {
+                type: 'review' as const,
+                author: target.author,
+                body: target.body,
+                prMeta,
+              },
         ...(customPrompt ? { customPrompt } : {}),
       },
       workingDir,

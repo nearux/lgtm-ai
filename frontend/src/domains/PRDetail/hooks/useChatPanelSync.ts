@@ -17,6 +17,7 @@ export function useChatPanelSync(workingDir: string) {
     setOnSendFollowUp,
     setClaudeSessionId,
     setClearMessages,
+    setFileChanges,
   } = useChatPanel();
 
   const ws = useClaudeWebSocket();
@@ -74,6 +75,11 @@ export function useChatPanelSync(workingDir: string) {
       setClaudeSessionId(ws.sessionId);
     }
   }, [ws.sessionId, setClaudeSessionId]);
+
+  // Sync fileChanges
+  useEffect(() => {
+    setFileChanges(ws.fileChanges);
+  }, [ws.fileChanges, setFileChanges]);
 
   // Set up follow-up handler - use context's claudeSessionId (supports resumed sessions)
   useEffect(() => {
