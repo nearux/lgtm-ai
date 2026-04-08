@@ -1,29 +1,31 @@
-export function getPageNumbers(
-  current: number,
-  hasMore: boolean
-): (number | 'ellipsis')[] {
-  const maxPage = hasMore ? current + 1 : current;
-  const pages: (number | 'ellipsis')[] = [];
+const GROUP_SIZE = 10;
 
-  if (maxPage <= 7) {
-    for (let i = 1; i <= maxPage; i++) pages.push(i);
-  } else {
-    pages.push(1);
+export function getPageNumbers(current: number, totalPages: number): number[] {
+  const groupIndex = Math.floor((current - 1) / GROUP_SIZE);
+  const start = groupIndex * GROUP_SIZE + 1;
+  const end = Math.min(start + GROUP_SIZE - 1, totalPages);
 
-    if (current <= 3) {
-      for (let i = 2; i <= 5; i++) pages.push(i);
-      pages.push('ellipsis');
-      pages.push(maxPage);
-    } else if (current >= maxPage - 2) {
-      pages.push('ellipsis');
-      for (let i = maxPage - 4; i <= maxPage; i++) pages.push(i);
-    } else {
-      pages.push('ellipsis');
-      for (let i = current - 1; i <= current + 1; i++) pages.push(i);
-      pages.push('ellipsis');
-      pages.push(maxPage);
-    }
-  }
-
+  const pages: number[] = [];
+  for (let i = start; i <= end; i++) pages.push(i);
   return pages;
+}
+
+interface PageGroup {
+  hasPrevGroup: boolean;
+  hasNextGroup: boolean;
+  prevGroupPage: number;
+  nextGroupPage: number;
+}
+
+export function getPageGroup(current: number, totalPages: number): PageGroup {
+  const groupIndex = Math.floor((current - 1) / GROUP_SIZE);
+  const groupStart = groupIndex * GROUP_SIZE + 1;
+  const groupEnd = Math.min(groupStart + GROUP_SIZE - 1, totalPages);
+
+  return {
+    hasPrevGroup: groupStart > 1,
+    hasNextGroup: groupEnd < totalPages,
+    prevGroupPage: groupStart - 1,
+    nextGroupPage: groupEnd + 1,
+  };
 }

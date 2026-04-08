@@ -1,5 +1,5 @@
 import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { AsyncBoundary, Select, Tabs } from '@/shared/components';
+import { AsyncBoundary, Select, Spinner, Tabs } from '@/shared/components';
 import { usePRListParams } from './hooks/usePRListParams';
 import { useQuery } from '@tanstack/react-query';
 import { projectsQuery } from '@/shared/apis';
@@ -72,7 +72,10 @@ export const PRListPage = () => {
             <Tabs options={stateOptions} value={state} onChange={setState} />
           </div>
 
-          <AsyncBoundary key={`${state}-${selectedOrigin}`}>
+          <AsyncBoundary
+            pending={<Spinner className="mt-40 w-full" />}
+            key={`${state}-${selectedOrigin}`}
+          >
             <PRTable
               projectId={projectId}
               origin={selectedOrigin}

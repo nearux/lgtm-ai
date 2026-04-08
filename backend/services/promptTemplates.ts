@@ -6,8 +6,6 @@
  * the assembly logic in promptBuilder.ts.
  */
 
-// ── System prompt ───────────────────────────────────────────────────
-
 export interface SystemPromptParams {
   repoOwnerName: string;
   number: number;
@@ -80,8 +78,6 @@ export function reviewCommentSection(p: ReviewCommentParams): string {
 
   return lines.join('\n');
 }
-
-// ── User prompts (per command) ──────────────────────────────────────
 
 export function explainPrompt(reviewComment: string): string {
   return `A reviewer left the following comment. Explain what the reviewer is pointing out and why it matters.

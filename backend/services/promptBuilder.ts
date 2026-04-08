@@ -1,3 +1,4 @@
+import HttpStatus from 'http-status';
 import type {
   CommandContext,
   ClaudeCommand,
@@ -5,6 +6,7 @@ import type {
   CommentCommandContext,
   PRCommandContext,
 } from '../types/claude.js';
+import { AppError } from '../errors/AppError.js';
 import * as templates from './promptTemplates.js';
 
 export function buildSystemPrompt(context: CommandContext): string {
@@ -56,7 +58,10 @@ function buildReviewCommentUserPrompt(
   customPrompt?: string
 ): string {
   if (context.type === 'comment' && !context.path) {
-    throw new Error('path is required for comment context');
+    throw new AppError(
+      'path is required for comment context',
+      HttpStatus.BAD_REQUEST
+    );
   }
 
   const reviewComment = templates.reviewCommentSection(context);
@@ -70,11 +75,14 @@ function buildReviewCommentUserPrompt(
       return templates.validatePrompt(reviewComment);
     case 'custom': {
       if (!customPrompt || customPrompt.trim() === '') {
-        throw new Error('customPrompt is required for custom command');
+        throw new AppError(
+          'customPrompt is required for custom command',
+          HttpStatus.BAD_REQUEST
+        );
       }
       return templates.customPrompt(customPrompt, reviewComment);
     }
     default:
-      throw new Error(`Unknown command: ${command}`);
+      throw new AppError(`Unknown command: ${command}`, HttpStatus.BAD_REQUEST);
   }
 }

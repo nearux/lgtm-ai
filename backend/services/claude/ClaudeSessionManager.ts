@@ -7,6 +7,7 @@ import {
   createChatSessionFromExecution,
   markChatSessionAsUsed,
 } from '../chatSessions.js';
+import { getFileChanges } from '../git.js';
 
 export class ClaudeSessionManager {
   private processes = new Map<string, ClaudeProcess>();
@@ -110,6 +111,24 @@ export class ClaudeSessionManager {
     proc.on('done', (exitCode, result, sessionId) => {
       sender.send({ type: 'done', requestId, exitCode, result, sessionId });
       this.processes.delete(requestId);
+
+      if (commandMeta?.command === 'fix') {
+        getFileChanges(workingDir)
+          .then((changes) => {
+            sender.send({ type: 'file_changes', requestId, changes });
+          })
+          .catch((err) => {
+            console.error(
+              '[ClaudeSessionManager] Failed to collect file changes:',
+              err
+            );
+            sender.send({
+              type: 'error',
+              requestId,
+              message: `Failed to collect file changes: ${err instanceof Error ? err.message : String(err)}`,
+            });
+          });
+      }
     });
     proc.on('error', (message) => {
       sender.send({ type: 'error', requestId, message });
