@@ -18,30 +18,38 @@ describe('pullRequests service', () => {
   });
 
   describe('fetchPRList', () => {
-    const mockApiPRListData = [
+    const mockGraphQLNodes = [
       {
         number: 1,
         title: 'Test PR',
         body: 'Test body',
-        comments: 3,
-        review_comments: 5,
-        assignees: [{ id: 1, login: 'user1', name: 'User One', type: 'User' }],
-        user: { id: 2, login: 'author1', name: 'Author One', type: 'User' },
-        created_at: '2024-01-01T00:00:00Z',
-        updated_at: '2024-01-02T00:00:00Z',
-        state: 'open',
+        state: 'OPEN',
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-02T00:00:00Z',
+        comments: { totalCount: 3 },
+        reviewThreads: { totalCount: 5 },
+        assignees: { nodes: [{ id: 'U_1', login: 'user1', name: 'User One' }] },
+        author: {
+          id: 'U_2',
+          login: 'author1',
+          name: 'Author One',
+          avatarUrl: 'https://avatars.githubusercontent.com/u/2',
+        },
       },
       {
         number: 2,
         title: 'Another PR',
         body: null,
-        comments: 0,
-        review_comments: 2,
-        assignees: [],
-        user: { id: 3, login: 'author2', type: 'Bot' },
-        created_at: '2024-01-03T00:00:00Z',
-        updated_at: '2024-01-04T00:00:00Z',
-        state: 'closed',
+        state: 'CLOSED',
+        createdAt: '2024-01-03T00:00:00Z',
+        updatedAt: '2024-01-04T00:00:00Z',
+        comments: { totalCount: 0 },
+        reviewThreads: { totalCount: 2 },
+        assignees: { nodes: [] },
+        author: {
+          login: 'author2',
+          avatarUrl: 'https://avatars.githubusercontent.com/u/3',
+        },
       },
     ];
 
@@ -52,16 +60,16 @@ describe('pullRequests service', () => {
         body: 'Test body',
         commentsCount: 3,
         reviewCommentsCount: 5,
-        assignees: [{ id: '1', login: 'user1', name: 'User One' }],
+        assignees: [{ id: 'U_1', login: 'user1', name: 'User One' }],
         author: {
-          id: '2',
+          id: 'U_2',
           login: 'author1',
           name: 'Author One',
           avatarUrl: 'https://avatars.githubusercontent.com/u/2',
         },
         createdAt: '2024-01-01T00:00:00Z',
         updatedAt: '2024-01-02T00:00:00Z',
-        state: 'open',
+        state: 'OPEN',
       },
       {
         number: 2,
@@ -71,138 +79,86 @@ describe('pullRequests service', () => {
         reviewCommentsCount: 2,
         assignees: [],
         author: {
-          id: '3',
+          id: 'author2',
           login: 'author2',
           name: 'author2',
           avatarUrl: 'https://avatars.githubusercontent.com/u/3',
-          is_bot: true,
         },
         createdAt: '2024-01-03T00:00:00Z',
         updatedAt: '2024-01-04T00:00:00Z',
-        state: 'closed',
+        state: 'CLOSED',
       },
     ];
 
-    const mockGraphQLResponse = (totalCount: number) =>
-      JSON.stringify({
-        data: {
-          repository: { pullRequests: { totalCount } },
-        },
+    function mockGraphQLDataResponse(
+      totalCount: number,
+      nodes = mockGraphQLNodes
+    ) {
+      mockExecAsync.mockResolvedValueOnce({
+        stdout: JSON.stringify({
+          data: {
+            repository: {
+              pullRequests: { totalCount, nodes },
+            },
+          },
+        }),
+        stderr: '',
       });
-
-    function mockPRListAPI(totalCount: number) {
-      mockExecAsync
-        .mockResolvedValueOnce({
-          stdout: JSON.stringify(mockApiPRListData),
-          stderr: '',
-        })
-        .mockResolvedValueOnce({
-          stdout: mockGraphQLResponse(totalCount),
-          stderr: '',
-        });
     }
 
-    it('should successfully fetch PR list', async () => {
-      mockPRListAPI(2);
+    function mockGraphQLCursorResponse(endCursor: string) {
+      mockExecAsync.mockResolvedValueOnce({
+        stdout: JSON.stringify({
+          data: {
+            repository: {
+              pullRequests: { pageInfo: { endCursor } },
+            },
+          },
+        }),
+        stderr: '',
+      });
+    }
+
+    it('should successfully fetch PR list (page 1 — single GraphQL call)', async () => {
+      mockGraphQLDataResponse(2);
 
       const result = await fetchPRList('owner/repo');
 
       expect(result).toEqual({ items: mockPRListData, lastPage: 1 });
+      expect(mockExecAsync).toHaveBeenCalledTimes(1);
       expect(mockExecAsync).toHaveBeenCalledWith('gh', [
         'api',
-        'repos/owner/repo/pulls?per_page=100&page=1&state=open',
+        'graphql',
+        '-f',
+        expect.stringContaining('pullRequests(first: 100'),
       ]);
-      expect(mockExecAsync).toHaveBeenCalledTimes(1);
     });
 
-    it('should default counts to 0 when GitHub fields are missing', async () => {
-      const withoutCountFields = [
-        {
-          number: 3,
-          title: 'No counts PR',
-          body: 'Body',
-          assignees: [],
-          user: { id: 4, login: 'author3', name: 'Author Three', type: 'User' },
-          created_at: '2024-01-05T00:00:00Z',
-          updated_at: '2024-01-06T00:00:00Z',
-          state: 'open',
-        },
-      ];
+    it('should fetch with cursor for page 2 (two GraphQL calls)', async () => {
+      mockGraphQLCursorResponse('cursor_abc');
+      mockGraphQLDataResponse(150);
 
-      mockExecAsync.mockResolvedValueOnce({
-        stdout: JSON.stringify(withoutCountFields),
-        stderr: '',
-      });
-      mockExecAsync.mockResolvedValueOnce({
-        stdout: JSON.stringify({ comments: 9, review_comments: 4 }),
-        stderr: '',
-      });
+      await fetchPRList('owner/repo', { page: 2, limit: 50 });
 
-      const result = await fetchPRList('owner/repo');
-
-      expect(result[0].commentsCount).toBe(9);
-      expect(result[0].reviewCommentsCount).toBe(4);
-    });
-
-    it('should default counts to 0 when GitHub fields are null', async () => {
-      const nullCountFields = [
-        {
-          number: 4,
-          title: 'Null counts PR',
-          body: 'Body',
-          comments: null,
-          review_comments: null,
-          assignees: [],
-          user: { id: 5, login: 'author4', name: 'Author Four', type: 'User' },
-          created_at: '2024-01-07T00:00:00Z',
-          updated_at: '2024-01-08T00:00:00Z',
-          state: 'open',
-        },
-      ];
-
-      mockExecAsync.mockResolvedValueOnce({
-        stdout: JSON.stringify(nullCountFields),
-        stderr: '',
-      });
-      mockExecAsync.mockResolvedValueOnce({
-        stdout: JSON.stringify({ comments: 6, review_comments: 2 }),
-        stderr: '',
-      });
-
-      const result = await fetchPRList('owner/repo');
-
-      expect(result[0].commentsCount).toBe(6);
-      expect(result[0].reviewCommentsCount).toBe(2);
-    });
-
-    it('should fallback to 0 when detail lookup for missing counts fails', async () => {
-      const withoutCountFields = [
-        {
-          number: 5,
-          title: 'Missing counts PR',
-          body: 'Body',
-          assignees: [],
-          user: { id: 6, login: 'author5', name: 'Author Five', type: 'User' },
-          created_at: '2024-01-09T00:00:00Z',
-          updated_at: '2024-01-10T00:00:00Z',
-          state: 'open',
-        },
-      ];
-
-      mockExecAsync.mockResolvedValueOnce({
-        stdout: JSON.stringify(withoutCountFields),
-        stderr: '',
-      });
-      mockExecAsync.mockRejectedValueOnce(new Error('detail lookup failed'));
-
-      const result = await fetchPRList('owner/repo');
-
-      expect(result[0].commentsCount).toBe(0);
-      expect(result[0].reviewCommentsCount).toBe(0);
+      expect(mockExecAsync).toHaveBeenCalledTimes(2);
+      // First call: cursor resolution for skip=50
+      expect(mockExecAsync).toHaveBeenNthCalledWith(1, 'gh', [
+        'api',
+        'graphql',
+        '-f',
+        expect.stringContaining('pullRequests(first: 50'),
+      ]);
+      // Second call: data fetch with cursor
+      expect(mockExecAsync).toHaveBeenNthCalledWith(2, 'gh', [
+        'api',
+        'graphql',
+        '-f',
+        expect.stringContaining('after: "cursor_abc"'),
+      ]);
     });
 
     it('should calculate lastPage from totalCount', async () => {
-      mockPRListAPI(250);
+      mockGraphQLDataResponse(250);
 
       const result = await fetchPRList('owner/repo', { limit: 50 });
 
@@ -210,52 +166,31 @@ describe('pullRequests service', () => {
     });
 
     it('should return lastPage 1 when totalCount is 0', async () => {
-      mockExecAsync
-        .mockResolvedValueOnce({
-          stdout: JSON.stringify([]),
-          stderr: '',
-        })
-        .mockResolvedValueOnce({
-          stdout: mockGraphQLResponse(0),
-          stderr: '',
-        });
+      mockGraphQLDataResponse(0, []);
 
       const result = await fetchPRList('owner/repo');
 
       expect(result).toEqual({ items: [], lastPage: 1 });
     });
 
-    it('should pass page and limit options', async () => {
-      mockPRListAPI(100);
+    it('should pass state=open via GraphQL states filter', async () => {
+      mockGraphQLDataResponse(2);
 
-      await fetchPRList('owner/repo', { page: 2, limit: 50 });
-
-      expect(mockExecAsync).toHaveBeenCalledWith('gh', [
-        'api',
-        'repos/owner/repo/pulls?per_page=50&page=2&state=open',
-      ]);
-    });
-
-    it('should clamp invalid page and limit values', async () => {
-      mockPRListAPI(2);
-
-      await fetchPRList('owner/repo', { page: 0, limit: 250 });
+      await fetchPRList('owner/repo', { state: 'open' });
 
       expect(mockExecAsync).toHaveBeenCalledWith('gh', [
         'api',
-        'repos/owner/repo/pulls?per_page=100&page=1&state=open',
+        'graphql',
+        '-f',
+        expect.stringContaining('states: [OPEN]'),
       ]);
     });
 
-    it('should pass state=closed option and query CLOSED+MERGED via GraphQL', async () => {
-      mockPRListAPI(2);
+    it('should pass state=closed via GraphQL states filter', async () => {
+      mockGraphQLDataResponse(2);
 
       await fetchPRList('owner/repo', { state: 'closed' });
 
-      expect(mockExecAsync).toHaveBeenCalledWith('gh', [
-        'api',
-        'repos/owner/repo/pulls?per_page=100&page=1&state=closed',
-      ]);
       expect(mockExecAsync).toHaveBeenCalledWith('gh', [
         'api',
         'graphql',
@@ -264,15 +199,11 @@ describe('pullRequests service', () => {
       ]);
     });
 
-    it('should pass state=all option and query all states via GraphQL', async () => {
-      mockPRListAPI(2);
+    it('should pass state=all via GraphQL states filter', async () => {
+      mockGraphQLDataResponse(2);
 
       await fetchPRList('owner/repo', { state: 'all' });
 
-      expect(mockExecAsync).toHaveBeenCalledWith('gh', [
-        'api',
-        'repos/owner/repo/pulls?per_page=100&page=1&state=all',
-      ]);
       expect(mockExecAsync).toHaveBeenCalledWith('gh', [
         'api',
         'graphql',
@@ -282,30 +213,31 @@ describe('pullRequests service', () => {
     });
 
     it('should default to state=open for invalid state value', async () => {
-      mockPRListAPI(2);
+      mockGraphQLDataResponse(2);
 
       await fetchPRList('owner/repo', { state: 'invalid' as never });
 
       expect(mockExecAsync).toHaveBeenCalledWith('gh', [
         'api',
-        'repos/owner/repo/pulls?per_page=100&page=1&state=open',
+        'graphql',
+        '-f',
+        expect.stringContaining('states: [OPEN]'),
       ]);
     });
 
-    it('should return empty items when no PRs exist', async () => {
-      mockExecAsync
-        .mockResolvedValueOnce({
-          stdout: JSON.stringify([]),
-          stderr: '',
-        })
-        .mockResolvedValueOnce({
-          stdout: mockGraphQLResponse(0),
-          stderr: '',
-        });
+    it('should clamp invalid page and limit values', async () => {
+      mockGraphQLDataResponse(2);
 
-      const result = await fetchPRList('owner/repo');
+      await fetchPRList('owner/repo', { page: 0, limit: 250 });
 
-      expect(result).toEqual({ items: [], lastPage: 1 });
+      // limit clamped to 100, page clamped to 1 → no cursor call
+      expect(mockExecAsync).toHaveBeenCalledTimes(1);
+      expect(mockExecAsync).toHaveBeenCalledWith('gh', [
+        'api',
+        'graphql',
+        '-f',
+        expect.stringContaining('pullRequests(first: 100'),
+      ]);
     });
 
     it('should throw SERVICE_UNAVAILABLE error for authentication failure', async () => {
@@ -320,7 +252,7 @@ describe('pullRequests service', () => {
       });
     });
 
-    it('should throw FORBIDDEN error for not found (private repo access)', async () => {
+    it('should throw FORBIDDEN error for not found', async () => {
       mockExecAsync.mockRejectedValue(new Error('Not Found'));
 
       await expect(fetchPRList('owner/repo')).rejects.toMatchObject({
@@ -344,6 +276,39 @@ describe('pullRequests service', () => {
         message: 'Invalid repository name',
         statusCode: 400,
       });
+    });
+
+    it('should throw INTERNAL_SERVER_ERROR when GraphQL response has errors', async () => {
+      mockExecAsync.mockResolvedValueOnce({
+        stdout: JSON.stringify({
+          errors: [{ message: 'Field does not exist' }],
+        }),
+        stderr: '',
+      });
+
+      await expect(fetchPRList('owner/repo')).rejects.toMatchObject({
+        message: 'Failed to fetch PR data from GitHub',
+        statusCode: 500,
+      });
+    });
+
+    it('should return empty result when page is out of bounds (cursor is null)', async () => {
+      // Cursor resolution returns null when skip >= totalCount
+      mockExecAsync.mockResolvedValueOnce({
+        stdout: JSON.stringify({
+          data: {
+            repository: {
+              pullRequests: { pageInfo: { endCursor: null } },
+            },
+          },
+        }),
+        stderr: '',
+      });
+
+      const result = await fetchPRList('owner/repo', { page: 999, limit: 10 });
+
+      expect(result).toEqual({ items: [], lastPage: 1 });
+      expect(mockExecAsync).toHaveBeenCalledTimes(1); // only cursor call, no data call
     });
   });
 

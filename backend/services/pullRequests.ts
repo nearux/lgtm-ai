@@ -3,15 +3,15 @@ import { promisify } from 'node:util';
 import HttpStatus from 'http-status';
 import { clamp } from 'remeda';
 import { AppError } from '../errors/AppError.js';
-import { batchAsync } from '../utils/batchAsync.js';
 import type {
   PaginatedPRList,
   PRDetail,
   PRState,
   CheckoutPRBranchResult,
-  GitHubPullRequest,
   GhPRDetail,
   GhReviewInlineComment,
+  GraphQLPRListResponse,
+  GraphQLCursorResponse,
 } from '../types/pullRequests.js';
 import { PRListItemDto } from '../dtos/pullRequestsDto.js';
 import { PRDetailDto } from '../dtos/prDetailDto.js';
@@ -61,12 +61,13 @@ const GRAPHQL_PR_STATES: Record<PRState, string> = {
   all: 'OPEN, CLOSED, MERGED',
 };
 
-async function fetchPRTotalCount(
+async function resolvePageCursor(
   repoOwnerName: string,
-  state: PRState
-): Promise<number> {
+  state: PRState,
+  skip: number
+): Promise<string | null> {
   const [owner, name] = repoOwnerName.split('/');
-  const query = `query { repository(owner: "${owner}", name: "${name}") { pullRequests(states: [${GRAPHQL_PR_STATES[state]}]) { totalCount } } }`;
+  const query = `query { repository(owner: "${owner}", name: "${name}") { pullRequests(first: ${skip}, states: [${GRAPHQL_PR_STATES[state]}]) { pageInfo { endCursor } } } }`;
 
   const { stdout } = await execFileAsync('gh', [
     'api',
@@ -74,21 +75,74 @@ async function fetchPRTotalCount(
     '-f',
     `query=${query}`,
   ]);
-  const result = JSON.parse(stdout) as {
-    data?: { repository: { pullRequests: { totalCount: number } } };
-    errors?: { message: string }[];
-  };
+  const result = JSON.parse(stdout) as GraphQLCursorResponse;
 
   if (result.errors || !result.data) {
     const message = result.errors?.[0]?.message ?? 'Unknown GraphQL error';
     throw new Error(`GraphQL query failed: ${message}`);
   }
 
-  return result.data.repository.pullRequests.totalCount;
+  return result.data.repository.pullRequests.pageInfo.endCursor;
+}
+
+async function fetchPRListGraphQL(
+  repoOwnerName: string,
+  state: PRState,
+  limit: number,
+  cursor: string | null
+) {
+  const [owner, name] = repoOwnerName.split('/');
+  // Cursors from GitHub GraphQL are base64-encoded opaque strings.
+  // Validate to prevent query injection if the value is ever unexpected.
+  if (cursor !== null && !/^[A-Za-z0-9+/=_-]+$/.test(cursor)) {
+    throw new Error('Invalid cursor format');
+  }
+  const afterClause = cursor ? `, after: "${cursor}"` : '';
+  const query = `query {
+  repository(owner: "${owner}", name: "${name}") {
+    pullRequests(first: ${limit}${afterClause}, states: [${GRAPHQL_PR_STATES[state]}]) {
+      totalCount
+      nodes {
+        number
+        title
+        body
+        state
+        createdAt
+        updatedAt
+        comments { totalCount }
+        reviewThreads { totalCount }
+        assignees(first: 20) {
+          nodes { id login name }
+        }
+        author {
+          login
+          avatarUrl
+          ... on User { id name }
+          ... on Bot { id }
+        }
+      }
+    }
+  }
+}`;
+
+  const { stdout } = await execFileAsync('gh', [
+    'api',
+    'graphql',
+    '-f',
+    `query=${query}`,
+  ]);
+  const result = JSON.parse(stdout) as GraphQLPRListResponse;
+
+  if (result.errors || !result.data) {
+    const message = result.errors?.[0]?.message ?? 'Unknown GraphQL error';
+    throw new Error(`GraphQL query failed: ${message}`);
+  }
+
+  return result.data.repository.pullRequests;
 }
 
 /**
- * Fetch PR list using GitHub API via gh
+ * Fetch PR list using GitHub GraphQL API via gh
  */
 export async function fetchPRList(
   repoOwnerName: string,
@@ -101,16 +155,30 @@ export async function fetchPRList(
     max: MAX_LIMIT,
   });
   const state = normalizePRState(options.state);
-  const apiPath = `repos/${repoOwnerName}/pulls?per_page=${limit}&page=${page}&state=${state}`;
-
-  let prsStdout: string;
-  let totalCount: number;
 
   try {
-    [{ stdout: prsStdout }, totalCount] = await Promise.all([
-      execFileAsync('gh', ['api', apiPath]),
-      fetchPRTotalCount(repoOwnerName, state),
-    ]);
+    let cursor: string | null = null;
+    if (page > 1) {
+      const skip = (page - 1) * limit;
+      cursor = await resolvePageCursor(repoOwnerName, state, skip);
+      if (cursor === null) {
+        return { items: [], lastPage: 1 };
+      }
+    }
+
+    const { totalCount, nodes } = await fetchPRListGraphQL(
+      repoOwnerName,
+      state,
+      limit,
+      cursor
+    );
+
+    const lastPage = Math.max(1, Math.ceil(totalCount / limit));
+
+    return {
+      items: nodes.map((node) => PRListItemDto.fromGraphQL(node)),
+      lastPage,
+    };
   } catch (error) {
     const errorMessage = getErrorMessage(error).toLowerCase();
     if (errorMessage.includes('authentication')) {
@@ -135,62 +203,6 @@ export async function fetchPRList(
       error
     );
   }
-
-  const prs = JSON.parse(prsStdout) as GitHubPullRequest[];
-  const prsWithCounts = await enrichMissingConversationCounts(
-    repoOwnerName,
-    prs
-  );
-  const lastPage = Math.max(1, Math.ceil(totalCount / limit));
-
-  return {
-    items: prsWithCounts.map((pr) => PRListItemDto.fromGitHub(pr)),
-    lastPage,
-  };
-}
-
-const ENRICH_BATCH_SIZE = 10;
-
-async function enrichMissingConversationCounts(
-  repoOwnerName: string,
-  prs: GitHubPullRequest[]
-): Promise<GitHubPullRequest[]> {
-  return batchAsync(prs, ENRICH_BATCH_SIZE, async (pr) => {
-    const hasCommentsCount = typeof pr.comments === 'number';
-    const hasReviewCommentsCount = typeof pr.review_comments === 'number';
-
-    if (hasCommentsCount && hasReviewCommentsCount) {
-      return pr;
-    }
-
-    try {
-      const { stdout } = await execFileAsync('gh', [
-        'api',
-        `repos/${repoOwnerName}/pulls/${pr.number}`,
-      ]);
-      const prDetail = JSON.parse(stdout) as {
-        comments?: number | null;
-        review_comments?: number | null;
-      };
-
-      return {
-        ...pr,
-        comments: pr.comments ?? prDetail.comments ?? 0,
-        review_comments: pr.review_comments ?? prDetail.review_comments ?? 0,
-      };
-    } catch (err) {
-      console.error(
-        `[fetchPRList] Failed to fetch conversation counts for PR #${pr.number}:`,
-        err
-      );
-
-      return {
-        ...pr,
-        comments: pr.comments ?? 0,
-        review_comments: pr.review_comments ?? 0,
-      };
-    }
-  });
 }
 
 /**
