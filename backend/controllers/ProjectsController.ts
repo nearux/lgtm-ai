@@ -341,6 +341,10 @@ export class ProjectsController extends Controller {
     @Body() body: CommitAndPushBody
   ): Promise<CommitAndPushResponse> {
     const project = await projectsService.findById(parseUUID(projectId));
-    return gitService.commitAndPush(project.working_dir, body.commitMessage);
+    return gitService.commitAndPush(
+      project.working_dir,
+      body.commitMessage,
+      body.push ?? true
+    );
   }
 }

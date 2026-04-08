@@ -237,7 +237,28 @@ new file mode 100644
       expect(calls).toEqual([
         'add -A',
         'commit -m fix: test',
-        'push',
+        'push origin HEAD',
+        'rev-parse --short HEAD',
+      ]);
+    });
+
+    it('should skip push when push=false', async () => {
+      const calls: string[] = [];
+
+      mockExecFileAsync.mockImplementation((_cmd: string, args: string[]) => {
+        const joined = args.join(' ');
+        calls.push(joined);
+        if (joined.includes('rev-parse'))
+          return Promise.resolve({ stdout: 'abc1234\n', stderr: '' });
+        return Promise.resolve({ stdout: '', stderr: '' });
+      });
+
+      const result = await commitAndPush('/workspace', 'fix: test', false);
+
+      expect(result).toEqual({ success: true, commitHash: 'abc1234' });
+      expect(calls).toEqual([
+        'add -A',
+        'commit -m fix: test',
         'rev-parse --short HEAD',
       ]);
     });
