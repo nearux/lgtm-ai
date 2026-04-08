@@ -25,11 +25,11 @@ export const PRTable = ({
   onPageChange,
 }: Props) => {
   const navigate = useNavigate();
-  const { data: prs } = useSuspenseQuery(
+  const { data } = useSuspenseQuery(
     prsQuery.list(projectId, { state, page, limit, origin })
   );
 
-  const hasMore = prs.length === limit;
+  const { items: prs, lastPage } = data;
 
   const handlePRClick = (pr: PRListItem) => {
     const params = origin ? `?origin=${encodeURIComponent(origin)}` : '';
@@ -109,7 +109,11 @@ export const PRTable = ({
           </tbody>
         </table>
       </div>
-      <Pagination page={page} hasMore={hasMore} onPageChange={onPageChange} />
+      <Pagination
+        page={page}
+        totalPages={lastPage}
+        onPageChange={onPageChange}
+      />
     </div>
   );
 };
