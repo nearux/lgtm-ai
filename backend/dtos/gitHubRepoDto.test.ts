@@ -4,35 +4,31 @@ import { GitHubRepoDto } from './gitHubRepoDto.js';
 describe('GitHubRepoDto.fromRemoteUrl', () => {
   describe('SSH format', () => {
     it('should parse SSH URL', () => {
-      const result = GitHubRepoDto.fromRemoteUrl(
-        'git@github.com:owner/repo.git'
-      );
-      expect(result.owner).toBe('owner');
-      expect(result.repo).toBe('repo');
+      expect(
+        GitHubRepoDto.fromRemoteUrl('git@github.com:owner/repo.git')
+      ).toMatchObject({ owner: 'owner', repo: 'repo' });
     });
   });
 
   describe('HTTPS format', () => {
     it('should parse HTTPS URL', () => {
-      const result = GitHubRepoDto.fromRemoteUrl(
-        'https://github.com/owner/repo.git'
-      );
-      expect(result.owner).toBe('owner');
-      expect(result.repo).toBe('repo');
+      expect(
+        GitHubRepoDto.fromRemoteUrl('https://github.com/owner/repo.git')
+      ).toMatchObject({ owner: 'owner', repo: 'repo' });
     });
   });
 
   describe('Short format', () => {
     it('should parse short URL with colon', () => {
-      const result = GitHubRepoDto.fromRemoteUrl('github.com:owner/repo');
-      expect(result.owner).toBe('owner');
-      expect(result.repo).toBe('repo');
+      expect(
+        GitHubRepoDto.fromRemoteUrl('github.com:owner/repo')
+      ).toMatchObject({ owner: 'owner', repo: 'repo' });
     });
 
     it('should parse short URL with slash', () => {
-      const result = GitHubRepoDto.fromRemoteUrl('github.com/owner/repo');
-      expect(result.owner).toBe('owner');
-      expect(result.repo).toBe('repo');
+      expect(
+        GitHubRepoDto.fromRemoteUrl('github.com/owner/repo')
+      ).toMatchObject({ owner: 'owner', repo: 'repo' });
     });
   });
 
@@ -58,27 +54,21 @@ describe('GitHubRepoDto.fromRemoteUrl', () => {
 
   describe('Edge cases', () => {
     it('should handle URL with username in HTTPS', () => {
-      const result = GitHubRepoDto.fromRemoteUrl(
-        'https://user@github.com/owner/repo.git'
-      );
-      expect(result.owner).toBe('owner');
-      expect(result.repo).toBe('repo');
+      expect(
+        GitHubRepoDto.fromRemoteUrl('https://user@github.com/owner/repo.git')
+      ).toMatchObject({ owner: 'owner', repo: 'repo' });
     });
 
     it('should handle repo names with dashes and underscores', () => {
-      const result = GitHubRepoDto.fromRemoteUrl(
-        'git@github.com:my-org/my_repo-v2.git'
-      );
-      expect(result.owner).toBe('my-org');
-      expect(result.repo).toBe('my_repo-v2');
+      expect(
+        GitHubRepoDto.fromRemoteUrl('git@github.com:my-org/my_repo-v2.git')
+      ).toMatchObject({ owner: 'my-org', repo: 'my_repo-v2' });
     });
 
     it('should handle repo names with dots', () => {
-      const result = GitHubRepoDto.fromRemoteUrl(
-        'https://github.com/owner/repo.name.git'
-      );
-      expect(result.owner).toBe('owner');
-      expect(result.repo).toBe('repo.name');
+      expect(
+        GitHubRepoDto.fromRemoteUrl('https://github.com/owner/repo.name.git')
+      ).toMatchObject({ owner: 'owner', repo: 'repo.name' });
     });
   });
 });
