@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, MessageCircle } from 'lucide-react';
 import { formatDate } from '@/shared/utils';
 import type { PRDetail } from '@lgtmai/backend/types';
 
@@ -79,6 +79,11 @@ export const PRHeader = ({
               {pr.state}
             </span>
             <span>Created {formatDate(pr.createdAt)}</span>
+            <span className="flex items-center gap-1" title="Comments">
+              <MessageCircle className="h-4 w-4" />
+              {pr.comments.length +
+                pr.reviews.reduce((sum, r) => sum + r.inlineComments.length, 0)}
+            </span>
           </div>
         </div>
       </div>

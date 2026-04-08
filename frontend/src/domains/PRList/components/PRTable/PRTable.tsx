@@ -6,6 +6,7 @@ import { useSuspenseQuery } from '@tanstack/react-query';
 import { prsQuery } from '@/shared/apis';
 import { useNavigate } from 'react-router-dom';
 import { Spinner } from '@/shared/components';
+import { MessageCircle } from 'lucide-react';
 
 interface Props {
   projectId: string;
@@ -64,14 +65,17 @@ export const PRTable = ({
               <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">
                 Title
               </th>
-              <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">
+              <th className="px-6 py-4 text-center text-sm font-medium text-gray-500">
                 Author
               </th>
-              <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">
+              <th className="px-6 py-4 text-center text-sm font-medium text-gray-500">
                 Status
               </th>
-              <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">
+              <th className="px-6 py-4 text-center text-sm font-medium text-gray-500">
                 Created
+              </th>
+              <th className="px-6 py-4 text-center text-sm font-medium text-gray-500">
+                Comments
               </th>
             </tr>
           </thead>
@@ -101,8 +105,14 @@ export const PRTable = ({
                 <td className="px-6 py-4">
                   <StatusBadge status={pr.state} />
                 </td>
-                <td className="flex min-w-max px-6 py-4 text-sm text-gray-500">
+                <td className="px-6 py-4 text-sm whitespace-nowrap text-gray-500">
                   {formatDate(pr.createdAt)}
+                </td>
+                <td className="px-6 py-4 text-center">
+                  <span className="inline-flex items-center gap-1 text-sm text-gray-500">
+                    <MessageCircle className="h-4 w-4" />
+                    {pr.commentsCount + pr.reviewCommentsCount}
+                  </span>
                 </td>
               </tr>
             ))}
