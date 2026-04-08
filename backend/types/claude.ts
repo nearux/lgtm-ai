@@ -37,7 +37,7 @@ export interface CommentCommandContext extends BaseCommandContext {
   type: 'comment';
   author: string;
   body: string;
-  path: string;
+  path?: string;
   diffHunk?: string;
 }
 
