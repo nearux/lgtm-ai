@@ -56,27 +56,37 @@ function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-const GRAPHQL_PR_STATES: Record<PRState, string> = {
-  open: 'OPEN',
-  closed: 'CLOSED, MERGED',
-  all: 'OPEN, CLOSED, MERGED',
+const GRAPHQL_PR_STATES: Record<PRState, string[]> = {
+  open: ['OPEN'],
+  closed: ['CLOSED', 'MERGED'],
+  all: ['OPEN', 'CLOSED', 'MERGED'],
 };
 
-// owner/name are safe to interpolate here because repoOwnerName is
-// validated by validateRepoOwnerName() before this function is called.
+function statesArgs(state: PRState): string[] {
+  return GRAPHQL_PR_STATES[state].flatMap((s) => ['-f', `states[]=${s}`]);
+}
+
+// Assumes repoOwnerName has been validated by validateRepoOwnerName() before calling.
 async function resolvePageCursor(
   repoOwnerName: string,
   state: PRState,
   skip: number
 ): Promise<string | null> {
   const [owner, name] = repoOwnerName.split('/');
-  const query = `query { repository(owner: "${owner}", name: "${name}") { pullRequests(first: ${skip}, states: [${GRAPHQL_PR_STATES[state]}]) { pageInfo { endCursor } } } }`;
+  const query = `query($owner: String!, $name: String!, $skip: Int!, $states: [PullRequestState!]!) { repository(owner: $owner, name: $name) { pullRequests(first: $skip, states: $states) { pageInfo { endCursor } } } }`;
 
   const { stdout } = await execFileAsync('gh', [
     'api',
     'graphql',
     '-f',
     `query=${query}`,
+    '-f',
+    `owner=${owner}`,
+    '-f',
+    `name=${name}`,
+    '-F',
+    `skip=${skip}`,
+    ...statesArgs(state),
   ]);
   const result = JSON.parse(stdout) as GraphQLCursorResponse;
 
@@ -95,15 +105,9 @@ async function fetchPRListGraphQL(
   cursor: string | null
 ) {
   const [owner, name] = repoOwnerName.split('/');
-  // Cursors from GitHub GraphQL are base64-encoded opaque strings.
-  // Validate to prevent query injection if the value is ever unexpected.
-  if (cursor !== null && !/^[A-Za-z0-9+/=_-]+$/.test(cursor)) {
-    throw new Error('Invalid cursor format');
-  }
-  const afterClause = cursor ? `, after: "${cursor}"` : '';
-  const query = `query {
-  repository(owner: "${owner}", name: "${name}") {
-    pullRequests(first: ${limit}${afterClause}, states: [${GRAPHQL_PR_STATES[state]}]) {
+  const query = `query($owner: String!, $name: String!, $limit: Int!, $states: [PullRequestState!]!, $after: String) {
+  repository(owner: $owner, name: $name) {
+    pullRequests(first: $limit, states: $states, after: $after) {
       totalCount
       nodes {
         number
@@ -133,6 +137,14 @@ async function fetchPRListGraphQL(
     'graphql',
     '-f',
     `query=${query}`,
+    '-f',
+    `owner=${owner}`,
+    '-f',
+    `name=${name}`,
+    '-F',
+    `limit=${limit}`,
+    ...statesArgs(state),
+    ...(cursor ? ['-f', `after=${cursor}`] : []),
   ]);
   const result = JSON.parse(stdout) as GraphQLPRListResponse;
 
