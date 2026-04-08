@@ -1,23 +1,3 @@
-export type GitHubUser = {
-  id: number;
-  login: string;
-  name?: string | null;
-  type?: string | null;
-};
-
-export type GitHubPullRequest = {
-  number: number;
-  title: string;
-  body?: string | null;
-  comments?: number | null;
-  review_comments?: number | null;
-  assignees: GitHubUser[];
-  user: GitHubUser;
-  created_at: string;
-  updated_at: string;
-  state: string;
-};
-
 export type PRState = 'open' | 'closed' | 'all';
 
 export type GhPRAuthor = {

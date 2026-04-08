@@ -12,6 +12,7 @@ import type {
   GhReviewInlineComment,
   GraphQLPRListResponse,
   GraphQLCursorResponse,
+  GraphQLPRNode,
 } from '../types/pullRequests.js';
 import { PRListItemDto } from '../dtos/pullRequestsDto.js';
 import { PRDetailDto } from '../dtos/prDetailDto.js';
@@ -158,6 +159,9 @@ export async function fetchPRList(
   });
   const state = normalizePRState(options.state);
 
+  let totalCount: number;
+  let nodes: GraphQLPRNode[];
+
   try {
     let cursor: string | null = null;
     if (page > 1) {
@@ -168,19 +172,12 @@ export async function fetchPRList(
       }
     }
 
-    const { totalCount, nodes } = await fetchPRListGraphQL(
+    ({ totalCount, nodes } = await fetchPRListGraphQL(
       repoOwnerName,
       state,
       limit,
       cursor
-    );
-
-    const lastPage = Math.max(1, Math.ceil(totalCount / limit));
-
-    return {
-      items: nodes.map((node) => PRListItemDto.fromGraphQL(node)),
-      lastPage,
-    };
+    ));
   } catch (error) {
     const errorMessage = getErrorMessage(error).toLowerCase();
     if (errorMessage.includes('authentication')) {
@@ -205,6 +202,13 @@ export async function fetchPRList(
       error
     );
   }
+
+  const lastPage = Math.max(1, Math.ceil(totalCount / limit));
+
+  return {
+    items: nodes.map((node) => PRListItemDto.fromGraphQL(node)),
+    lastPage,
+  };
 }
 
 /**

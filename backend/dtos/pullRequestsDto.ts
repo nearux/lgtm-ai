@@ -1,9 +1,5 @@
 import { isString } from 'remeda';
-import type {
-  PRListItem,
-  GitHubPullRequest,
-  GraphQLPRNode,
-} from '../types/pullRequests.js';
+import type { PRListItem, GraphQLPRNode } from '../types/pullRequests.js';
 
 export class PRListItemDto implements PRListItem {
   number: number;
@@ -28,33 +24,6 @@ export class PRListItemDto implements PRListItem {
     this.createdAt = data.createdAt;
     this.updatedAt = data.updatedAt;
     this.state = data.state;
-  }
-
-  static fromGitHub(pr: GitHubPullRequest): PRListItemDto {
-    const authorIsBot = pr.user.type?.toLowerCase() === 'bot';
-
-    return new PRListItemDto({
-      number: pr.number,
-      title: pr.title,
-      body: isString(pr.body) ? pr.body : '',
-      commentsCount: pr.comments ?? 0,
-      reviewCommentsCount: pr.review_comments ?? 0,
-      assignees: pr.assignees.map((user) => ({
-        id: String(user.id),
-        login: user.login,
-        name: user.name ?? user.login,
-      })),
-      author: {
-        id: String(pr.user.id),
-        login: pr.user.login,
-        name: pr.user.name ?? pr.user.login,
-        avatarUrl: `https://avatars.githubusercontent.com/u/${pr.user.id}`,
-        ...(authorIsBot ? { is_bot: true } : {}),
-      },
-      createdAt: pr.created_at,
-      updatedAt: pr.updated_at,
-      state: pr.state,
-    });
   }
 
   static fromGraphQL(node: GraphQLPRNode): PRListItemDto {
