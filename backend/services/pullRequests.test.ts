@@ -130,7 +130,15 @@ describe('pullRequests service', () => {
         'api',
         'graphql',
         '-f',
-        expect.stringContaining('pullRequests(first: 100'),
+        expect.stringContaining('query='),
+        '-f',
+        'owner=owner',
+        '-f',
+        'name=repo',
+        '-F',
+        'limit=100',
+        '-f',
+        'states[]=OPEN',
       ]);
     });
 
@@ -146,14 +154,32 @@ describe('pullRequests service', () => {
         'api',
         'graphql',
         '-f',
-        expect.stringContaining('pullRequests(first: 50'),
+        expect.stringContaining('query='),
+        '-f',
+        'owner=owner',
+        '-f',
+        'name=repo',
+        '-F',
+        'skip=50',
+        '-f',
+        'states[]=OPEN',
       ]);
       // Second call: data fetch with cursor
       expect(mockExecAsync).toHaveBeenNthCalledWith(2, 'gh', [
         'api',
         'graphql',
         '-f',
-        expect.stringContaining('after: "cursor_abc"'),
+        expect.stringContaining('query='),
+        '-f',
+        'owner=owner',
+        '-f',
+        'name=repo',
+        '-F',
+        'limit=50',
+        '-f',
+        'states[]=OPEN',
+        '-f',
+        'after=cursor_abc',
       ]);
     });
 
@@ -178,12 +204,10 @@ describe('pullRequests service', () => {
 
       await fetchPRList('owner/repo', { state: 'open' });
 
-      expect(mockExecAsync).toHaveBeenCalledWith('gh', [
-        'api',
-        'graphql',
-        '-f',
-        expect.stringContaining('states: [OPEN]'),
-      ]);
+      expect(mockExecAsync).toHaveBeenCalledWith(
+        'gh',
+        expect.arrayContaining(['-f', 'states[]=OPEN'])
+      );
     });
 
     it('should pass state=closed via GraphQL states filter', async () => {
@@ -191,12 +215,11 @@ describe('pullRequests service', () => {
 
       await fetchPRList('owner/repo', { state: 'closed' });
 
-      expect(mockExecAsync).toHaveBeenCalledWith('gh', [
-        'api',
-        'graphql',
-        '-f',
-        expect.stringContaining('states: [CLOSED, MERGED]'),
-      ]);
+      const args: string[] = mockExecAsync.mock.calls[0][1];
+      const statesArgs = args.filter(
+        (_, i) => args[i - 1] === '-f' && args[i].startsWith('states[]=')
+      );
+      expect(statesArgs).toEqual(['states[]=CLOSED', 'states[]=MERGED']);
     });
 
     it('should pass state=all via GraphQL states filter', async () => {
@@ -204,11 +227,14 @@ describe('pullRequests service', () => {
 
       await fetchPRList('owner/repo', { state: 'all' });
 
-      expect(mockExecAsync).toHaveBeenCalledWith('gh', [
-        'api',
-        'graphql',
-        '-f',
-        expect.stringContaining('states: [OPEN, CLOSED, MERGED]'),
+      const args: string[] = mockExecAsync.mock.calls[0][1];
+      const statesArgs = args.filter(
+        (_, i) => args[i - 1] === '-f' && args[i].startsWith('states[]=')
+      );
+      expect(statesArgs).toEqual([
+        'states[]=OPEN',
+        'states[]=CLOSED',
+        'states[]=MERGED',
       ]);
     });
 
@@ -217,12 +243,10 @@ describe('pullRequests service', () => {
 
       await fetchPRList('owner/repo', { state: 'invalid' as never });
 
-      expect(mockExecAsync).toHaveBeenCalledWith('gh', [
-        'api',
-        'graphql',
-        '-f',
-        expect.stringContaining('states: [OPEN]'),
-      ]);
+      expect(mockExecAsync).toHaveBeenCalledWith(
+        'gh',
+        expect.arrayContaining(['-f', 'states[]=OPEN'])
+      );
     });
 
     it('should clamp invalid page and limit values', async () => {
@@ -236,7 +260,15 @@ describe('pullRequests service', () => {
         'api',
         'graphql',
         '-f',
-        expect.stringContaining('pullRequests(first: 100'),
+        expect.stringContaining('query='),
+        '-f',
+        'owner=owner',
+        '-f',
+        'name=repo',
+        '-F',
+        'limit=100',
+        '-f',
+        'states[]=OPEN',
       ]);
     });
 
