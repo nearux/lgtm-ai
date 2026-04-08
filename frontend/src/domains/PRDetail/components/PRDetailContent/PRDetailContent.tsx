@@ -2,6 +2,7 @@ import { useSuspenseQueries } from '@tanstack/react-query';
 import { projectsQuery, prsQuery } from '@/shared/apis';
 import { parseGitHubUrl, linkifyGitHubReferences } from '@/shared/utils';
 import type { PRMeta } from '@lgtmai/backend/types';
+import { usePRChat } from '../../hooks/usePRChat';
 import { PRHeader } from '../PRHeader/PRHeader';
 import { PRDescription } from '../PRDescription/PRDescription';
 import { ActivityTimeline } from '../ActivityTimeline/ActivityTimeline';
@@ -45,6 +46,15 @@ export const PRDetailContent = ({ projectId, prNumber, origin }: Props) => {
     repoOwnerName,
   };
 
+  const { openPRChat } = usePRChat({
+    projectId,
+    prNumber: pr.number,
+    prMeta,
+    prAuthor: pr.author.login,
+    prBody: pr.body ?? '',
+    workingDir: project.working_dir,
+  });
+
   return (
     <>
       <PRHeader
@@ -56,7 +66,9 @@ export const PRDetailContent = ({ projectId, prNumber, origin }: Props) => {
         githubBaseUrl={githubBaseUrl}
       />
 
-      {linkedBody && <PRDescription body={linkedBody} />}
+      {linkedBody && (
+        <PRDescription body={linkedBody} onAskClaude={openPRChat} />
+      )}
 
       <ActivityTimeline
         reviews={pr.reviews}
