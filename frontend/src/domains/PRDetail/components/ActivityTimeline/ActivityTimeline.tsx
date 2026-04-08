@@ -20,6 +20,8 @@ interface Props {
   projectId: string;
   prNumber: number;
   prState: string;
+  currentBranch: string | null;
+  prHeadBranch: string;
   origin?: string;
   prMeta: PRMeta;
 }
@@ -71,6 +73,8 @@ export const ActivityTimeline = ({
   projectId,
   prNumber,
   prState,
+  currentBranch,
+  prHeadBranch,
   origin,
   prMeta,
 }: Props) => {
@@ -86,6 +90,8 @@ export const ActivityTimeline = ({
     projectId,
     prNumber,
     prState,
+    currentBranch,
+    prHeadBranch,
     origin,
     prMeta,
     setValidations,

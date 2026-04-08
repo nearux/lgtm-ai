@@ -1,8 +1,8 @@
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useChatPanelSync, useChatPanelParams } from '../../../hooks';
 import { useChatPanel } from '../../../contexts';
 import { ACTION_LABELS } from '../../../utils/reviewPrompts';
-import { prsMutation } from '@/shared/apis';
+import { prsMutation, projectsQueryKey } from '@/shared/apis';
 import { useOverlay } from '@/shared/hooks';
 import { CheckoutModal } from '../../ReviewList/components/CheckoutModal/CheckoutModal';
 import type { PRMeta, ClaudeChatContext } from '@lgtmai/backend/types';
@@ -27,6 +27,8 @@ interface UseActivityChatOptions {
   projectId: string;
   prNumber: number;
   prState: string;
+  currentBranch: string | null;
+  prHeadBranch: string;
   origin?: string;
   prMeta: PRMeta;
   setValidations: React.Dispatch<
@@ -42,6 +44,8 @@ export function useActivityChat({
   projectId,
   prNumber,
   prState,
+  currentBranch,
+  prHeadBranch,
   origin,
   prMeta,
   setValidations,
@@ -58,6 +62,7 @@ export function useActivityChat({
     addUserMessage,
   } = useChatPanelSync(workingDir);
   const overlay = useOverlay();
+  const queryClient = useQueryClient();
   const { mutateAsync: checkoutPR } = useMutation(prsMutation.checkout());
 
   const executeAction = (
@@ -115,7 +120,7 @@ export function useActivityChat({
     customPrompt: string | undefined,
     target: ValidationTarget
   ) => {
-    if (prState !== 'OPEN') {
+    if (prState !== 'OPEN' || currentBranch === prHeadBranch) {
       executeAction(actionId, customPrompt, target);
       return;
     }
@@ -130,6 +135,9 @@ export function useActivityChat({
               projectId,
               prNumber,
               body: { force: true, origin },
+            });
+            await queryClient.invalidateQueries({
+              queryKey: projectsQueryKey.detail(projectId),
             });
             close();
             executeAction(actionId, customPrompt, target);

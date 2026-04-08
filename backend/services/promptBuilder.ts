@@ -57,13 +57,6 @@ function buildReviewCommentUserPrompt(
   context: ReviewCommandContext | CommentCommandContext,
   customPrompt?: string
 ): string {
-  if (context.type === 'comment' && !context.path) {
-    throw new AppError(
-      'path is required for comment context',
-      HttpStatus.BAD_REQUEST
-    );
-  }
-
   const reviewComment = templates.reviewCommentSection(context);
 
   switch (command) {
