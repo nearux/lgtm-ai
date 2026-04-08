@@ -61,6 +61,8 @@ const GRAPHQL_PR_STATES: Record<PRState, string> = {
   all: 'OPEN, CLOSED, MERGED',
 };
 
+// owner/name are safe to interpolate here because repoOwnerName is
+// validated by validateRepoOwnerName() before this function is called.
 async function resolvePageCursor(
   repoOwnerName: string,
   state: PRState,
