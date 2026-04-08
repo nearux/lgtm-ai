@@ -190,3 +190,54 @@ export interface CheckoutPRBranchResult {
   targetBranch: string;
   stashed: boolean;
 }
+
+export interface GraphQLPRAuthor {
+  login: string;
+  avatarUrl: string;
+  id?: string;
+  name?: string | null;
+}
+
+export interface GraphQLPRAssignee {
+  id: string;
+  login: string;
+  name?: string | null;
+}
+
+export interface GraphQLPRNode {
+  number: number;
+  title: string;
+  body?: string | null;
+  state: string;
+  createdAt: string;
+  updatedAt: string;
+  comments: { totalCount: number };
+  reviewThreads: { totalCount: number };
+  assignees: { nodes: GraphQLPRAssignee[] };
+  author: GraphQLPRAuthor;
+}
+
+export interface GraphQLPRListResponse {
+  data?: {
+    repository: {
+      pullRequests: {
+        totalCount: number;
+        nodes: GraphQLPRNode[];
+      };
+    };
+  };
+  errors?: { message: string }[];
+}
+
+export interface GraphQLCursorResponse {
+  data?: {
+    repository: {
+      pullRequests: {
+        pageInfo: {
+          endCursor: string | null;
+        };
+      };
+    };
+  };
+  errors?: { message: string }[];
+}
