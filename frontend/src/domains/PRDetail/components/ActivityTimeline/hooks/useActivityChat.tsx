@@ -27,6 +27,8 @@ interface UseActivityChatOptions {
   projectId: string;
   prNumber: number;
   prState: string;
+  currentBranch: string | null;
+  prHeadBranch: string;
   origin?: string;
   prMeta: PRMeta;
   setValidations: React.Dispatch<
@@ -42,6 +44,8 @@ export function useActivityChat({
   projectId,
   prNumber,
   prState,
+  currentBranch,
+  prHeadBranch,
   origin,
   prMeta,
   setValidations,
@@ -107,7 +111,7 @@ export function useActivityChat({
     customPrompt: string | undefined,
     target: ValidationTarget
   ) => {
-    if (prState !== 'OPEN') {
+    if (prState !== 'OPEN' || currentBranch === prHeadBranch) {
       executeAction(actionId, customPrompt, target);
       return;
     }
