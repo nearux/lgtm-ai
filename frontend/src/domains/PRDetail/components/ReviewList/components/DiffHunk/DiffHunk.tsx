@@ -14,7 +14,7 @@ export const DiffHunk = ({ diffHunk, filePath }: Props) => {
     files = parseDiff(fakeDiff);
   } catch {
     return (
-      <pre className="overflow-x-auto bg-gray-50 px-3 py-2 font-mono text-xs text-gray-600">
+      <pre className="overflow-x-auto bg-gray-50 font-mono text-xs text-gray-600">
         {diffHunk}
       </pre>
     );
@@ -22,7 +22,7 @@ export const DiffHunk = ({ diffHunk, filePath }: Props) => {
 
   if (!files.length || !files[0].hunks.length) {
     return (
-      <pre className="overflow-x-auto bg-gray-50 px-3 py-2 font-mono text-xs text-gray-600">
+      <pre className="overflow-x-auto bg-gray-50 font-mono text-xs text-gray-600">
         {diffHunk}
       </pre>
     );

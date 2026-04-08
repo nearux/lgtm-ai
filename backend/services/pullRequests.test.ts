@@ -9,7 +9,8 @@ vi.mock('util', () => ({
 }));
 
 // Import after mocks are set up
-const { fetchPRList, fetchPRDetail } = await import('./pullRequests.js');
+const { fetchPRList, fetchPRDetail, checkoutPRBranch } =
+  await import('./pullRequests.js');
 
 describe('pullRequests service', () => {
   beforeEach(() => {
@@ -17,26 +18,38 @@ describe('pullRequests service', () => {
   });
 
   describe('fetchPRList', () => {
-    const mockApiPRListData = [
+    const mockGraphQLNodes = [
       {
         number: 1,
         title: 'Test PR',
         body: 'Test body',
-        assignees: [{ id: 1, login: 'user1', name: 'User One', type: 'User' }],
-        user: { id: 2, login: 'author1', name: 'Author One', type: 'User' },
-        created_at: '2024-01-01T00:00:00Z',
-        updated_at: '2024-01-02T00:00:00Z',
-        state: 'open',
+        state: 'OPEN',
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-02T00:00:00Z',
+        comments: { totalCount: 3 },
+        reviewThreads: { totalCount: 5 },
+        assignees: { nodes: [{ id: 'U_1', login: 'user1', name: 'User One' }] },
+        author: {
+          id: 'U_2',
+          login: 'author1',
+          name: 'Author One',
+          avatarUrl: 'https://avatars.githubusercontent.com/u/2',
+        },
       },
       {
         number: 2,
         title: 'Another PR',
         body: null,
-        assignees: [],
-        user: { id: 3, login: 'author2', type: 'Bot' },
-        created_at: '2024-01-03T00:00:00Z',
-        updated_at: '2024-01-04T00:00:00Z',
-        state: 'closed',
+        state: 'CLOSED',
+        createdAt: '2024-01-03T00:00:00Z',
+        updatedAt: '2024-01-04T00:00:00Z',
+        comments: { totalCount: 0 },
+        reviewThreads: { totalCount: 2 },
+        assignees: { nodes: [] },
+        author: {
+          login: 'author2',
+          avatarUrl: 'https://avatars.githubusercontent.com/u/3',
+        },
       },
     ];
 
@@ -45,123 +58,218 @@ describe('pullRequests service', () => {
         number: 1,
         title: 'Test PR',
         body: 'Test body',
-        assignees: [{ id: '1', login: 'user1', name: 'User One' }],
-        author: { id: '2', login: 'author1', name: 'Author One' },
+        commentsCount: 3,
+        reviewCommentsCount: 5,
+        assignees: [{ id: 'U_1', login: 'user1', name: 'User One' }],
+        author: {
+          id: 'U_2',
+          login: 'author1',
+          name: 'Author One',
+          avatarUrl: 'https://avatars.githubusercontent.com/u/2',
+        },
         createdAt: '2024-01-01T00:00:00Z',
         updatedAt: '2024-01-02T00:00:00Z',
-        state: 'open',
+        state: 'OPEN',
       },
       {
         number: 2,
         title: 'Another PR',
         body: '',
+        commentsCount: 0,
+        reviewCommentsCount: 2,
         assignees: [],
         author: {
-          id: '3',
+          id: 'author2',
           login: 'author2',
           name: 'author2',
-          is_bot: true,
+          avatarUrl: 'https://avatars.githubusercontent.com/u/3',
         },
         createdAt: '2024-01-03T00:00:00Z',
         updatedAt: '2024-01-04T00:00:00Z',
-        state: 'closed',
+        state: 'CLOSED',
       },
     ];
 
-    it('should successfully fetch PR list', async () => {
-      mockExecAsync.mockResolvedValue({
-        stdout: JSON.stringify(mockApiPRListData),
+    function mockGraphQLDataResponse(
+      totalCount: number,
+      nodes = mockGraphQLNodes
+    ) {
+      mockExecAsync.mockResolvedValueOnce({
+        stdout: JSON.stringify({
+          data: {
+            repository: {
+              pullRequests: { totalCount, nodes },
+            },
+          },
+        }),
         stderr: '',
       });
+    }
+
+    function mockGraphQLCursorResponse(endCursor: string) {
+      mockExecAsync.mockResolvedValueOnce({
+        stdout: JSON.stringify({
+          data: {
+            repository: {
+              pullRequests: { pageInfo: { endCursor } },
+            },
+          },
+        }),
+        stderr: '',
+      });
+    }
+
+    it('should successfully fetch PR list (page 1 — single GraphQL call)', async () => {
+      mockGraphQLDataResponse(2);
 
       const result = await fetchPRList('owner/repo');
 
-      expect(result).toEqual(mockPRListData);
+      expect(result).toEqual({ items: mockPRListData, lastPage: 1 });
+      expect(mockExecAsync).toHaveBeenCalledTimes(1);
       expect(mockExecAsync).toHaveBeenCalledWith('gh', [
         'api',
-        'repos/owner/repo/pulls?per_page=100&page=1&state=open',
+        'graphql',
+        '-f',
+        expect.stringContaining('query='),
+        '-f',
+        'owner=owner',
+        '-f',
+        'name=repo',
+        '-F',
+        'limit=100',
+        '-f',
+        'states[]=OPEN',
       ]);
     });
 
-    it('should pass page and limit options', async () => {
-      mockExecAsync.mockResolvedValue({
-        stdout: JSON.stringify(mockApiPRListData),
-        stderr: '',
-      });
+    it('should fetch with cursor for page 2 (two GraphQL calls)', async () => {
+      mockGraphQLCursorResponse('cursor_abc');
+      mockGraphQLDataResponse(150);
 
       await fetchPRList('owner/repo', { page: 2, limit: 50 });
 
-      expect(mockExecAsync).toHaveBeenCalledWith('gh', [
+      expect(mockExecAsync).toHaveBeenCalledTimes(2);
+      // First call: cursor resolution for skip=50
+      expect(mockExecAsync).toHaveBeenNthCalledWith(1, 'gh', [
         'api',
-        'repos/owner/repo/pulls?per_page=50&page=2&state=open',
+        'graphql',
+        '-f',
+        expect.stringContaining('query='),
+        '-f',
+        'owner=owner',
+        '-f',
+        'name=repo',
+        '-F',
+        'skip=50',
+        '-f',
+        'states[]=OPEN',
+      ]);
+      // Second call: data fetch with cursor
+      expect(mockExecAsync).toHaveBeenNthCalledWith(2, 'gh', [
+        'api',
+        'graphql',
+        '-f',
+        expect.stringContaining('query='),
+        '-f',
+        'owner=owner',
+        '-f',
+        'name=repo',
+        '-F',
+        'limit=50',
+        '-f',
+        'states[]=OPEN',
+        '-f',
+        'after=cursor_abc',
       ]);
     });
 
-    it('should clamp invalid page and limit values', async () => {
-      mockExecAsync.mockResolvedValue({
-        stdout: JSON.stringify(mockApiPRListData),
-        stderr: '',
-      });
+    it('should calculate lastPage from totalCount', async () => {
+      mockGraphQLDataResponse(250);
 
-      await fetchPRList('owner/repo', { page: 0, limit: 250 });
+      const result = await fetchPRList('owner/repo', { limit: 50 });
 
-      expect(mockExecAsync).toHaveBeenCalledWith('gh', [
-        'api',
-        'repos/owner/repo/pulls?per_page=100&page=1&state=open',
-      ]);
+      expect(result.lastPage).toBe(5);
     });
 
-    it('should pass state=closed option', async () => {
-      mockExecAsync.mockResolvedValue({
-        stdout: JSON.stringify(mockApiPRListData),
-        stderr: '',
-      });
+    it('should return lastPage 1 when totalCount is 0', async () => {
+      mockGraphQLDataResponse(0, []);
+
+      const result = await fetchPRList('owner/repo');
+
+      expect(result).toEqual({ items: [], lastPage: 1 });
+    });
+
+    it('should pass state=open via GraphQL states filter', async () => {
+      mockGraphQLDataResponse(2);
+
+      await fetchPRList('owner/repo', { state: 'open' });
+
+      expect(mockExecAsync).toHaveBeenCalledWith(
+        'gh',
+        expect.arrayContaining(['-f', 'states[]=OPEN'])
+      );
+    });
+
+    it('should pass state=closed via GraphQL states filter', async () => {
+      mockGraphQLDataResponse(2);
 
       await fetchPRList('owner/repo', { state: 'closed' });
 
-      expect(mockExecAsync).toHaveBeenCalledWith('gh', [
-        'api',
-        'repos/owner/repo/pulls?per_page=100&page=1&state=closed',
-      ]);
+      const args: string[] = mockExecAsync.mock.calls[0][1];
+      const statesArgs = args.filter(
+        (_, i) => args[i - 1] === '-f' && args[i].startsWith('states[]=')
+      );
+      expect(statesArgs).toEqual(['states[]=CLOSED', 'states[]=MERGED']);
     });
 
-    it('should pass state=all option', async () => {
-      mockExecAsync.mockResolvedValue({
-        stdout: JSON.stringify(mockApiPRListData),
-        stderr: '',
-      });
+    it('should pass state=all via GraphQL states filter', async () => {
+      mockGraphQLDataResponse(2);
 
       await fetchPRList('owner/repo', { state: 'all' });
 
-      expect(mockExecAsync).toHaveBeenCalledWith('gh', [
-        'api',
-        'repos/owner/repo/pulls?per_page=100&page=1&state=all',
+      const args: string[] = mockExecAsync.mock.calls[0][1];
+      const statesArgs = args.filter(
+        (_, i) => args[i - 1] === '-f' && args[i].startsWith('states[]=')
+      );
+      expect(statesArgs).toEqual([
+        'states[]=OPEN',
+        'states[]=CLOSED',
+        'states[]=MERGED',
       ]);
     });
 
     it('should default to state=open for invalid state value', async () => {
-      mockExecAsync.mockResolvedValue({
-        stdout: JSON.stringify(mockApiPRListData),
-        stderr: '',
-      });
+      mockGraphQLDataResponse(2);
 
       await fetchPRList('owner/repo', { state: 'invalid' as never });
 
-      expect(mockExecAsync).toHaveBeenCalledWith('gh', [
-        'api',
-        'repos/owner/repo/pulls?per_page=100&page=1&state=open',
-      ]);
+      expect(mockExecAsync).toHaveBeenCalledWith(
+        'gh',
+        expect.arrayContaining(['-f', 'states[]=OPEN'])
+      );
     });
 
-    it('should return empty array when no PRs exist', async () => {
-      mockExecAsync.mockResolvedValue({
-        stdout: JSON.stringify([]),
-        stderr: '',
-      });
+    it('should clamp invalid page and limit values', async () => {
+      mockGraphQLDataResponse(2);
 
-      const result = await fetchPRList('owner/repo');
+      await fetchPRList('owner/repo', { page: 0, limit: 250 });
 
-      expect(result).toEqual([]);
+      // limit clamped to 100, page clamped to 1 → no cursor call
+      expect(mockExecAsync).toHaveBeenCalledTimes(1);
+      expect(mockExecAsync).toHaveBeenCalledWith('gh', [
+        'api',
+        'graphql',
+        '-f',
+        expect.stringContaining('query='),
+        '-f',
+        'owner=owner',
+        '-f',
+        'name=repo',
+        '-F',
+        'limit=100',
+        '-f',
+        'states[]=OPEN',
+      ]);
     });
 
     it('should throw SERVICE_UNAVAILABLE error for authentication failure', async () => {
@@ -170,8 +278,19 @@ describe('pullRequests service', () => {
       );
 
       await expect(fetchPRList('owner/repo')).rejects.toMatchObject({
-        message: 'GitHub CLI is not available or authenticated',
+        message:
+          'GitHub CLI is not authenticated. Please check your account in the header.',
         statusCode: 503,
+      });
+    });
+
+    it('should throw FORBIDDEN error for not found', async () => {
+      mockExecAsync.mockRejectedValue(new Error('Not Found'));
+
+      await expect(fetchPRList('owner/repo')).rejects.toMatchObject({
+        message:
+          'Cannot access this repository. Try switching your GitHub account in the header.',
+        statusCode: 403,
       });
     });
 
@@ -183,6 +302,46 @@ describe('pullRequests service', () => {
         statusCode: 500,
       });
     });
+
+    it('should throw BAD_REQUEST for invalid repo name', async () => {
+      await expect(fetchPRList('invalid repo name!')).rejects.toMatchObject({
+        message: 'Invalid repository name',
+        statusCode: 400,
+      });
+    });
+
+    it('should throw INTERNAL_SERVER_ERROR when GraphQL response has errors', async () => {
+      mockExecAsync.mockResolvedValueOnce({
+        stdout: JSON.stringify({
+          errors: [{ message: 'Field does not exist' }],
+        }),
+        stderr: '',
+      });
+
+      await expect(fetchPRList('owner/repo')).rejects.toMatchObject({
+        message: 'Failed to fetch PR data from GitHub',
+        statusCode: 500,
+      });
+    });
+
+    it('should return empty result when page is out of bounds (cursor is null)', async () => {
+      // Cursor resolution returns null when skip >= totalCount
+      mockExecAsync.mockResolvedValueOnce({
+        stdout: JSON.stringify({
+          data: {
+            repository: {
+              pullRequests: { pageInfo: { endCursor: null } },
+            },
+          },
+        }),
+        stderr: '',
+      });
+
+      const result = await fetchPRList('owner/repo', { page: 999, limit: 10 });
+
+      expect(result).toEqual({ items: [], lastPage: 1 });
+      expect(mockExecAsync).toHaveBeenCalledTimes(1); // only cursor call, no data call
+    });
   });
 
   describe('fetchPRDetail', () => {
@@ -190,15 +349,29 @@ describe('pullRequests service', () => {
       number: 1,
       title: 'Test PR',
       body: 'Test body',
+      commentsCount: 1,
+      reviewCommentsCount: 0,
+      baseBranch: 'main',
+      headBranch: 'feature/test',
       assignees: [{ id: '1', login: 'user1', name: 'User One' }],
-      author: { id: '2', login: 'author1', name: 'Author One' },
+      author: {
+        id: '2',
+        login: 'author1',
+        name: 'Author One',
+        avatarUrl: 'https://avatars.githubusercontent.com/u/2',
+      },
       createdAt: '2024-01-01T00:00:00Z',
       updatedAt: '2024-01-02T00:00:00Z',
       state: 'OPEN',
       comments: [
         {
           id: 'c1',
-          author: { id: '3', login: 'reviewer1', name: 'Reviewer One' },
+          author: {
+            id: '3',
+            login: 'reviewer1',
+            name: 'Reviewer One',
+            avatarUrl: 'https://avatars.githubusercontent.com/u/3',
+          },
           body: 'Looks good!',
           createdAt: '2024-01-01T10:00:00Z',
           updatedAt: '2024-01-01T10:00:00Z',
@@ -207,7 +380,12 @@ describe('pullRequests service', () => {
       reviews: [
         {
           id: 'r1',
-          author: { id: '3', login: 'reviewer1', name: 'Reviewer One' },
+          author: {
+            id: '3',
+            login: 'reviewer1',
+            name: 'Reviewer One',
+            avatarUrl: 'https://avatars.githubusercontent.com/u/3',
+          },
           state: 'APPROVED',
           body: 'LGTM',
           submittedAt: '2024-01-01T11:00:00Z',
@@ -225,11 +403,17 @@ describe('pullRequests service', () => {
         },
       ],
     };
+    // Raw GH response shape — includes baseRefName/headRefName instead of baseBranch/headBranch
+    const mockGhPRDetailData = {
+      ...mockPRDetailData,
+      baseRefName: 'main',
+      headRefName: 'feature/test',
+    };
 
     it('should successfully fetch PR detail', async () => {
       mockExecAsync
         .mockResolvedValueOnce({
-          stdout: JSON.stringify(mockPRDetailData),
+          stdout: JSON.stringify(mockGhPRDetailData),
           stderr: '',
         })
         .mockResolvedValueOnce({ stdout: JSON.stringify([]), stderr: '' });
@@ -244,18 +428,19 @@ describe('pullRequests service', () => {
         '--repo',
         'owner/repo',
         '--json',
-        'number,title,body,assignees,author,createdAt,updatedAt,state,comments,reviews,commits',
+        'number,title,body,baseRefName,headRefName,assignees,author,createdAt,updatedAt,state,comments,reviews,commits',
       ]);
     });
 
-    it('should throw NOT_FOUND error when PR does not exist', async () => {
+    it('should throw FORBIDDEN error when PR could not be resolved', async () => {
       mockExecAsync.mockRejectedValue(
         new Error('could not resolve to a PullRequest')
       );
 
       await expect(fetchPRDetail('owner/repo', 999)).rejects.toMatchObject({
-        message: 'Pull request not found',
-        statusCode: 404,
+        message:
+          'Cannot access this repository. Try switching your GitHub account in the header.',
+        statusCode: 403,
       });
     });
 
@@ -265,7 +450,8 @@ describe('pullRequests service', () => {
       );
 
       await expect(fetchPRDetail('owner/repo', 1)).rejects.toMatchObject({
-        message: 'GitHub CLI is not available or authenticated',
+        message:
+          'GitHub CLI is not authenticated. Please check your account in the header.',
         statusCode: 503,
       });
     });
@@ -289,8 +475,8 @@ describe('pullRequests service', () => {
     });
 
     it('should handle PR with empty comments, reviews, and commits', async () => {
-      const emptyDetailData: PRDetail = {
-        ...mockPRDetailData,
+      const emptyDetailData = {
+        ...mockGhPRDetailData,
         comments: [],
         reviews: [],
         commits: [],
@@ -439,6 +625,176 @@ describe('pullRequests service', () => {
       expect(result.reviews[0].inlineComments[0].author.login).toBe(
         'reviewer1'
       );
+    });
+  });
+
+  describe('checkoutPRBranch', () => {
+    it('should checkout PR branch when working tree is clean', async () => {
+      mockExecAsync
+        .mockResolvedValueOnce({ stdout: '', stderr: '' }) // git status (clean)
+        .mockResolvedValueOnce({ stdout: '', stderr: '' }) // gh pr checkout
+        .mockResolvedValueOnce({
+          stdout: 'feature/awesome-change\n',
+          stderr: '',
+        }); // git branch --show-current
+
+      const result = await checkoutPRBranch('owner/repo', 23, '/repo', {
+        force: false,
+      });
+
+      expect(result).toEqual({
+        success: true,
+        message: 'Checked out PR branch successfully',
+        targetBranch: 'feature/awesome-change',
+        stashed: false,
+      });
+      expect(mockExecAsync).toHaveBeenNthCalledWith(
+        1,
+        'git',
+        ['status', '--porcelain', '--untracked-files=normal'],
+        { cwd: '/repo' }
+      );
+      expect(mockExecAsync).toHaveBeenNthCalledWith(
+        2,
+        'gh',
+        ['pr', 'checkout', '23', '--repo', 'owner/repo'],
+        { cwd: '/repo' }
+      );
+      expect(mockExecAsync).toHaveBeenNthCalledWith(
+        3,
+        'git',
+        ['branch', '--show-current'],
+        { cwd: '/repo' }
+      );
+    });
+
+    it('should throw CONFLICT when working tree is dirty and force is false', async () => {
+      mockExecAsync.mockResolvedValueOnce({
+        stdout: ' M backend/services/pullRequests.ts',
+        stderr: '',
+      }); // git status (dirty)
+
+      await expect(
+        checkoutPRBranch('owner/repo', 23, '/repo', { force: false })
+      ).rejects.toMatchObject({
+        message:
+          'Cannot checkout PR branch because local changes exist. Retry with force=true to auto-stash.',
+        statusCode: 409,
+      });
+
+      expect(mockExecAsync).toHaveBeenCalledTimes(1);
+    });
+
+    it('should stash including untracked files when force is true', async () => {
+      mockExecAsync
+        .mockResolvedValueOnce({
+          stdout: ' M backend/services/pullRequests.ts\n?? new-file.txt',
+          stderr: '',
+        }) // git status (dirty)
+        .mockResolvedValueOnce({
+          stdout: 'Saved working directory...',
+          stderr: '',
+        }) // git stash push
+        .mockResolvedValueOnce({ stdout: '', stderr: '' }) // gh pr checkout
+        .mockResolvedValueOnce({
+          stdout: 'feature/awesome-change\n',
+          stderr: '',
+        }); // git branch --show-current
+
+      const result = await checkoutPRBranch('owner/repo', 23, '/repo', {
+        force: true,
+      });
+
+      expect(result).toEqual({
+        success: true,
+        message: 'Checked out PR branch successfully',
+        targetBranch: 'feature/awesome-change',
+        stashed: true,
+      });
+      expect(mockExecAsync).toHaveBeenNthCalledWith(
+        2,
+        'git',
+        [
+          'stash',
+          'push',
+          '--include-untracked',
+          '-m',
+          'lgtmai: auto-stash before PR #23 checkout',
+        ],
+        { cwd: '/repo' }
+      );
+      expect(mockExecAsync).toHaveBeenNthCalledWith(
+        3,
+        'gh',
+        ['pr', 'checkout', '23', '--repo', 'owner/repo'],
+        { cwd: '/repo' }
+      );
+    });
+
+    it('should throw INTERNAL_SERVER_ERROR when stash fails', async () => {
+      mockExecAsync
+        .mockResolvedValueOnce({
+          stdout: ' M file.ts',
+          stderr: '',
+        }) // git status (dirty)
+        .mockRejectedValueOnce(new Error('stash failed')); // git stash push
+
+      await expect(
+        checkoutPRBranch('owner/repo', 23, '/repo', { force: true })
+      ).rejects.toMatchObject({
+        message: 'Failed to stash local changes before checkout',
+        statusCode: 500,
+      });
+    });
+
+    it('should throw NOT_FOUND when PR does not exist', async () => {
+      mockExecAsync
+        .mockResolvedValueOnce({ stdout: '', stderr: '' }) // git status (clean)
+        .mockRejectedValueOnce(new Error('could not resolve to a PullRequest')); // gh pr checkout
+
+      await expect(
+        checkoutPRBranch('owner/repo', 999, '/repo', { force: false })
+      ).rejects.toMatchObject({
+        message: 'Pull request not found',
+        statusCode: 404,
+      });
+    });
+
+    it('should throw SERVICE_UNAVAILABLE for gh authentication failure', async () => {
+      mockExecAsync
+        .mockResolvedValueOnce({ stdout: '', stderr: '' }) // git status (clean)
+        .mockRejectedValueOnce(
+          new Error('authentication required: gh auth login')
+        ); // gh pr checkout
+
+      await expect(
+        checkoutPRBranch('owner/repo', 23, '/repo', { force: false })
+      ).rejects.toMatchObject({
+        message: 'GitHub CLI is not available or authenticated',
+        statusCode: 503,
+      });
+    });
+
+    it('should throw INTERNAL_SERVER_ERROR for general checkout failure', async () => {
+      mockExecAsync
+        .mockResolvedValueOnce({ stdout: '', stderr: '' }) // git status (clean)
+        .mockRejectedValueOnce(new Error('unexpected error')); // gh pr checkout
+
+      await expect(
+        checkoutPRBranch('owner/repo', 23, '/repo', { force: false })
+      ).rejects.toMatchObject({
+        message: 'Failed to checkout PR branch',
+        statusCode: 500,
+      });
+    });
+
+    it('should throw BAD_REQUEST for invalid repo name', async () => {
+      await expect(
+        checkoutPRBranch('bad repo!', 23, '/repo', { force: false })
+      ).rejects.toMatchObject({
+        message: 'Invalid repository name',
+        statusCode: 400,
+      });
     });
   });
 });

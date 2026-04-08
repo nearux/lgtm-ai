@@ -1,18 +1,63 @@
-import { useParams } from 'react-router-dom';
+import { useEffect, useRef } from 'react';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { AsyncBoundary } from '@/shared/components';
 import { PRDetailContent } from './components/PRDetailContent/PRDetailContent';
+import { ChatPanel } from './components/ChatPanel';
+import { ChatPanelProvider, useChatPanel } from './contexts';
+import { useChatPanelController, useChatPanelParams } from './hooks';
+import { useCommitAndPush } from './hooks/useCommitAndPush';
 
 export const PRDetailPage = () => {
+  return (
+    <ChatPanelProvider>
+      <PRDetailPageContent />
+    </ChatPanelProvider>
+  );
+};
+
+const PRDetailPageContent = () => {
   const { projectId, prNumber } = useParams<{
     projectId: string;
     prNumber: string;
   }>();
+  const [searchParams] = useSearchParams();
+  const origin = searchParams.get('origin') ?? undefined;
+  const initialPanelRef = useRef(searchParams.get('panel'));
+
+  const { closePanel } = useChatPanelParams();
+  const chatPanel = useChatPanelController();
+  const { state } = useChatPanel();
+  const { commitState, handleCommitAndPush } = useCommitAndPush(projectId);
+
+  // NOTE: Clear panel params on mount (page refresh)
+  useEffect(() => {
+    if (initialPanelRef.current) {
+      closePanel();
+      initialPanelRef.current = null;
+    }
+  }, [closePanel]);
 
   return (
-    <div className="mx-auto max-w-6xl p-8">
-      <AsyncBoundary>
-        <PRDetailContent projectId={projectId!} prNumber={prNumber!} />
-      </AsyncBoundary>
+    <div className="flex min-h-screen">
+      <div
+        className={`flex-1 transition-all duration-300 ${chatPanel.isOpen ? 'mr-[480px]' : ''}`}
+      >
+        <div className="mx-auto max-w-6xl p-8">
+          <AsyncBoundary>
+            <PRDetailContent
+              projectId={projectId!}
+              prNumber={prNumber!}
+              origin={origin}
+            />
+          </AsyncBoundary>
+        </div>
+      </div>
+      <ChatPanel
+        {...chatPanel}
+        fileChanges={state.fileChanges}
+        onCommitAndPush={state.fileChanges ? handleCommitAndPush : undefined}
+        commitState={commitState}
+      />
     </div>
   );
 };

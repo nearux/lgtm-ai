@@ -1,10 +1,12 @@
 import { isString } from 'remeda';
-import type { PRListItem, GitHubPullRequest } from '../types/pullRequests.js';
+import type { PRListItem, GraphQLPRNode } from '../types/pullRequests.js';
 
 export class PRListItemDto implements PRListItem {
   number: number;
   title: string;
   body: string;
+  commentsCount: number;
+  reviewCommentsCount: number;
   assignees: PRListItem['assignees'];
   author: PRListItem['author'];
   createdAt: string;
@@ -15,6 +17,8 @@ export class PRListItemDto implements PRListItem {
     this.number = data.number;
     this.title = data.title;
     this.body = data.body;
+    this.commentsCount = data.commentsCount;
+    this.reviewCommentsCount = data.reviewCommentsCount;
     this.assignees = data.assignees;
     this.author = data.author;
     this.createdAt = data.createdAt;
@@ -22,27 +26,27 @@ export class PRListItemDto implements PRListItem {
     this.state = data.state;
   }
 
-  static fromGitHub(pr: GitHubPullRequest): PRListItemDto {
-    const authorIsBot = pr.user.type?.toLowerCase() === 'bot';
-
+  static fromGraphQL(node: GraphQLPRNode): PRListItemDto {
     return new PRListItemDto({
-      number: pr.number,
-      title: pr.title,
-      body: isString(pr.body) ? pr.body : '',
-      assignees: pr.assignees.map((user) => ({
-        id: String(user.id),
-        login: user.login,
-        name: user.name ?? user.login,
+      number: node.number,
+      title: node.title,
+      body: isString(node.body) ? node.body : '',
+      commentsCount: node.comments.totalCount,
+      reviewCommentsCount: node.reviewThreads.totalCount,
+      assignees: node.assignees.nodes.map((u) => ({
+        id: u.id,
+        login: u.login,
+        name: u.name ?? u.login,
       })),
       author: {
-        id: String(pr.user.id),
-        login: pr.user.login,
-        name: pr.user.name ?? pr.user.login,
-        ...(authorIsBot ? { is_bot: true } : {}),
+        id: node.author.id ?? node.author.login,
+        login: node.author.login,
+        name: node.author.name ?? node.author.login,
+        avatarUrl: node.author.avatarUrl,
       },
-      createdAt: pr.created_at,
-      updatedAt: pr.updated_at,
-      state: pr.state,
+      createdAt: node.createdAt,
+      updatedAt: node.updatedAt,
+      state: node.state,
     });
   }
 }

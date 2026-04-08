@@ -1,3 +1,5 @@
+import type { ClaudeChatContext } from './chatSessions.js';
+
 // ── Client → Server ──────────────────────────────────────────────────
 
 export type ClaudeExecutionMode =
@@ -9,15 +11,75 @@ export type ClaudeExecutionMode =
 export interface ClaudeExecuteOptions {
   executionMode?: ClaudeExecutionMode;
   model?: string;
+  sessionId?: string;
 }
 
-export interface WsExecuteMessage {
+export interface PRMeta {
+  number: number;
+  title: string;
+  body: string;
+  baseBranch: string;
+  headBranch: string;
+  repoOwnerName: string;
+}
+
+interface BaseCommandContext {
+  prMeta: PRMeta;
+}
+
+export interface ReviewCommandContext extends BaseCommandContext {
+  type: 'review';
+  author: string;
+  body: string;
+}
+
+export interface CommentCommandContext extends BaseCommandContext {
+  type: 'comment';
+  author: string;
+  body: string;
+  path?: string;
+  diffHunk?: string;
+}
+
+export interface PRCommandContext extends BaseCommandContext {
+  type: 'pr';
+}
+
+export type CommandContext =
+  | ReviewCommandContext
+  | CommentCommandContext
+  | PRCommandContext;
+
+export type ClaudeCommand =
+  | 'validate'
+  | 'fix'
+  | 'explain'
+  | 'custom'
+  | 'review';
+
+export interface WsCommandExecuteMessage {
   type: 'execute';
   requestId: string;
-  prompt: string;
   workingDir: string;
+  command: ClaudeCommand;
+  context: CommandContext;
+  customPrompt?: string;
   options?: ClaudeExecuteOptions;
+  chatContext?: ClaudeChatContext;
 }
+
+export interface WsFollowUpExecuteMessage {
+  type: 'followUp';
+  requestId: string;
+  workingDir: string;
+  message: string;
+  options?: ClaudeExecuteOptions;
+  chatContext?: ClaudeChatContext;
+}
+
+export type WsExecuteMessage =
+  | WsCommandExecuteMessage
+  | WsFollowUpExecuteMessage;
 
 export interface WsAbortMessage {
   type: 'abort';
@@ -43,7 +105,8 @@ export interface WsPlanApprovalResponseMessage {
 }
 
 export type WsClientMessage =
-  | WsExecuteMessage
+  | WsCommandExecuteMessage
+  | WsFollowUpExecuteMessage
   | WsAbortMessage
   | WsApprovalResponseMessage
   | WsPlanApprovalResponseMessage;
@@ -83,6 +146,13 @@ export interface WsDoneEvent {
   requestId: string;
   exitCode: number;
   result: string;
+  sessionId?: string;
+}
+
+export interface WsInitEvent {
+  type: 'init';
+  requestId: string;
+  sessionId: string;
 }
 
 export interface WsErrorEvent {
@@ -109,12 +179,39 @@ export interface WsPlanApprovalRequestEvent {
   input: unknown;
 }
 
+export type FileChangeStatus = 'added' | 'modified' | 'deleted';
+
+export interface FileChange {
+  path: string;
+  status: FileChangeStatus;
+  additions: number;
+  deletions: number;
+  diff: string;
+}
+
+export interface FileChangesSummary {
+  totalFiles: number;
+  totalAdditions: number;
+  totalDeletions: number;
+}
+
+export interface WsFileChangesEvent {
+  type: 'file_changes';
+  requestId: string;
+  changes: {
+    files: FileChange[];
+    summary: FileChangesSummary;
+  };
+}
+
 export type WsServerMessage =
   | WsTextEvent
   | WsToolMessageEvent
   | WsToolResultEvent
   | WsStderrEvent
+  | WsInitEvent
   | WsDoneEvent
   | WsErrorEvent
   | WsApprovalRequestEvent
-  | WsPlanApprovalRequestEvent;
+  | WsPlanApprovalRequestEvent
+  | WsFileChangesEvent;

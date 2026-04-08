@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
-    branches: [main]
+    branches: [main, develop]
 
 jobs:
   build:
@@ -74,6 +74,9 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install
+
+      - name: Generate tsoa routes
+        run: pnpm --filter @lgtmai/backend exec tsoa routes
 
       - name: Test
         run: pnpm run test

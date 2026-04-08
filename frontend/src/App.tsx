@@ -1,11 +1,22 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+// frontend/src/App.tsx
+import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'sonner';
 import { getQueryClient } from '@/shared/lib/getQueryClient';
 import { OverlayProvider } from '@/shared/hooks';
+import { AppHeader } from '@/shared/components/AppHeader/AppHeader';
 import { ProjectSelectPage } from './domains/Projects/page';
 import { PRListPage } from './domains/PRList/page';
 import { PRDetailPage } from './domains/PRDetail/page';
+
+const Layout = () => (
+  <div className="flex min-h-screen flex-col">
+    <AppHeader />
+    <main className="flex-1 pt-(--header-height)">
+      <Outlet />
+    </main>
+  </div>
+);
 
 const App = () => {
   const queryClient = getQueryClient();
@@ -16,12 +27,14 @@ const App = () => {
       <OverlayProvider>
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<ProjectSelectPage />} />
-            <Route path="/projects/:projectId/prs" element={<PRListPage />} />
-            <Route
-              path="/projects/:projectId/prs/:prNumber"
-              element={<PRDetailPage />}
-            />
+            <Route element={<Layout />}>
+              <Route path="/" element={<ProjectSelectPage />} />
+              <Route path="/projects/:projectId/prs" element={<PRListPage />} />
+              <Route
+                path="/projects/:projectId/prs/:prNumber"
+                element={<PRDetailPage />}
+              />
+            </Route>
           </Routes>
         </BrowserRouter>
       </OverlayProvider>

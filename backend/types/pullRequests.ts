@@ -1,21 +1,3 @@
-export type GitHubUser = {
-  id: number;
-  login: string;
-  name?: string | null;
-  type?: string | null;
-};
-
-export type GitHubPullRequest = {
-  number: number;
-  title: string;
-  body?: string | null;
-  assignees: GitHubUser[];
-  user: GitHubUser;
-  created_at: string;
-  updated_at: string;
-  state: string;
-};
-
 export type PRState = 'open' | 'closed' | 'all';
 
 export type GhPRAuthor = {
@@ -64,6 +46,8 @@ export type GhPRCommit = {
 export type GhReviewInlineComment = {
   id: number;
   node_id: string;
+  /** ID of the comment this is a reply to. Absent if this is the first comment in the thread */
+  in_reply_to_id?: number;
   user: {
     login: string;
     id: number;
@@ -81,6 +65,8 @@ export type GhPRDetail = {
   number: number;
   title: string;
   body?: string | null;
+  baseRefName: string;
+  headRefName: string;
   assignees: GhPRAssignee[];
   author: GhPRAuthor;
   createdAt: string;
@@ -95,6 +81,7 @@ export interface PRAuthor {
   id: string;
   login: string;
   name: string;
+  avatarUrl: string;
   is_bot?: boolean;
 }
 
@@ -108,6 +95,8 @@ export interface PRListItem {
   number: number;
   title: string;
   body: string;
+  commentsCount: number;
+  reviewCommentsCount: number;
   assignees: PRAssignee[];
   author: PRAuthor;
   createdAt: string;
@@ -125,6 +114,7 @@ export interface PRComment {
 
 export interface PRReviewInlineComment {
   id: string;
+  inReplyToId?: string;
   author: PRAuthor;
   body: string;
   path: string;
@@ -157,7 +147,77 @@ export interface PRCommit {
 }
 
 export interface PRDetail extends PRListItem {
+  baseBranch: string;
+  headBranch: string;
   comments: PRComment[];
   reviews: PRReview[];
   commits: PRCommit[];
+}
+
+export interface PaginatedPRList {
+  items: PRListItem[];
+  lastPage: number;
+}
+
+export interface CheckoutPRBranchBody {
+  force?: boolean;
+  origin?: string;
+}
+
+export interface CheckoutPRBranchResult {
+  success: boolean;
+  message: string;
+  targetBranch: string;
+  stashed: boolean;
+}
+
+export interface GraphQLPRAuthor {
+  login: string;
+  avatarUrl: string;
+  id?: string;
+  name?: string | null;
+}
+
+export interface GraphQLPRAssignee {
+  id: string;
+  login: string;
+  name?: string | null;
+}
+
+export interface GraphQLPRNode {
+  number: number;
+  title: string;
+  body?: string | null;
+  state: string;
+  createdAt: string;
+  updatedAt: string;
+  comments: { totalCount: number };
+  reviewThreads: { totalCount: number };
+  assignees: { nodes: GraphQLPRAssignee[] };
+  author: GraphQLPRAuthor;
+}
+
+export interface GraphQLPRListResponse {
+  data?: {
+    repository: {
+      pullRequests: {
+        totalCount: number;
+        nodes: GraphQLPRNode[];
+      };
+    };
+  };
+  errors?: { message: string }[];
+}
+
+export interface GraphQLCursorResponse {
+  data?: {
+    repository: {
+      pullRequests: {
+        pageInfo: {
+          endCursor: string | null;
+        };
+      };
+    };
+  };
+  errors?: { message: string }[];
 }
