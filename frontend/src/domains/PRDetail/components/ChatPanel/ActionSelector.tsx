@@ -9,12 +9,15 @@ interface ActionOption {
   icon: React.ReactNode;
 }
 
+type ActionScope = 'review' | 'pr';
+
 interface Props {
   onSelect: (command: ClaudeCommand, customPrompt?: string) => void;
   onShowHistory?: () => void;
+  scope?: ActionScope;
 }
 
-const actions: ActionOption[] = [
+const reviewActions: ActionOption[] = [
   {
     id: 'validate',
     label: 'Validate',
@@ -35,7 +38,20 @@ const actions: ActionOption[] = [
   },
 ];
 
-export const ActionSelector = ({ onSelect, onShowHistory }: Props) => {
+const prActions: ActionOption[] = [
+  {
+    id: 'explain',
+    label: 'Explain',
+    description: 'Summarize this pull request',
+    icon: <BookOpen className="h-5 w-5" />,
+  },
+];
+
+export const ActionSelector = ({
+  onSelect,
+  onShowHistory,
+  scope = 'review',
+}: Props) => {
   const [chatInput, setChatInput] = useState('');
 
   const handleChatSubmit = (e: React.FormEvent) => {
@@ -51,19 +67,25 @@ export const ActionSelector = ({ onSelect, onShowHistory }: Props) => {
         What would you like to do?
       </h3>
 
-      <div className="grid w-full max-w-sm grid-cols-3 gap-3">
-        {actions.map((action) => (
+      <div
+        className={`grid w-full max-w-sm gap-3 ${scope === 'pr' ? 'grid-cols-1' : 'grid-cols-3'}`}
+      >
+        {(scope === 'pr' ? prActions : reviewActions).map((action) => (
           <button
             key={action.id}
             type="button"
             onClick={() => onSelect(action.id)}
-            className="flex cursor-pointer flex-col items-center gap-2 rounded-lg border border-gray-200 bg-white p-4 text-center transition-all hover:border-indigo-300 hover:bg-indigo-50 hover:shadow-sm"
+            className={`flex cursor-pointer items-center gap-3 rounded-lg border border-gray-200 bg-white p-4 transition-all hover:border-indigo-300 hover:bg-indigo-50 hover:shadow-sm ${scope === 'pr' ? 'flex-row text-left' : 'flex-col text-center'}`}
           >
             <span className="text-indigo-600">{action.icon}</span>
-            <span className="text-sm font-medium text-gray-800">
-              {action.label}
-            </span>
-            <span className="text-xs text-gray-500">{action.description}</span>
+            <div className={'flex flex-col gap-1'}>
+              <span className="text-sm font-medium text-gray-800">
+                {action.label}
+              </span>
+              <span className="text-xs text-gray-500">
+                {action.description}
+              </span>
+            </div>
           </button>
         ))}
       </div>

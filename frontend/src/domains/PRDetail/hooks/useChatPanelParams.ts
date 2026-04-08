@@ -24,11 +24,12 @@ export function useChatPanelParams() {
   const targetType = searchParams.get('targetType') as
     | 'review'
     | 'comment'
+    | 'pr'
     | null;
   const resumed = searchParams.get('resumed') === '1';
 
   const openActionSelector = useCallback(
-    (targetType: 'review' | 'comment', targetId: string) => {
+    (targetType: 'review' | 'comment' | 'pr', targetId: string) => {
       setSearchParams((prev) => {
         const next = new URLSearchParams(prev);
         next.set('panel', 'action');
@@ -62,7 +63,7 @@ export function useChatPanelParams() {
   }, [setSearchParams]);
 
   const resumeSession = useCallback(
-    (targetType: 'review' | 'comment', targetId: string) => {
+    (targetType: 'review' | 'comment' | 'pr', targetId: string) => {
       setSearchParams((prev) => {
         const next = new URLSearchParams(prev);
         next.set('panel', 'chat');

@@ -18,9 +18,11 @@ export function useChatPanelController() {
     } else if (panelMode === 'action' && state.targetContext) {
       const t = state.targetContext;
       setTitle(
-        t.type === 'review'
-          ? `Chat: ${t.author}'s review`
-          : `Chat: ${t.author}'s comment on ${t.path}`
+        t.type === 'pr'
+          ? 'Chat: Pull Request'
+          : t.type === 'review'
+            ? `Chat: ${t.author}'s review`
+            : `Chat: ${t.author}'s comment on ${t.path}`
       );
     }
     // chat mode title is set by ReviewList when action is executed or session is resumed

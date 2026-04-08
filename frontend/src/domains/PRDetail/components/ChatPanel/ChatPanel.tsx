@@ -102,6 +102,7 @@ export const ChatPanel = ({
           <ActionSelector
             onSelect={onExecuteAction}
             onShowHistory={onShowHistory}
+            scope={state.targetContext?.type === 'pr' ? 'pr' : 'review'}
           />
         ) : grouped.length === 0 ? (
           <div className="flex h-full items-center justify-center p-4">

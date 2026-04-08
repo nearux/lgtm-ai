@@ -5,7 +5,7 @@ import type { ClaudeCommand, ChatSessionSummary } from '@lgtmai/backend/types';
 export type ChatPanelMode = 'action-selection' | 'chat' | 'history';
 
 export interface TargetContext {
-  type: 'review' | 'inline';
+  type: 'review' | 'inline' | 'pr';
   author: string;
   body: string;
   path?: string;
