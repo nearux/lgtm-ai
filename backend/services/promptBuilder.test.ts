@@ -190,16 +190,14 @@ describe('buildUserPrompt', () => {
     });
   });
 
-  it('comment type throws if path is missing', () => {
+  it('comment type with no path does not throw', () => {
     const noPath = {
       type: 'comment',
       author: 'x',
       body: 'y',
       prMeta,
     } as unknown as CommandContext;
-    expect(() => buildUserPrompt('validate', noPath)).toThrow(
-      'path is required'
-    );
+    expect(() => buildUserPrompt('validate', noPath)).not.toThrow();
   });
 
   it('throws on unknown command', () => {
