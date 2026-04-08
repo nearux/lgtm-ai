@@ -73,7 +73,7 @@ export const PRListPage = () => {
           </div>
 
           <AsyncBoundary
-            pending={<Spinner className="mt-40 w-full" />}
+            pending={<Spinner className="w-full" />}
             key={`${state}-${selectedOrigin}`}
           >
             <PRTable
