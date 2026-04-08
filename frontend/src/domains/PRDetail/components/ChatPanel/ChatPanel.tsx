@@ -31,7 +31,7 @@ interface Props {
   onShowHistory: () => void;
   onHideHistory: () => void;
   onBackToChat: () => void;
-  onCommitAndPush?: () => void;
+  onCommitAndPush?: (push: boolean) => void;
   commitState?: CommitState;
 }
 

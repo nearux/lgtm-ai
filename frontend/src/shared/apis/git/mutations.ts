@@ -15,6 +15,7 @@ interface GenerateCommitMessageBody {
 
 interface CommitAndPushBody {
   commitMessage: string;
+  push?: boolean;
 }
 
 export const gitMutation = {

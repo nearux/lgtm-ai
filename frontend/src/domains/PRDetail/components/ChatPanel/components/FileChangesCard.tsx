@@ -11,7 +11,7 @@ import { FileChangeRow } from './FileChangeRow';
 
 interface Props {
   data: FileChangesData;
-  onCommitAndPush?: () => void;
+  onCommitAndPush?: (push: boolean) => void;
   isCommitting?: boolean;
   commitResult?: { success: boolean; commitHash?: string; error?: string };
 }
@@ -23,6 +23,7 @@ export const FileChangesCard = ({
   commitResult,
 }: Props) => {
   const [expanded, setExpanded] = useState(false);
+  const [pushEnabled, setPushEnabled] = useState(true);
   const { files, summary } = data;
 
   if (summary.totalFiles === 0) return null;
@@ -61,9 +62,18 @@ export const FileChangesCard = ({
 
       {onCommitAndPush && !commitResult && (
         <div className="border-t border-amber-200 px-3 py-2">
+          <label className="mb-2 flex cursor-pointer items-center gap-2 text-xs text-gray-600">
+            <input
+              type="checkbox"
+              checked={pushEnabled}
+              onChange={(e) => setPushEnabled(e.target.checked)}
+              className="accent-indigo-600"
+            />
+            Push to remote after commit
+          </label>
           <button
             type="button"
-            onClick={onCommitAndPush}
+            onClick={() => onCommitAndPush(pushEnabled)}
             disabled={isCommitting}
             className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-sm text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-gray-300"
           >
@@ -72,12 +82,20 @@ export const FileChangesCard = ({
             ) : (
               <GitCommit className="h-4 w-4" />
             )}
-            {isCommitting ? 'Committing...' : 'Commit & Push'}
+            {isCommitting
+              ? pushEnabled
+                ? 'Committing & Pushing...'
+                : 'Committing...'
+              : pushEnabled
+                ? 'Commit & Push'
+                : 'Commit'}
           </button>
         </div>
       )}
 
-      {commitResult && <CommitResult result={commitResult} />}
+      {commitResult && (
+        <CommitResult result={commitResult} pushed={pushEnabled} />
+      )}
     </div>
   );
 };
@@ -97,8 +115,10 @@ const DiffStats = ({
 
 const CommitResult = ({
   result,
+  pushed,
 }: {
   result: { success: boolean; commitHash?: string; error?: string };
+  pushed: boolean;
 }) => (
   <div
     className={`border-t px-3 py-2 text-xs ${
@@ -108,7 +128,9 @@ const CommitResult = ({
     }`}
   >
     {result.success
-      ? `Committed and pushed (${result.commitHash?.slice(0, 7)})`
+      ? pushed
+        ? `Committed and pushed (${result.commitHash?.slice(0, 7)})`
+        : `Committed locally (${result.commitHash?.slice(0, 7)})`
       : `Failed: ${result.error}`}
   </div>
 );

@@ -14,7 +14,7 @@ export function useCommitAndPush(projectId: string | undefined) {
     gitMutation.commitAndPush()
   );
 
-  const handleCommitAndPush = async () => {
+  const handleCommitAndPush = async (push: boolean) => {
     if (!projectId) return;
     setCommitState({ isCommitting: true });
     try {
@@ -24,7 +24,7 @@ export function useCommitAndPush(projectId: string | undefined) {
       });
       const result = await commitAndPush({
         projectId,
-        body: { commitMessage: message },
+        body: { commitMessage: message, push },
       });
       setCommitState({ isCommitting: false, result });
     } catch (err) {
