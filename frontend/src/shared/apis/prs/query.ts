@@ -14,7 +14,7 @@ export const prsQuery = {
     }
   ) =>
     queryOptions<PaginatedPRList>({
-      queryKey: prsQueryKey.all(projectId, params),
+      queryKey: prsQueryKey.list(projectId, params),
       queryFn: () => {
         const searchParams = new URLSearchParams();
         if (params?.state) searchParams.set('state', params.state);

@@ -6,7 +6,7 @@ import type { Project, ProjectDetail } from '@lgtmai/backend/types';
 export const projectsQuery = {
   list: () =>
     queryOptions<Project[]>({
-      queryKey: projectsQueryKey.all,
+      queryKey: projectsQueryKey.list(),
       queryFn: () => apiGet<Project[]>('/api/projects'),
     }),
 

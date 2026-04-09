@@ -1,15 +1,17 @@
 import type { PRState } from '@lgtmai/backend/types';
 
 export const prsQueryKey = {
-  all: (
+  all: ['prs'] as const,
+  lists: () => [...prsQueryKey.all, 'list'] as const,
+  list: (
     projectId: string,
     params?: { state: PRState; page: number; limit: number; origin?: string }
-  ) => ['projects', projectId, 'prs', params ?? {}] as const,
+  ) => [...prsQueryKey.lists(), projectId, params ?? {}] as const,
+  details: () => [...prsQueryKey.all, 'detail'] as const,
   detail: (projectId: string, prNumber: number, origin?: string) =>
     [
-      'projects',
+      ...prsQueryKey.details(),
       projectId,
-      'prs',
       prNumber,
       ...(origin ? [origin] : []),
     ] as const,
