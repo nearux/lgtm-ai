@@ -1,8 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useMutation, useSuspenseQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { authQuery } from '@/shared/apis/auth/queries';
-import { authMutation } from '@/shared/apis/auth/mutations';
+import { authQuery, authMutation } from '@/shared/apis';
 
 export const AccountMenu = () => {
   const [isOpen, setIsOpen] = useState(false);

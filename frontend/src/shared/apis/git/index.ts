@@ -1,1 +1,1 @@
-export { gitMutation } from './mutations';
+export { gitMutation } from './mutation';
