@@ -2,6 +2,7 @@ import { useSuspenseQueries } from '@tanstack/react-query';
 import { projectsQuery, prsQuery } from '@/shared/apis';
 import { parseGitHubUrl, linkifyGitHubReferences } from '@/shared/utils';
 import type { PRMeta } from '@lgtmai/backend/types';
+import type { UseClaudeWebSocketReturn } from '../../hooks';
 import { usePRChat } from '../../hooks/usePRChat';
 import { PRHeader } from '../PRHeader/PRHeader';
 import { PRDescription } from '../PRDescription/PRDescription';
@@ -12,9 +13,10 @@ interface Props {
   projectId: string;
   prNumber: string;
   origin?: string;
+  ws: UseClaudeWebSocketReturn;
 }
 
-export const PRDetailContent = ({ projectId, prNumber, origin }: Props) => {
+export const PRDetailContent = ({ projectId, prNumber, origin, ws }: Props) => {
   const [{ data: project }, { data: pr }] = useSuspenseQueries({
     queries: [
       projectsQuery.detail(projectId),
@@ -53,6 +55,7 @@ export const PRDetailContent = ({ projectId, prNumber, origin }: Props) => {
     prAuthor: pr.author.login,
     prBody: pr.body ?? '',
     workingDir: project.working_dir,
+    ws,
   });
 
   return (
@@ -81,6 +84,7 @@ export const PRDetailContent = ({ projectId, prNumber, origin }: Props) => {
         prHeadBranch={pr.headBranch}
         origin={origin}
         prMeta={prMeta}
+        ws={ws}
       />
       <CommitList commits={pr.commits} githubBaseUrl={githubBaseUrl} />
     </>

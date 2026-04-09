@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useChatPanelSync, useChatPanelParams } from '../../../hooks';
+import { useChatPanelParams } from '../../../hooks';
+import type { UseClaudeWebSocketReturn } from '../../../hooks';
 import { useChatPanel } from '../../../contexts';
 import { ACTION_LABELS } from '../../../utils/reviewPrompts';
 import { prsMutation, projectsQueryKey } from '@/shared/apis';
@@ -31,6 +32,7 @@ interface UseActivityChatOptions {
   prHeadBranch: string;
   origin?: string;
   prMeta: PRMeta;
+  ws: UseClaudeWebSocketReturn;
   setValidations: React.Dispatch<
     React.SetStateAction<Record<string, ValidationState>>
   >;
@@ -48,6 +50,7 @@ export function useActivityChat({
   prHeadBranch,
   origin,
   prMeta,
+  ws,
   setValidations,
   setActiveTarget,
 }: UseActivityChatOptions) {
@@ -60,7 +63,7 @@ export function useActivityChat({
     execute,
     clearMessages,
     addUserMessage,
-  } = useChatPanelSync(workingDir);
+  } = ws;
   const overlay = useOverlay();
   const queryClient = useQueryClient();
   const { mutateAsync: checkoutPR } = useMutation(prsMutation.checkout());

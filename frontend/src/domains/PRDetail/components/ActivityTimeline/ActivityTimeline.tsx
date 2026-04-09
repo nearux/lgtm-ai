@@ -5,6 +5,7 @@ import type {
   PRReviewInlineComment,
   PRMeta,
 } from '@lgtmai/backend/types';
+import type { UseClaudeWebSocketReturn } from '../../hooks';
 import { ReviewCard } from '../ReviewList/components';
 import { CommentCard } from './components/CommentCard';
 import {
@@ -24,6 +25,7 @@ interface Props {
   prHeadBranch: string;
   origin?: string;
   prMeta: PRMeta;
+  ws: UseClaudeWebSocketReturn;
 }
 
 type ActivityItem =
@@ -77,6 +79,7 @@ export const ActivityTimeline = ({
   prHeadBranch,
   origin,
   prMeta,
+  ws,
 }: Props) => {
   const [validations, setValidations] = useState<
     Record<string, ValidationState>
@@ -94,6 +97,7 @@ export const ActivityTimeline = ({
     prHeadBranch,
     origin,
     prMeta,
+    ws,
     setValidations,
     setActiveTarget,
   });
