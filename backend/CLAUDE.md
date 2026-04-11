@@ -29,7 +29,7 @@ SQLite via Prisma + libsql adapter. Schema: `prisma/schema.prisma`.
 
 ## Conventions
 
-- Public methods must always be placed above private methods.
+- Order methods by caller → callee (top-down readability); public methods above private.
 - Prefer declarative, functional programming style using remeda for data transformation logic.
 
 ## Error Handling
