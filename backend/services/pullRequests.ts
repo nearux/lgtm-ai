@@ -70,7 +70,7 @@ export function mapGhError(error: unknown, context: GhErrorContext): AppError {
   }
 
   if (context === 'fetch') {
-    if (msg.includes('not found')) {
+    if (msg.includes('not found') || msg.includes('could not resolve')) {
       return new AppError(
         'Cannot access this repository. Try switching your GitHub account in the header.',
         HttpStatus.FORBIDDEN,

@@ -1107,6 +1107,13 @@ describe('pullRequests service', () => {
         expect(result.message).toContain('Cannot access');
       });
 
+      it('returns FORBIDDEN for could not resolve errors', () => {
+        const err = new Error('could not resolve repository');
+        const result = mapGhError(err, 'fetch');
+        expect(result.statusCode).toBe(403);
+        expect(result.message).toContain('Cannot access');
+      });
+
       it('returns INTERNAL_SERVER_ERROR for unknown errors', () => {
         const err = new Error('something unexpected');
         const result = mapGhError(err, 'fetch');
@@ -1132,6 +1139,7 @@ describe('pullRequests service', () => {
         const err = new Error('authentication required');
         const result = mapGhError(err, 'checkout');
         expect(result.statusCode).toBe(503);
+        expect(result.message).toContain('not authenticated');
       });
 
       it('returns INTERNAL_SERVER_ERROR for unknown errors', () => {
