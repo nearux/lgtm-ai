@@ -260,6 +260,16 @@ describe('buildBatchUserPrompt', () => {
       expect(result).toContain('This variable name is unclear');
       expect(result).toContain('Missing null check here');
     });
+
+    it('includes diff hunk when present', () => {
+      const result = buildBatchUserPrompt('explain', batchContexts);
+      expect(result).toContain('x.doSomething()');
+    });
+
+    it('includes file path when present', () => {
+      const result = buildBatchUserPrompt('explain', batchContexts);
+      expect(result).toContain('src/utils/helper.ts');
+    });
   });
 
   describe('validate', () => {
@@ -305,15 +315,5 @@ describe('buildBatchUserPrompt', () => {
     expect(() =>
       buildBatchUserPrompt('unknown' as ClaudeCommand, batchContexts)
     ).toThrow();
-  });
-
-  it('includes diff hunk when present', () => {
-    const result = buildBatchUserPrompt('explain', batchContexts);
-    expect(result).toContain('x.doSomething()');
-  });
-
-  it('includes file path when present', () => {
-    const result = buildBatchUserPrompt('explain', batchContexts);
-    expect(result).toContain('src/utils/helper.ts');
   });
 });
