@@ -56,23 +56,11 @@ export async function getFileChanges(
   // Parse per-file diffs
   const fileDiffs = parsePerFileDiffs(diffOutput);
 
-  const toFileChange = (line: string): FileChange => {
-    const path = line.slice(3);
-    const stats = numstatMap.get(path) ?? { additions: 0, deletions: 0 };
-    return {
-      path,
-      status: parseStatus(line.slice(0, 2).trim()),
-      additions: stats.additions,
-      deletions: stats.deletions,
-      diff: fileDiffs.get(path) ?? '',
-    };
-  };
-
   // Parse status for file list (trimEnd to preserve leading status codes like ' M')
   const files = pipe(
     statusOutput.trimEnd().split('\n'),
     filter((line) => line.length > 0),
-    map(toFileChange)
+    map((line) => toFileChange(line, numstatMap, fileDiffs))
   );
 
   const summary: FileChangesSummary = {
@@ -196,6 +184,22 @@ function toNumstatEntry(
       deletions: del === '-' ? 0 : Number(del),
     },
   ];
+}
+
+function toFileChange(
+  line: string,
+  numstatMap: Map<string, { additions: number; deletions: number }>,
+  fileDiffs: Map<string, string>
+): FileChange {
+  const path = line.slice(3);
+  const stats = numstatMap.get(path) ?? { additions: 0, deletions: 0 };
+  return {
+    path,
+    status: parseStatus(line.slice(0, 2).trim()),
+    additions: stats.additions,
+    deletions: stats.deletions,
+    diff: fileDiffs.get(path) ?? '',
+  };
 }
 
 function parsePerFileDiffs(diffOutput: string): Map<string, string> {

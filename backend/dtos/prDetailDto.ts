@@ -11,40 +11,6 @@ import type {
 import { GhAuthorDto } from './ghAuthorDto.js';
 import { GhInlineCommentDto } from './ghInlineCommentDto.js';
 
-function toAssignee(a: GhPRAssignee): PRDetail['assignees'][number] {
-  return {
-    id: a.id ?? a.login,
-    login: a.login,
-    name: a.name ?? a.login,
-  };
-}
-
-function toComment(c: GhPRComment): PRDetail['comments'][number] {
-  return {
-    id: c.id,
-    author: GhAuthorDto.fromGh(c.author),
-    body: c.body,
-    createdAt: c.createdAt,
-    updatedAt: c.updatedAt,
-  };
-}
-
-function toReview(
-  inlineCommentsByReview: Map<string, GhReviewInlineComment[]>
-): (r: GhPRReview) => PRReview {
-  return (r) => ({
-    id: r.id,
-    author: GhAuthorDto.fromGh(r.author),
-    state: r.state,
-    body: r.body,
-    submittedAt: r.submittedAt,
-    inlineComments: map(
-      inlineCommentsByReview.get(r.id) ?? [],
-      GhInlineCommentDto.fromGh
-    ),
-  });
-}
-
 export class PRDetailDto implements PRDetail {
   number: number;
   title: string;
@@ -105,4 +71,38 @@ export class PRDetailDto implements PRDetail {
       commits: raw.commits,
     });
   }
+}
+
+function toAssignee(a: GhPRAssignee): PRDetail['assignees'][number] {
+  return {
+    id: a.id ?? a.login,
+    login: a.login,
+    name: a.name ?? a.login,
+  };
+}
+
+function toComment(c: GhPRComment): PRDetail['comments'][number] {
+  return {
+    id: c.id,
+    author: GhAuthorDto.fromGh(c.author),
+    body: c.body,
+    createdAt: c.createdAt,
+    updatedAt: c.updatedAt,
+  };
+}
+
+function toReview(
+  inlineCommentsByReview: Map<string, GhReviewInlineComment[]>
+): (r: GhPRReview) => PRReview {
+  return (r) => ({
+    id: r.id,
+    author: GhAuthorDto.fromGh(r.author),
+    state: r.state,
+    body: r.body,
+    submittedAt: r.submittedAt,
+    inlineComments: map(
+      inlineCommentsByReview.get(r.id) ?? [],
+      GhInlineCommentDto.fromGh
+    ),
+  });
 }
