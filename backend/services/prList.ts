@@ -46,14 +46,18 @@ function statesArgs(state: PRState): string[] {
   return GRAPHQL_PR_STATES[state].flatMap((s) => ['-f', `states[]=${s}`]);
 }
 
+const MAX_GRAPHQL_FIRST = 100;
+
+// Fetches a single cursor hop of up to MAX_GRAPHQL_FIRST items.
 // Assumes repoOwnerName has been validated by validateRepoOwnerName() before calling.
-async function resolvePageCursor(
-  repoOwnerName: string,
+async function fetchCursorHop(
+  owner: string,
+  name: string,
   state: PRState,
-  skip: number
+  hop: number,
+  after: string | null
 ): Promise<string | null> {
-  const [owner, name] = repoOwnerName.split('/');
-  const query = `query($owner: String!, $name: String!, $skip: Int!, $states: [PullRequestState!]!) { repository(owner: $owner, name: $name) { pullRequests(first: $skip, states: $states, orderBy: {field: CREATED_AT, direction: DESC}) { pageInfo { endCursor } } } }`;
+  const query = `query($owner: String!, $name: String!, $skip: Int!, $states: [PullRequestState!]!, $after: String) { repository(owner: $owner, name: $name) { pullRequests(first: $skip, after: $after, states: $states, orderBy: {field: CREATED_AT, direction: DESC}) { pageInfo { endCursor } } } }`;
 
   const { stdout } = await execFileAsync('gh', [
     'api',
@@ -65,8 +69,9 @@ async function resolvePageCursor(
     '-f',
     `name=${name}`,
     '-F',
-    `skip=${skip}`,
+    `skip=${hop}`,
     ...statesArgs(state),
+    ...(after ? ['-f', `after=${after}`] : []),
   ]);
   const result = JSON.parse(stdout) as GraphQLCursorResponse;
 
@@ -76,6 +81,29 @@ async function resolvePageCursor(
   }
 
   return result.data.repository.pullRequests.pageInfo.endCursor;
+}
+
+// Resolves the cursor at `skip` items from the start, hopping in chunks of
+// MAX_GRAPHQL_FIRST to stay within GitHub GraphQL's `first` limit of 100.
+// Assumes repoOwnerName has been validated by validateRepoOwnerName() before calling.
+async function resolvePageCursor(
+  repoOwnerName: string,
+  state: PRState,
+  skip: number
+): Promise<string | null> {
+  const [owner, name] = repoOwnerName.split('/');
+
+  let remaining = skip;
+  let cursor: string | null = null;
+
+  while (remaining > 0) {
+    const hop = Math.min(remaining, MAX_GRAPHQL_FIRST);
+    cursor = await fetchCursorHop(owner, name, state, hop, cursor);
+    if (cursor === null) return null;
+    remaining -= hop;
+  }
+
+  return cursor;
 }
 
 async function fetchPRListGraphQL(

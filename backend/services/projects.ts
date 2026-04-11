@@ -123,10 +123,16 @@ export async function remove(id: string): Promise<void> {
  * Resolves the GitHub "owner/repo" string for a project, using the specified
  * remote name (defaults to "origin"). Throws an AppError on invalid input.
  */
+const REMOTE_NAME_RE = /^[\w.-]+$/;
+
 export async function resolveGitHubRepo(
   projectId: string,
   remoteName: string
 ): Promise<string> {
+  if (!REMOTE_NAME_RE.test(remoteName)) {
+    throw new AppError('Invalid remote name', HttpStatus.BAD_REQUEST);
+  }
+
   const project = await projectRepository.findById(projectId);
   if (!project) throw new AppError('Project not found', HttpStatus.NOT_FOUND);
 

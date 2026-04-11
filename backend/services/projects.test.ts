@@ -243,4 +243,37 @@ describe('projects service', () => {
       expect.objectContaining({ cwd: '/tmp/project' })
     );
   });
+
+  it('throws BAD_REQUEST when remoteName contains argument injection characters', async () => {
+    const project = await seedProject({
+      id: 'project-1',
+      working_dir: '/tmp/project',
+    });
+
+    await expect(
+      projectsService.resolveGitHubRepo(project.id, '--upload-pack=malicious')
+    ).rejects.toMatchObject({
+      message: 'Invalid remote name',
+      statusCode: 400,
+    });
+
+    // git must not be called at all
+    expect(mockExecFileAsync).not.toHaveBeenCalled();
+  });
+
+  it('throws BAD_REQUEST when remoteName contains spaces', async () => {
+    const project = await seedProject({
+      id: 'project-1',
+      working_dir: '/tmp/project',
+    });
+
+    await expect(
+      projectsService.resolveGitHubRepo(project.id, 'origin; rm -rf /')
+    ).rejects.toMatchObject({
+      message: 'Invalid remote name',
+      statusCode: 400,
+    });
+
+    expect(mockExecFileAsync).not.toHaveBeenCalled();
+  });
 });

@@ -18,9 +18,11 @@ async function fetchRawPRInlineComments(
     'api',
     '--method',
     'GET',
+    '--paginate',
+    '--slurp',
     `repos/${repoOwnerName}/pulls/${prNumber}/comments`,
   ]);
-  return JSON.parse(stdout) as GhReviewInlineComment[];
+  return (JSON.parse(stdout) as GhReviewInlineComment[][]).flat();
 }
 
 async function resolveNodeIdToNumericId(
@@ -47,7 +49,7 @@ async function resolveNodeIdToNumericId(
     );
   } catch (err) {
     console.error(
-      `[fetchReviewInlineComments] Failed to fetch reviews list for PR #${prNumber}:`,
+      `[resolveNodeIdToNumericId] Failed to fetch reviews list for PR #${prNumber}:`,
       err
     );
     return new Map();

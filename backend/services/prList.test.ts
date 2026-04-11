@@ -173,6 +173,52 @@ describe('fetchPRList', () => {
     ]);
   });
 
+  it('should hop in chunks of 100 when skip exceeds GitHub GraphQL limit (page=3, limit=100)', async () => {
+    // skip = (3-1) * 100 = 200, must be fetched in 2 hops of 100 each
+    mockGraphQLCursorResponse('cursor_after_100'); // first hop: first:100, no after
+    mockGraphQLCursorResponse('cursor_after_200'); // second hop: first:100, after:cursor_after_100
+    mockGraphQLDataResponse(300);
+
+    await fetchPRList('owner/repo', { page: 3, limit: 100 });
+
+    // 2 cursor-resolution calls + 1 data call = 3 total
+    expect(mockExecAsync).toHaveBeenCalledTimes(3);
+
+    // First hop: first:100, no after
+    expect(mockExecAsync).toHaveBeenNthCalledWith(1, 'gh', [
+      'api',
+      'graphql',
+      '-f',
+      expect.stringContaining('query='),
+      '-f',
+      'owner=owner',
+      '-f',
+      'name=repo',
+      '-F',
+      'skip=100',
+      '-f',
+      'states[]=OPEN',
+    ]);
+
+    // Second hop: first:100, after cursor from first hop
+    expect(mockExecAsync).toHaveBeenNthCalledWith(2, 'gh', [
+      'api',
+      'graphql',
+      '-f',
+      expect.stringContaining('query='),
+      '-f',
+      'owner=owner',
+      '-f',
+      'name=repo',
+      '-F',
+      'skip=100',
+      '-f',
+      'states[]=OPEN',
+      '-f',
+      'after=cursor_after_100',
+    ]);
+  });
+
   it('should calculate lastPage from totalCount', async () => {
     mockGraphQLDataResponse(250);
 

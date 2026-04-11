@@ -291,6 +291,78 @@ describe('fetchPRDetail', () => {
     expect(result.reviews[0].inlineComments[0].author.login).toBe('reviewer1');
   });
 
+  it('fetches all inline comments across multiple pages via --paginate --slurp', async () => {
+    const ghOutput = {
+      number: 1,
+      title: 'Test PR',
+      body: '',
+      assignees: [],
+      author: { login: 'author1' },
+      createdAt: '2024-01-01T00:00:00Z',
+      updatedAt: '2024-01-02T00:00:00Z',
+      state: 'OPEN',
+      comments: [],
+      reviews: [
+        {
+          id: '42',
+          author: { login: 'r1' },
+          state: 'COMMENTED',
+          body: '',
+          submittedAt: '2024-01-01T11:00:00Z',
+        },
+      ],
+      commits: [],
+    };
+    // --paginate --slurp returns an array of pages, each page being an array
+    const paginatedInlineComments = [
+      [
+        {
+          id: 1,
+          node_id: 'PRRC_1',
+          pull_request_review_id: 42,
+          user: { login: 'r1', id: 1, node_id: 'U_1', type: 'User' },
+          body: 'Page 1 comment',
+          path: 'a.ts',
+          diff_hunk: '@@ -1 +1 @@',
+          created_at: '2024-01-01T11:00:00Z',
+          updated_at: '2024-01-01T11:00:00Z',
+        },
+      ],
+      [
+        {
+          id: 2,
+          node_id: 'PRRC_2',
+          pull_request_review_id: 42,
+          user: { login: 'r1', id: 1, node_id: 'U_1', type: 'User' },
+          body: 'Page 2 comment',
+          path: 'b.ts',
+          diff_hunk: '@@ -2 +2 @@',
+          created_at: '2024-01-01T12:00:00Z',
+          updated_at: '2024-01-01T12:00:00Z',
+        },
+      ],
+    ];
+    mockExecAsync.mockImplementation((_cmd: string, args: string[]) => {
+      const path = args.join(' ');
+      if (path.includes('pr view'))
+        return Promise.resolve({
+          stdout: JSON.stringify(ghOutput),
+          stderr: '',
+        });
+      // --paginate --slurp response
+      return Promise.resolve({
+        stdout: JSON.stringify(paginatedInlineComments),
+        stderr: '',
+      });
+    });
+
+    const result = await fetchPRDetail('owner/repo', 1);
+
+    expect(result.reviews[0].inlineComments).toHaveLength(2);
+    expect(result.reviews[0].inlineComments[0].body).toBe('Page 1 comment');
+    expect(result.reviews[0].inlineComments[1].body).toBe('Page 2 comment');
+  });
+
   it('uses a single pulls/comments call regardless of review count (no N+1)', async () => {
     const ghOutput = {
       number: 1,
