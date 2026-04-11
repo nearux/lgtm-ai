@@ -56,6 +56,45 @@ function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+type GhErrorContext = 'fetch' | 'checkout';
+
+export function mapGhError(error: unknown, context: GhErrorContext): AppError {
+  const msg = getErrorMessage(error).toLowerCase();
+
+  if (msg.includes('authentication')) {
+    return new AppError(
+      'GitHub CLI is not authenticated. Please check your account in the header.',
+      HttpStatus.SERVICE_UNAVAILABLE,
+      error
+    );
+  }
+
+  if (context === 'fetch') {
+    if (msg.includes('not found')) {
+      return new AppError(
+        'Cannot access this repository. Try switching your GitHub account in the header.',
+        HttpStatus.FORBIDDEN,
+        error
+      );
+    }
+    return new AppError(
+      'Failed to fetch PR data from GitHub',
+      HttpStatus.INTERNAL_SERVER_ERROR,
+      error
+    );
+  }
+
+  // context === 'checkout'
+  if (msg.includes('could not resolve')) {
+    return new AppError('Pull request not found', HttpStatus.NOT_FOUND, error);
+  }
+  return new AppError(
+    'Failed to checkout PR branch',
+    HttpStatus.INTERNAL_SERVER_ERROR,
+    error
+  );
+}
+
 const GRAPHQL_PR_STATES: Record<PRState, string[]> = {
   open: ['OPEN'],
   closed: ['CLOSED', 'MERGED'],

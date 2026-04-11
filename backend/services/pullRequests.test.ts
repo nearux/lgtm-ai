@@ -9,8 +9,13 @@ vi.mock('util', () => ({
 }));
 
 // Import after mocks are set up
-const { fetchPRList, fetchPRDetail, checkoutPRBranch, buildReviewIdMap } =
-  await import('./pullRequests.js');
+const {
+  fetchPRList,
+  fetchPRDetail,
+  checkoutPRBranch,
+  buildReviewIdMap,
+  mapGhError,
+} = await import('./pullRequests.js');
 
 describe('pullRequests service', () => {
   beforeEach(() => {
@@ -1083,6 +1088,58 @@ describe('pullRequests service', () => {
           [42, '42'],
         ])
       );
+    });
+  });
+
+  describe('mapGhError', () => {
+    describe("context: 'fetch'", () => {
+      it('returns SERVICE_UNAVAILABLE for authentication errors', () => {
+        const err = new Error('authentication failed');
+        const result = mapGhError(err, 'fetch');
+        expect(result.statusCode).toBe(503);
+        expect(result.message).toContain('not authenticated');
+      });
+
+      it('returns FORBIDDEN for not found errors', () => {
+        const err = new Error('repository not found');
+        const result = mapGhError(err, 'fetch');
+        expect(result.statusCode).toBe(403);
+        expect(result.message).toContain('Cannot access');
+      });
+
+      it('returns INTERNAL_SERVER_ERROR for unknown errors', () => {
+        const err = new Error('something unexpected');
+        const result = mapGhError(err, 'fetch');
+        expect(result.statusCode).toBe(500);
+        expect(result.message).toContain('Failed to fetch');
+      });
+
+      it('handles non-Error objects', () => {
+        const result = mapGhError('plain string error', 'fetch');
+        expect(result.statusCode).toBe(500);
+      });
+    });
+
+    describe("context: 'checkout'", () => {
+      it('returns NOT_FOUND for could not resolve errors', () => {
+        const err = new Error('could not resolve pull request');
+        const result = mapGhError(err, 'checkout');
+        expect(result.statusCode).toBe(404);
+        expect(result.message).toContain('not found');
+      });
+
+      it('returns SERVICE_UNAVAILABLE for authentication errors', () => {
+        const err = new Error('authentication required');
+        const result = mapGhError(err, 'checkout');
+        expect(result.statusCode).toBe(503);
+      });
+
+      it('returns INTERNAL_SERVER_ERROR for unknown errors', () => {
+        const err = new Error('unexpected failure');
+        const result = mapGhError(err, 'checkout');
+        expect(result.statusCode).toBe(500);
+        expect(result.message).toContain('Failed to checkout');
+      });
     });
   });
 });
