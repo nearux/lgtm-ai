@@ -79,3 +79,34 @@ function buildReviewCommentUserPrompt(
       throw new AppError(`Unknown command: ${command}`, HttpStatus.BAD_REQUEST);
   }
 }
+
+export function buildBatchUserPrompt(
+  command: ClaudeCommand,
+  contexts: (ReviewCommandContext | CommentCommandContext)[],
+  customPrompt?: string
+): string {
+  const batchSection = templates.batchReviewCommentSection(contexts);
+
+  switch (command) {
+    case 'fix':
+      return templates.batchFixPrompt(batchSection);
+    case 'explain':
+      return templates.batchExplainPrompt(batchSection);
+    case 'validate':
+      return templates.batchValidatePrompt(batchSection);
+    case 'custom': {
+      if (!customPrompt || customPrompt.trim() === '') {
+        throw new AppError(
+          'customPrompt is required for custom command',
+          HttpStatus.BAD_REQUEST
+        );
+      }
+      return templates.batchCustomPrompt(customPrompt, batchSection);
+    }
+    default:
+      throw new AppError(
+        `Command '${command}' is not supported for batch`,
+        HttpStatus.BAD_REQUEST
+      );
+  }
+}
