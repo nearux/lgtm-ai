@@ -419,6 +419,27 @@ export function buildReviewIdMap(
   );
 }
 
+/**
+ * Groups inline comments by their review ID string.
+ * Comments not belonging to any known review are dropped.
+ */
+export function groupCommentsByReview(
+  allComments: GhReviewInlineComment[],
+  numericIdToReviewId: Map<number, string>,
+  reviewIds: string[]
+): Map<string, GhReviewInlineComment[]> {
+  return allComments.reduce(
+    (grouped, comment) => {
+      const reviewId = numericIdToReviewId.get(comment.pull_request_review_id);
+      if (reviewId !== undefined) {
+        grouped.get(reviewId)!.push(comment);
+      }
+      return grouped;
+    },
+    new Map<string, GhReviewInlineComment[]>(reviewIds.map((id) => [id, []]))
+  );
+}
+
 async function fetchReviewInlineComments(
   repoOwnerName: string,
   prNumber: number,
@@ -431,15 +452,5 @@ async function fetchReviewInlineComments(
 
   const numericIdToReviewId = buildReviewIdMap(reviewIds, nodeIdToNumericId);
 
-  const grouped = new Map<string, GhReviewInlineComment[]>(
-    reviewIds.map((id) => [id, []])
-  );
-  for (const comment of allComments) {
-    const reviewId = numericIdToReviewId.get(comment.pull_request_review_id);
-    if (reviewId !== undefined) {
-      grouped.get(reviewId)!.push(comment);
-    }
-  }
-
-  return grouped;
+  return groupCommentsByReview(allComments, numericIdToReviewId, reviewIds);
 }
