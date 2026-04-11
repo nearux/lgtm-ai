@@ -1014,7 +1014,8 @@ describe('pullRequests service', () => {
       await expect(
         checkoutPRBranch('owner/repo', 23, '/repo', { force: false })
       ).rejects.toMatchObject({
-        message: 'GitHub CLI is not available or authenticated',
+        message:
+          'GitHub CLI is not authenticated. Please check your account in the header.',
         statusCode: 503,
       });
     });
