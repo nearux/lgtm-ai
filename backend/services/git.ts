@@ -1,6 +1,7 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import HttpStatus from 'http-status';
+import { filter, map, pipe, reduce } from 'remeda';
 import type {
   FileChange,
   FileChangeStatus,
@@ -44,44 +45,49 @@ export async function getFileChanges(
   }
 
   // Parse numstat for additions/deletions per file
-  const numstatMap = new Map<
-    string,
-    { additions: number; deletions: number }
-  >();
-  for (const line of numstatOutput.trim().split('\n')) {
-    if (!line) continue;
-    const [add, del, path] = line.split('\t');
-    numstatMap.set(path, {
-      additions: add === '-' ? 0 : Number(add),
-      deletions: del === '-' ? 0 : Number(del),
-    });
-  }
+  const numstatMap = new Map(
+    pipe(
+      numstatOutput.trim().split('\n'),
+      filter((line) => line.length > 0),
+      map(toNumstatEntry)
+    )
+  );
 
   // Parse per-file diffs
   const fileDiffs = parsePerFileDiffs(diffOutput);
 
-  // Parse status for file list (trimEnd to preserve leading status codes like ' M')
-  const files: FileChange[] = [];
-  for (const line of statusOutput.trimEnd().split('\n')) {
-    if (!line) continue;
-    const statusCode = line.slice(0, 2).trim();
+  const toFileChange = (line: string): FileChange => {
     const path = line.slice(3);
     const stats = numstatMap.get(path) ?? { additions: 0, deletions: 0 };
-
-    files.push({
+    return {
       path,
-      status: parseStatus(statusCode),
+      status: parseStatus(line.slice(0, 2).trim()),
       additions: stats.additions,
       deletions: stats.deletions,
       diff: fileDiffs.get(path) ?? '',
-    });
-  }
-
-  const summary: FileChangesSummary = {
-    totalFiles: files.length,
-    totalAdditions: files.reduce((sum, f) => sum + f.additions, 0),
-    totalDeletions: files.reduce((sum, f) => sum + f.deletions, 0),
+    };
   };
+
+  // Parse status for file list (trimEnd to preserve leading status codes like ' M')
+  const files = pipe(
+    statusOutput.trimEnd().split('\n'),
+    filter((line) => line.length > 0),
+    map(toFileChange)
+  );
+
+  const summary = reduce(
+    files,
+    (acc, f) => ({
+      totalFiles: acc.totalFiles + 1,
+      totalAdditions: acc.totalAdditions + f.additions,
+      totalDeletions: acc.totalDeletions + f.deletions,
+    }),
+    {
+      totalFiles: 0,
+      totalAdditions: 0,
+      totalDeletions: 0,
+    } satisfies FileChangesSummary
+  );
 
   return { files, summary };
 }
@@ -185,6 +191,19 @@ function parseStatus(code: string): FileChangeStatus {
   if (code === 'A' || code === '?' || code === '??') return 'added';
   if (code === 'D') return 'deleted';
   return 'modified';
+}
+
+function toNumstatEntry(
+  line: string
+): [string, { additions: number; deletions: number }] {
+  const [add, del, path] = line.split('\t');
+  return [
+    path,
+    {
+      additions: add === '-' ? 0 : Number(add),
+      deletions: del === '-' ? 0 : Number(del),
+    },
+  ];
 }
 
 function parsePerFileDiffs(diffOutput: string): Map<string, string> {
