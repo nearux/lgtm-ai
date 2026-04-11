@@ -9,6 +9,15 @@ import type {
 import { AppError } from '../errors/AppError.js';
 import * as templates from './promptTemplates.js';
 
+function requireCustomPrompt(customPrompt?: string): void {
+  if (!customPrompt || customPrompt.trim() === '') {
+    throw new AppError(
+      'customPrompt is required for custom command',
+      HttpStatus.BAD_REQUEST
+    );
+  }
+}
+
 export function buildSystemPrompt(context: CommandContext): string {
   if (context.type === 'pr') {
     return templates.systemPromptForPR(context.prMeta);
@@ -40,10 +49,8 @@ function buildPrUserPrompt(
     case 'explain':
       return templates.explainPrPrompt(repoOwnerName, prNumber);
     case 'custom': {
-      if (!customPrompt || customPrompt.trim() === '') {
-        throw new Error('customPrompt is required for custom command');
-      }
-      return templates.customPrPrompt(customPrompt, repoOwnerName, prNumber);
+      requireCustomPrompt(customPrompt);
+      return templates.customPrPrompt(customPrompt!, repoOwnerName, prNumber);
     }
     default:
       throw new Error(
@@ -67,13 +74,8 @@ function buildReviewCommentUserPrompt(
     case 'validate':
       return templates.validatePrompt(reviewComment);
     case 'custom': {
-      if (!customPrompt || customPrompt.trim() === '') {
-        throw new AppError(
-          'customPrompt is required for custom command',
-          HttpStatus.BAD_REQUEST
-        );
-      }
-      return templates.customPrompt(customPrompt, reviewComment);
+      requireCustomPrompt(customPrompt);
+      return templates.customPrompt(customPrompt!, reviewComment);
     }
     default:
       throw new AppError(`Unknown command: ${command}`, HttpStatus.BAD_REQUEST);
@@ -95,13 +97,8 @@ export function buildBatchUserPrompt(
     case 'validate':
       return templates.batchValidatePrompt(batchSection);
     case 'custom': {
-      if (!customPrompt || customPrompt.trim() === '') {
-        throw new AppError(
-          'customPrompt is required for custom command',
-          HttpStatus.BAD_REQUEST
-        );
-      }
-      return templates.batchCustomPrompt(customPrompt, batchSection);
+      requireCustomPrompt(customPrompt);
+      return templates.batchCustomPrompt(customPrompt!, batchSection);
     }
     default:
       throw new AppError(

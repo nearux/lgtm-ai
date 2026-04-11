@@ -108,10 +108,17 @@ export function handleClaudeWebSocket(ws: WebSocket): void {
     }
 
     if (msg.type === 'batchExecute') {
-      const { requestId, workingDir, options, chatContext } = msg;
-      const batchMsg = msg as WsBatchExecuteMessage;
+      const {
+        requestId,
+        workingDir,
+        options,
+        chatContext,
+        command,
+        contexts,
+        customPrompt,
+      } = msg as WsBatchExecuteMessage;
 
-      if (!batchMsg.contexts || batchMsg.contexts.length === 0) {
+      if (!contexts || contexts.length === 0) {
         ws.send(
           JSON.stringify({
             type: 'error',
@@ -125,12 +132,8 @@ export function handleClaudeWebSocket(ws: WebSocket): void {
       let userPrompt: string;
       let systemPrompt: string;
       try {
-        systemPrompt = buildSystemPrompt(batchMsg.contexts[0]);
-        userPrompt = buildBatchUserPrompt(
-          batchMsg.command,
-          batchMsg.contexts,
-          batchMsg.customPrompt
-        );
+        systemPrompt = buildSystemPrompt(contexts[0]);
+        userPrompt = buildBatchUserPrompt(command, contexts, customPrompt);
       } catch (err) {
         ws.send(
           JSON.stringify({
@@ -149,7 +152,7 @@ export function handleClaudeWebSocket(ws: WebSocket): void {
         workingDir,
         options,
         chatContext,
-        { command: batchMsg.command, customPrompt: batchMsg.customPrompt },
+        { command, customPrompt },
         systemPrompt
       );
       return;
