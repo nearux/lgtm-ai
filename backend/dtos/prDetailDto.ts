@@ -1,12 +1,49 @@
-import { isString } from 'remeda';
+import { isString, map, sumBy } from 'remeda';
 import type {
   PRDetail,
   PRReview,
   GhPRDetail,
+  GhPRAssignee,
+  GhPRComment,
+  GhPRReview,
   GhReviewInlineComment,
 } from '../types/pullRequests.js';
 import { GhAuthorDto } from './ghAuthorDto.js';
 import { GhInlineCommentDto } from './ghInlineCommentDto.js';
+
+function toAssignee(a: GhPRAssignee): PRDetail['assignees'][number] {
+  return {
+    id: a.id ?? a.login,
+    login: a.login,
+    name: a.name ?? a.login,
+  };
+}
+
+function toComment(c: GhPRComment): PRDetail['comments'][number] {
+  return {
+    id: c.id,
+    author: GhAuthorDto.fromGh(c.author),
+    body: c.body,
+    createdAt: c.createdAt,
+    updatedAt: c.updatedAt,
+  };
+}
+
+function toReview(
+  inlineCommentsByReview: Map<string, GhReviewInlineComment[]>
+): (r: GhPRReview) => PRReview {
+  return (r) => ({
+    id: r.id,
+    author: GhAuthorDto.fromGh(r.author),
+    state: r.state,
+    body: r.body,
+    submittedAt: r.submittedAt,
+    inlineComments: map(
+      inlineCommentsByReview.get(r.id) ?? [],
+      GhInlineCommentDto.fromGh
+    ),
+  });
+}
 
 export class PRDetailDto implements PRDetail {
   number: number;
@@ -47,48 +84,24 @@ export class PRDetailDto implements PRDetail {
     raw: GhPRDetail,
     inlineCommentsByReview: Map<string, GhReviewInlineComment[]>
   ): PRDetailDto {
-    const reviewCommentsCount = raw.reviews.reduce(
-      (total, review) =>
-        total + (inlineCommentsByReview.get(review.id)?.length ?? 0),
-      0
-    );
-
     return new PRDetailDto({
       number: raw.number,
       title: raw.title,
       body: isString(raw.body) ? raw.body : '',
       commentsCount: raw.comments.length,
-      reviewCommentsCount,
+      reviewCommentsCount: sumBy(
+        raw.reviews,
+        (r) => inlineCommentsByReview.get(r.id)?.length ?? 0
+      ),
       baseBranch: raw.baseRefName,
       headBranch: raw.headRefName,
-      assignees: raw.assignees.map((a) => ({
-        id: a.id ?? a.login,
-        login: a.login,
-        name: a.name ?? a.login,
-      })),
+      assignees: map(raw.assignees, toAssignee),
       author: GhAuthorDto.fromGh(raw.author),
       createdAt: raw.createdAt,
       updatedAt: raw.updatedAt,
       state: raw.state,
-      comments: raw.comments.map((c) => ({
-        id: c.id,
-        author: GhAuthorDto.fromGh(c.author),
-        body: c.body,
-        createdAt: c.createdAt,
-        updatedAt: c.updatedAt,
-      })),
-      reviews: raw.reviews.map(
-        (r): PRReview => ({
-          id: r.id,
-          author: GhAuthorDto.fromGh(r.author),
-          state: r.state,
-          body: r.body,
-          submittedAt: r.submittedAt,
-          inlineComments: (inlineCommentsByReview.get(r.id) ?? []).map(
-            GhInlineCommentDto.fromGh
-          ),
-        })
-      ),
+      comments: map(raw.comments, toComment),
+      reviews: map(raw.reviews, toReview(inlineCommentsByReview)),
       commits: raw.commits,
     });
   }
