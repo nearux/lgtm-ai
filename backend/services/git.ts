@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import HttpStatus from 'http-status';
-import { filter, map, pipe, reduce } from 'remeda';
+import { filter, map, pipe, sumBy } from 'remeda';
 import type {
   FileChange,
   FileChangeStatus,
@@ -75,19 +75,11 @@ export async function getFileChanges(
     map(toFileChange)
   );
 
-  const summary = reduce(
-    files,
-    (acc, f) => ({
-      totalFiles: acc.totalFiles + 1,
-      totalAdditions: acc.totalAdditions + f.additions,
-      totalDeletions: acc.totalDeletions + f.deletions,
-    }),
-    {
-      totalFiles: 0,
-      totalAdditions: 0,
-      totalDeletions: 0,
-    } satisfies FileChangesSummary
-  );
+  const summary: FileChangesSummary = {
+    totalFiles: files.length,
+    totalAdditions: sumBy(files, (f) => f.additions),
+    totalDeletions: sumBy(files, (f) => f.deletions),
+  };
 
   return { files, summary };
 }
