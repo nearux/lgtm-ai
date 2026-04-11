@@ -18,7 +18,7 @@ Controllers use decorators (`@Route`, `@Get`, `@Post`, etc.) and extend `Control
 
 **IMPORTANT**: Always import from `@tsoa/runtime`, never from `tsoa`. The `tsoa` package is build-time only and excluded from the esbuild bundle.
 
-Build pipeline: `tsoa spec && tsoa routes` → esbuild. Routes and Swagger are auto-generated — run tsoa before building.
+Build pipeline: `tsoa routes` → esbuild. In dev, `tsoa spec` also runs to generate `swagger.json` (swagger is not served in production). Routes are auto-generated — run `tsoa routes` before building.
 
 ## Database
 

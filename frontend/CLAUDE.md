@@ -18,7 +18,7 @@ src/
 
 - **domains**: Hooks, components, and pages used only within each domain (Projects, PRList, PRDetail)
 - **features**: Code with business logic shared across multiple domains
-- **shared**: Pure utilities and UI components with no business logic
+- **shared**: Pure utilities, UI components, and API layer (fetch functions + React Query hooks shared across domains)
 
 ## API Layer
 
