@@ -3,10 +3,12 @@ import { ClaudeSessionManager } from '../services/claude/ClaudeSessionManager.js
 import {
   buildSystemPrompt,
   buildUserPrompt,
+  buildBatchUserPrompt,
 } from '../services/promptBuilder.js';
 import type {
   WsClientMessage,
   WsCommandExecuteMessage,
+  WsBatchExecuteMessage,
 } from '../types/claude.js';
 
 export function handleClaudeWebSocket(ws: WebSocket): void {
@@ -101,6 +103,54 @@ export function handleClaudeWebSocket(ws: WebSocket): void {
         behavior,
         message,
         updatedInput
+      );
+      return;
+    }
+
+    if (msg.type === 'batchExecute') {
+      const { requestId, workingDir, options, chatContext } = msg;
+      const batchMsg = msg as WsBatchExecuteMessage;
+
+      if (!batchMsg.contexts || batchMsg.contexts.length === 0) {
+        ws.send(
+          JSON.stringify({
+            type: 'error',
+            requestId,
+            message: 'contexts must be a non-empty array',
+          })
+        );
+        return;
+      }
+
+      let userPrompt: string;
+      let systemPrompt: string;
+      try {
+        systemPrompt = buildSystemPrompt(batchMsg.contexts[0]);
+        userPrompt = buildBatchUserPrompt(
+          batchMsg.command,
+          batchMsg.contexts,
+          batchMsg.customPrompt
+        );
+      } catch (err) {
+        ws.send(
+          JSON.stringify({
+            type: 'error',
+            requestId,
+            message:
+              err instanceof Error ? err.message : 'Failed to build prompt',
+          })
+        );
+        return;
+      }
+
+      manager.execute(
+        requestId,
+        userPrompt,
+        workingDir,
+        options,
+        chatContext,
+        { command: batchMsg.command, customPrompt: batchMsg.customPrompt },
+        systemPrompt
       );
       return;
     }
