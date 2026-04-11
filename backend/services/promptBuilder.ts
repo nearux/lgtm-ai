@@ -9,15 +9,6 @@ import type {
 import { AppError } from '../errors/AppError.js';
 import * as templates from './promptTemplates.js';
 
-function requireCustomPrompt(customPrompt?: string): void {
-  if (!customPrompt || customPrompt.trim() === '') {
-    throw new AppError(
-      'customPrompt is required for custom command',
-      HttpStatus.BAD_REQUEST
-    );
-  }
-}
-
 export function buildSystemPrompt(context: CommandContext): string {
   if (context.type === 'pr') {
     return templates.systemPromptForPR(context.prMeta);
