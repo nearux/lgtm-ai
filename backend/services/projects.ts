@@ -15,44 +15,40 @@ import type {
 } from '../types/projects.js';
 
 async function getGitInfo(workingDir: string): Promise<ProjectGitInfo> {
-  let remoteUrl: string | null = null;
-  let currentBranch: string | null = null;
-  let branches: string[] = [];
-  let remotes: Array<{ name: string; url: string }> = [];
-
-  try {
-    remoteUrl = (await git(workingDir, ['remote', 'get-url', 'origin'])).trim();
-  } catch (error) {
-    console.error('[getGitInfo] Failed to resolve origin remote URL:', error);
-    remoteUrl = null;
-  }
-
-  try {
-    const raw = await git(workingDir, ['remote', '-v']);
-    remotes = ProjectGitRemoteDto.fromGitRemoteList(raw);
-  } catch (error) {
-    console.error('[getGitInfo] Failed to list git remotes:', error);
-    remotes = [];
-  }
-
-  try {
-    currentBranch =
-      (await git(workingDir, ['branch', '--show-current'])).trim() || null;
-  } catch (error) {
-    console.error('[getGitInfo] Failed to get current branch:', error);
-    currentBranch = null;
-  }
-
-  try {
-    const raw = await git(workingDir, ['branch']);
-    branches = raw
-      .split('\n')
-      .map((line) => line.replace(/^\*?\s+/, '').trim())
-      .filter((line) => line.length > 0);
-  } catch (error) {
-    console.error('[getGitInfo] Failed to list branches:', error);
-    branches = [];
-  }
+  const [remoteUrl, remotes, currentBranch, branches] = await Promise.all([
+    git(workingDir, ['remote', 'get-url', 'origin'])
+      .then((out) => out.trim())
+      .catch((error) => {
+        console.error(
+          '[getGitInfo] Failed to resolve origin remote URL:',
+          error
+        );
+        return null;
+      }),
+    git(workingDir, ['remote', '-v'])
+      .then((raw) => ProjectGitRemoteDto.fromGitRemoteList(raw))
+      .catch((error) => {
+        console.error('[getGitInfo] Failed to list git remotes:', error);
+        return [] as Array<{ name: string; url: string }>;
+      }),
+    git(workingDir, ['branch', '--show-current'])
+      .then((out) => out.trim() || null)
+      .catch((error) => {
+        console.error('[getGitInfo] Failed to get current branch:', error);
+        return null;
+      }),
+    git(workingDir, ['branch'])
+      .then((raw) =>
+        raw
+          .split('\n')
+          .map((line) => line.replace(/^\*?\s+/, '').trim())
+          .filter((line) => line.length > 0)
+      )
+      .catch((error) => {
+        console.error('[getGitInfo] Failed to list branches:', error);
+        return [] as string[];
+      }),
+  ]);
 
   return { remoteUrl, currentBranch, branches, remotes };
 }
@@ -131,17 +127,18 @@ export async function resolveGitHubRepo(
   projectId: string,
   remoteName: string
 ): Promise<string> {
-  const project = await findById(projectId);
-  const selectedRemoteUrl = project.gitInfo.remotes.find(
-    (remote) => remote.name === remoteName
-  )?.url;
+  const project = await projectRepository.findById(projectId);
+  if (!project) throw new AppError('Project not found', HttpStatus.NOT_FOUND);
 
-  if (!selectedRemoteUrl) {
+  try {
+    const remoteUrl = (
+      await git(project.working_dir, ['remote', 'get-url', remoteName])
+    ).trim();
+    return GitHubRepoDto.fromRemoteUrl(remoteUrl).toString();
+  } catch {
     throw new AppError(
       `Project does not have a configured Git remote named '${remoteName}'`,
       HttpStatus.UNPROCESSABLE_ENTITY
     );
   }
-
-  return GitHubRepoDto.fromRemoteUrl(selectedRemoteUrl).toString();
 }

@@ -119,25 +119,37 @@ describe('projects service', () => {
     expect(result.map((project) => project.id)).toEqual([second.id, first.id]);
   });
 
-  it('returns project detail with git info', async () => {
+  it('returns project detail with git info, running all git calls in parallel', async () => {
     const project = await seedProject({
       id: 'project-1',
       working_dir: '/tmp/project',
     });
 
-    mockExecFileAsync
-      .mockResolvedValueOnce({ stdout: 'git@github.com:owner/repo.git\n' })
-      .mockResolvedValueOnce({
-        stdout:
-          'origin\tgit@github.com:owner/repo.git (fetch)\norigin\tgit@github.com:owner/repo.git (push)\nupstream\thttps://github.com/base/repo.git (fetch)\n',
-      })
-      .mockResolvedValueOnce({ stdout: 'feature/my-branch\n' })
-      .mockResolvedValueOnce({
-        stdout: '* feature/my-branch\n  main\n',
-      });
+    // Mock by inspecting git subcommand args — order-independent for parallel calls
+    mockExecFileAsync.mockImplementation((_cmd: string, args: string[]) => {
+      const sub = args.join(' ');
+      if (sub.includes('remote get-url origin')) {
+        return Promise.resolve({ stdout: 'git@github.com:owner/repo.git\n' });
+      }
+      if (sub.includes('remote -v')) {
+        return Promise.resolve({
+          stdout:
+            'origin\tgit@github.com:owner/repo.git (fetch)\norigin\tgit@github.com:owner/repo.git (push)\nupstream\thttps://github.com/base/repo.git (fetch)\n',
+        });
+      }
+      if (sub.includes('branch --show-current')) {
+        return Promise.resolve({ stdout: 'feature/my-branch\n' });
+      }
+      if (sub.includes('branch') && !sub.includes('--show-current')) {
+        return Promise.resolve({ stdout: '* feature/my-branch\n  main\n' });
+      }
+      return Promise.resolve({ stdout: '' });
+    });
 
     const result = await projectsService.findById(project.id);
 
+    // All 4 git calls must still be made
+    expect(mockExecFileAsync).toHaveBeenCalledTimes(4);
     expect(result).toEqual({
       ...project,
       gitInfo: {
@@ -210,23 +222,25 @@ describe('projects service', () => {
     expect(persisted).toBeNull();
   });
 
-  it('resolves GitHub repository by remote name', async () => {
+  it('resolves GitHub repository using a single git remote get-url call', async () => {
     const project = await seedProject({
       id: 'project-1',
       working_dir: '/tmp/project',
     });
 
-    mockExecFileAsync
-      .mockResolvedValueOnce({ stdout: 'git@github.com:owner/repo.git\n' })
-      .mockResolvedValueOnce({
-        stdout:
-          'origin\tgit@github.com:owner/repo.git (fetch)\norigin\tgit@github.com:owner/repo.git (push)\nteam\thttps://github.com/org/repo.git (fetch)\n',
-      })
-      .mockResolvedValueOnce({ stdout: 'feature/my-branch\n' })
-      .mockResolvedValueOnce({ stdout: '* feature/my-branch\n  main\n' });
+    mockExecFileAsync.mockResolvedValueOnce({
+      stdout: 'https://github.com/org/repo.git\n',
+    });
 
     const result = await projectsService.resolveGitHubRepo(project.id, 'team');
 
     expect(result).toBe('org/repo');
+    // Must make exactly one git call — no full getGitInfo traversal
+    expect(mockExecFileAsync).toHaveBeenCalledTimes(1);
+    expect(mockExecFileAsync).toHaveBeenCalledWith(
+      'git',
+      ['remote', 'get-url', 'team'],
+      expect.objectContaining({ cwd: '/tmp/project' })
+    );
   });
 });
