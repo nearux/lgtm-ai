@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import HttpStatus from 'http-status';
+import { filter, map, pipe } from 'remeda';
 import { AppError } from '../../errors/AppError.js';
 import type { ChatSessionHistoryEntry } from '../../types/chatSessions.js';
 
@@ -18,45 +19,6 @@ type TranscriptLine = {
     content?: string | Array<Record<string, unknown>>;
   };
 };
-
-function toProjectTranscriptDir(workingDir: string): string {
-  return workingDir.replace(/[\\/]/g, '-');
-}
-
-function normalizeContent(
-  content: string | Array<Record<string, unknown>> | undefined
-): string {
-  if (typeof content === 'string') {
-    return content.trim();
-  }
-
-  if (!Array.isArray(content)) {
-    return '';
-  }
-
-  return content
-    .map((block) => {
-      if (block.type === 'text' && typeof block.text === 'string') {
-        return block.text.trim();
-      }
-
-      if (block.type === 'tool_use' && typeof block.name === 'string') {
-        return `[tool:${block.name}] ${JSON.stringify(block.input ?? {})}`;
-      }
-
-      if (block.type === 'tool_result') {
-        if (typeof block.content === 'string') {
-          return `[tool_result] ${block.content.trim()}`;
-        }
-        return `[tool_result] ${JSON.stringify(block.content ?? '')}`;
-      }
-
-      return '';
-    })
-    .filter(Boolean)
-    .join('\n')
-    .trim();
-}
 
 const defaultTranscriptsRoot = path.join(os.homedir(), '.claude', 'projects');
 
@@ -121,21 +83,64 @@ export async function getClaudeSessionHistory({
     );
   }
 
-  const rawEntries = raw
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => JSON.parse(line) as TranscriptLine)
-    .filter((line) => line.type === 'user' || line.type === 'assistant')
-    .map((line) => ({
-      role: line.message?.role ?? line.type ?? 'unknown',
+  const rawEntries = pipe(
+    raw.split('\n'),
+    map((line) => line.trim()),
+    filter((line) => line.length > 0),
+    map((line) => JSON.parse(line) as TranscriptLine),
+    filter(
+      (line): line is TranscriptLine & { type: string } =>
+        line.type === 'user' || line.type === 'assistant'
+    ),
+    map((line) => ({
+      role: line.message?.role ?? line.type,
       content: normalizeContent(line.message?.content),
       timestamp: line.timestamp,
-    }))
-    .filter((entry) => entry.content.length > 0);
+    })),
+    filter((entry) => entry.content.length > 0)
+  );
 
   return {
     claudeSessionId,
     entries: replaceFirstUserMessage(rawEntries, command, customPrompt),
   };
+}
+
+function toProjectTranscriptDir(workingDir: string): string {
+  return workingDir.replace(/[\\/]/g, '-');
+}
+
+function normalizeContent(
+  content: string | Array<Record<string, unknown>> | undefined
+): string {
+  if (typeof content === 'string') {
+    return content.trim();
+  }
+
+  if (!Array.isArray(content)) {
+    return '';
+  }
+
+  return content
+    .map((block) => {
+      if (block.type === 'text' && typeof block.text === 'string') {
+        return block.text.trim();
+      }
+
+      if (block.type === 'tool_use' && typeof block.name === 'string') {
+        return `[tool:${block.name}] ${JSON.stringify(block.input ?? {})}`;
+      }
+
+      if (block.type === 'tool_result') {
+        if (typeof block.content === 'string') {
+          return `[tool_result] ${block.content.trim()}`;
+        }
+        return `[tool_result] ${JSON.stringify(block.content ?? '')}`;
+      }
+
+      return '';
+    })
+    .filter(Boolean)
+    .join('\n')
+    .trim();
 }

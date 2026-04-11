@@ -9,6 +9,10 @@ import type {
   WsClientMessage,
   WsCommandExecuteMessage,
   WsBatchExecuteMessage,
+  WsFollowUpExecuteMessage,
+  WsAbortMessage,
+  WsApprovalResponseMessage,
+  WsPlanApprovalResponseMessage,
 } from '../types/claude.js';
 
 export function handleClaudeWebSocket(ws: WebSocket): void {
@@ -25,145 +29,7 @@ export function handleClaudeWebSocket(ws: WebSocket): void {
       return;
     }
 
-    if (msg.type === 'abort') {
-      manager.abort(msg.requestId);
-      return;
-    }
-
-    if (msg.type === 'followUp') {
-      manager.execute(
-        msg.requestId,
-        msg.message,
-        msg.workingDir,
-        msg.options,
-        msg.chatContext
-      );
-      return;
-    }
-
-    if (msg.type === 'execute') {
-      const { requestId, workingDir, options, chatContext } = msg;
-
-      const cmdMsg = msg as WsCommandExecuteMessage;
-      let userPrompt: string;
-      let systemPrompt: string;
-      try {
-        systemPrompt = buildSystemPrompt(cmdMsg.context);
-        userPrompt = buildUserPrompt(
-          cmdMsg.command,
-          cmdMsg.context,
-          cmdMsg.customPrompt
-        );
-      } catch (err) {
-        ws.send(
-          JSON.stringify({
-            type: 'error',
-            requestId,
-            message:
-              err instanceof Error ? err.message : 'Failed to build prompt',
-          })
-        );
-        return;
-      }
-
-      manager.execute(
-        requestId,
-        userPrompt,
-        workingDir,
-        options,
-        chatContext,
-        {
-          command: cmdMsg.command,
-          customPrompt: cmdMsg.customPrompt,
-        },
-        systemPrompt
-      );
-      return;
-    }
-
-    if (msg.type === 'approval_response') {
-      const { requestId, approvalRequestId, behavior, message, updatedInput } =
-        msg;
-      manager.respondToToolApproval(
-        requestId,
-        approvalRequestId,
-        behavior,
-        message,
-        updatedInput
-      );
-      return;
-    }
-
-    if (msg.type === 'plan_approval_response') {
-      const { requestId, approvalRequestId, behavior, message, updatedInput } =
-        msg;
-      manager.respondToPlanApproval(
-        requestId,
-        approvalRequestId,
-        behavior,
-        message,
-        updatedInput
-      );
-      return;
-    }
-
-    if (msg.type === 'batchExecute') {
-      const {
-        requestId,
-        workingDir,
-        options,
-        chatContext,
-        command,
-        contexts,
-        customPrompt,
-      } = msg as WsBatchExecuteMessage;
-
-      if (!contexts || contexts.length === 0) {
-        ws.send(
-          JSON.stringify({
-            type: 'error',
-            requestId,
-            message: 'contexts must be a non-empty array',
-          })
-        );
-        return;
-      }
-
-      let userPrompt: string;
-      let systemPrompt: string;
-      try {
-        systemPrompt = buildSystemPrompt(contexts[0]);
-        userPrompt = buildBatchUserPrompt(command, contexts, customPrompt);
-      } catch (err) {
-        ws.send(
-          JSON.stringify({
-            type: 'error',
-            requestId,
-            message:
-              err instanceof Error ? err.message : 'Failed to build prompt',
-          })
-        );
-        return;
-      }
-
-      manager.execute(
-        requestId,
-        userPrompt,
-        workingDir,
-        options,
-        chatContext,
-        { command, customPrompt },
-        systemPrompt
-      );
-      return;
-    }
-
-    ws.send(
-      JSON.stringify({
-        type: 'error',
-        message: `Unknown message type: ${(msg as { type: string }).type}`,
-      })
-    );
+    routeMessage(msg, manager, ws);
   });
 
   ws.on('close', () => {
@@ -174,4 +40,166 @@ export function handleClaudeWebSocket(ws: WebSocket): void {
     console.error('[WS] Connection error:', err.message);
     manager.abortAll();
   });
+}
+
+function routeMessage(
+  msg: WsClientMessage,
+  manager: ClaudeSessionManager,
+  ws: WebSocket
+): void {
+  switch (msg.type) {
+    case 'execute':
+      return handleExecute(msg, manager, ws);
+    case 'batchExecute':
+      return handleBatchExecute(msg, manager, ws);
+    case 'followUp':
+      return handleFollowUp(msg, manager);
+    case 'abort':
+      return handleAbort(msg, manager);
+    case 'approval_response':
+      return handleApprovalResponse(msg, manager);
+    case 'plan_approval_response':
+      return handlePlanApprovalResponse(msg, manager);
+    default: {
+      msg satisfies never;
+      ws.send(
+        JSON.stringify({
+          type: 'error',
+          message: `Unknown message type: ${(msg as { type: string }).type}`,
+        })
+      );
+    }
+  }
+}
+
+function handleExecute(
+  msg: WsCommandExecuteMessage,
+  manager: ClaudeSessionManager,
+  ws: WebSocket
+): void {
+  const { requestId, workingDir, options, chatContext } = msg;
+
+  let userPrompt: string;
+  let systemPrompt: string;
+  try {
+    systemPrompt = buildSystemPrompt(msg.context);
+    userPrompt = buildUserPrompt(msg.command, msg.context, msg.customPrompt);
+  } catch (err) {
+    sendError(ws, requestId, err);
+    return;
+  }
+
+  manager.execute({
+    requestId,
+    prompt: userPrompt,
+    workingDir,
+    options,
+    chatContext,
+    commandMeta: { command: msg.command, customPrompt: msg.customPrompt },
+    systemPrompt,
+  });
+}
+
+function handleBatchExecute(
+  msg: WsBatchExecuteMessage,
+  manager: ClaudeSessionManager,
+  ws: WebSocket
+): void {
+  const {
+    requestId,
+    workingDir,
+    options,
+    chatContext,
+    command,
+    contexts,
+    customPrompt,
+  } = msg;
+
+  if (!contexts || contexts.length === 0) {
+    ws.send(
+      JSON.stringify({
+        type: 'error',
+        requestId,
+        message: 'contexts must be a non-empty array',
+      })
+    );
+    return;
+  }
+
+  let userPrompt: string;
+  let systemPrompt: string;
+  try {
+    systemPrompt = buildSystemPrompt(contexts[0]);
+    userPrompt = buildBatchUserPrompt(command, contexts, customPrompt);
+  } catch (err) {
+    sendError(ws, requestId, err);
+    return;
+  }
+
+  manager.execute({
+    requestId,
+    prompt: userPrompt,
+    workingDir,
+    options,
+    chatContext,
+    commandMeta: { command, customPrompt },
+    systemPrompt,
+  });
+}
+
+function handleFollowUp(
+  msg: WsFollowUpExecuteMessage,
+  manager: ClaudeSessionManager
+): void {
+  manager.execute({
+    requestId: msg.requestId,
+    prompt: msg.message,
+    workingDir: msg.workingDir,
+    options: msg.options,
+    chatContext: msg.chatContext,
+  });
+}
+
+function handleAbort(msg: WsAbortMessage, manager: ClaudeSessionManager): void {
+  manager.abort(msg.requestId);
+}
+
+function handleApprovalResponse(
+  msg: WsApprovalResponseMessage,
+  manager: ClaudeSessionManager
+): void {
+  manager.respondToToolApproval(
+    msg.requestId,
+    msg.approvalRequestId,
+    msg.behavior,
+    msg.message,
+    msg.updatedInput
+  );
+}
+
+function handlePlanApprovalResponse(
+  msg: WsPlanApprovalResponseMessage,
+  manager: ClaudeSessionManager
+): void {
+  manager.respondToPlanApproval(
+    msg.requestId,
+    msg.approvalRequestId,
+    msg.behavior,
+    msg.message,
+    msg.updatedInput
+  );
+}
+
+function sendError(
+  ws: WebSocket,
+  requestId: string | undefined,
+  err: unknown
+): void {
+  ws.send(
+    JSON.stringify({
+      type: 'error',
+      requestId,
+      message: err instanceof Error ? err.message : 'Failed to build prompt',
+    })
+  );
 }

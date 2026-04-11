@@ -10,10 +10,10 @@ import { AppError } from '../errors/AppError.js';
 import * as templates from './promptTemplates.js';
 
 export function buildSystemPrompt(context: CommandContext): string {
-  if (context.type === 'pr') {
-    return templates.systemPromptForPR(context.prMeta);
-  }
-  return templates.systemPrompt(context.prMeta);
+  return templates.systemPrompt(
+    context.prMeta,
+    context.type === 'pr' ? 'pr' : 'thread'
+  );
 }
 
 export function buildUserPrompt(
@@ -27,78 +27,97 @@ export function buildUserPrompt(
   return buildReviewCommentUserPrompt(command, context, customPrompt);
 }
 
+export function buildBatchUserPrompt(
+  command: ClaudeCommand,
+  contexts: (ReviewCommandContext | CommentCommandContext)[],
+  customPrompt?: string
+): string {
+  if (command === 'custom') requireCustomPrompt(customPrompt);
+
+  const templateFn = batchTemplates[command];
+  if (!templateFn) {
+    throw new AppError(
+      `Command '${command}' is not supported for batch`,
+      HttpStatus.BAD_REQUEST
+    );
+  }
+  const batchSection = templates.batchReviewCommentSection(contexts);
+  return templateFn(batchSection, customPrompt);
+}
+
+// ── PR-level prompt ─────────────────────────────────────────────────
+
+type PrTemplateFn = (
+  repoOwnerName: string,
+  prNumber: number,
+  customPrompt?: string
+) => string;
+
+const prTemplates: Partial<Record<ClaudeCommand, PrTemplateFn>> = {
+  review: (r, n) => templates.reviewPrPrompt(r, n),
+  explain: (r, n) => templates.explainPrPrompt(r, n),
+  custom: (r, n, cp) => templates.customPrPrompt(cp!, r, n),
+};
+
 function buildPrUserPrompt(
   command: ClaudeCommand,
   context: PRCommandContext,
   customPrompt?: string
 ): string {
-  const { repoOwnerName, number: prNumber } = context.prMeta;
+  if (command === 'custom') requireCustomPrompt(customPrompt);
 
-  switch (command) {
-    case 'review':
-      return templates.reviewPrPrompt(repoOwnerName, prNumber);
-    case 'explain':
-      return templates.explainPrPrompt(repoOwnerName, prNumber);
-    case 'custom': {
-      requireCustomPrompt(customPrompt);
-      return templates.customPrPrompt(customPrompt!, repoOwnerName, prNumber);
-    }
-    default:
-      throw new Error(
-        `Command '${command}' is not supported for PR-level context`
-      );
+  const templateFn = prTemplates[command];
+  if (!templateFn) {
+    throw new AppError(
+      `Command '${command}' is not supported for PR-level context`,
+      HttpStatus.BAD_REQUEST
+    );
   }
+  const { repoOwnerName, number: prNumber } = context.prMeta;
+  return templateFn(repoOwnerName, prNumber, customPrompt);
 }
+
+// ── Review comment prompt ───────────────────────────────────────────
+
+type CommentTemplateFn = (
+  reviewComment: string,
+  customPrompt?: string
+) => string;
+
+const commentTemplates: Partial<Record<ClaudeCommand, CommentTemplateFn>> = {
+  explain: (s) => templates.explainPrompt(s),
+  fix: (s) => templates.fixPrompt(s),
+  validate: (s) => templates.validatePrompt(s),
+  custom: (s, cp) => templates.customPrompt(cp!, s),
+};
 
 function buildReviewCommentUserPrompt(
   command: ClaudeCommand,
   context: ReviewCommandContext | CommentCommandContext,
   customPrompt?: string
 ): string {
+  if (command === 'custom') requireCustomPrompt(customPrompt);
+
+  const templateFn = commentTemplates[command];
+  if (!templateFn) {
+    throw new AppError(`Unknown command: ${command}`, HttpStatus.BAD_REQUEST);
+  }
   const reviewComment = templates.reviewCommentSection(context);
-
-  switch (command) {
-    case 'explain':
-      return templates.explainPrompt(reviewComment);
-    case 'fix':
-      return templates.fixPrompt(reviewComment);
-    case 'validate':
-      return templates.validatePrompt(reviewComment);
-    case 'custom': {
-      requireCustomPrompt(customPrompt);
-      return templates.customPrompt(customPrompt!, reviewComment);
-    }
-    default:
-      throw new AppError(`Unknown command: ${command}`, HttpStatus.BAD_REQUEST);
-  }
+  return templateFn(reviewComment, customPrompt);
 }
 
-export function buildBatchUserPrompt(
-  command: ClaudeCommand,
-  contexts: (ReviewCommandContext | CommentCommandContext)[],
-  customPrompt?: string
-): string {
-  const batchSection = templates.batchReviewCommentSection(contexts);
+// ── Batch prompt ────────────────────────────────────────────────────
 
-  switch (command) {
-    case 'fix':
-      return templates.batchFixPrompt(batchSection);
-    case 'explain':
-      return templates.batchExplainPrompt(batchSection);
-    case 'validate':
-      return templates.batchValidatePrompt(batchSection);
-    case 'custom': {
-      requireCustomPrompt(customPrompt);
-      return templates.batchCustomPrompt(customPrompt!, batchSection);
-    }
-    default:
-      throw new AppError(
-        `Command '${command}' is not supported for batch`,
-        HttpStatus.BAD_REQUEST
-      );
-  }
-}
+type BatchTemplateFn = (batchSection: string, customPrompt?: string) => string;
 
+const batchTemplates: Partial<Record<ClaudeCommand, BatchTemplateFn>> = {
+  fix: (s) => templates.batchFixPrompt(s),
+  explain: (s) => templates.batchExplainPrompt(s),
+  validate: (s) => templates.batchValidatePrompt(s),
+  custom: (s, cp) => templates.batchCustomPrompt(cp!, s),
+};
+
+// ── Shared helpers ─────────────────────────────────────────────────
 
 function requireCustomPrompt(customPrompt?: string): void {
   if (!customPrompt || customPrompt.trim() === '') {

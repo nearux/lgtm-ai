@@ -51,6 +51,21 @@ export class ClaudeProcess extends EventEmitter<ClaudeStreamEvents> {
   private errored = false;
   private resultReceived = false;
 
+  private static readonly HOOKS_BY_MODE: Record<
+    string,
+    { matcher: string; hookCallbackIds: string[] }[]
+  > = {
+    plan: [{ matcher: '*', hookCallbackIds: ['auto_approve'] }],
+    acceptEdits: [{ matcher: '^Bash$', hookCallbackIds: ['tool_approval'] }],
+    bypassPermissions: [],
+    default: [
+      {
+        matcher: '^(?!(Glob|Grep|Read|Task|TodoWrite)$).*',
+        hookCallbackIds: ['tool_approval'],
+      },
+    ],
+  };
+
   constructor(
     workingDir: string,
     options: ClaudeExecuteOptions = {},
@@ -96,37 +111,9 @@ export class ClaudeProcess extends EventEmitter<ClaudeStreamEvents> {
   }
 
   sendInitialize(requestId: string, mode?: string): void {
-    let preToolUseHooks: { matcher: string; hookCallbackIds: string[] }[];
-    switch (mode) {
-      case 'plan':
-        preToolUseHooks = [
-          {
-            matcher: '*',
-            hookCallbackIds: ['auto_approve'],
-          },
-        ];
-        break;
-      case 'acceptEdits':
-        preToolUseHooks = [
-          {
-            matcher: '^Bash$',
-            hookCallbackIds: ['tool_approval'],
-          },
-        ];
-        break;
-      case 'bypassPermissions':
-        preToolUseHooks = [];
-        break;
-      case 'default':
-      default:
-        preToolUseHooks = [
-          {
-            matcher: '^(?!(Glob|Grep|Read|Task|TodoWrite)$).*',
-            hookCallbackIds: ['tool_approval'],
-          },
-        ];
-        break;
-    }
+    const preToolUseHooks =
+      ClaudeProcess.HOOKS_BY_MODE[mode ?? 'default'] ??
+      ClaudeProcess.HOOKS_BY_MODE['default'];
 
     this.writeJson({
       type: 'control_request',
@@ -217,12 +204,12 @@ export class ClaudeProcess extends EventEmitter<ClaudeStreamEvents> {
     });
   }
 
-  private writeJson(value: unknown): void {
-    this.childProcess?.stdin!.write(JSON.stringify(value) + '\n');
-  }
-
   abort(): void {
     this.childProcess?.kill();
+  }
+
+  private writeJson(value: unknown): void {
+    this.childProcess?.stdin!.write(JSON.stringify(value) + '\n');
   }
 
   private handleChunk(chunk: Buffer): void {

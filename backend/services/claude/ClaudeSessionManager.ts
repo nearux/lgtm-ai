@@ -9,6 +9,16 @@ import {
 } from '../chatSessions.js';
 import { getFileChanges } from '../git.js';
 
+export interface ExecuteParams {
+  requestId: string;
+  prompt: string;
+  workingDir: string;
+  options?: ClaudeExecuteOptions;
+  chatContext?: ClaudeChatContext;
+  commandMeta?: { command?: string; customPrompt?: string };
+  systemPrompt?: string;
+}
+
 export class ClaudeSessionManager {
   private processes = new Map<string, ClaudeProcess>();
   private sender: WebSocketSender;
@@ -17,16 +27,18 @@ export class ClaudeSessionManager {
     this.sender = new WebSocketSender(ws);
   }
 
-  execute(
-    requestId: string,
-    prompt: string,
-    workingDir: string,
-    options: ClaudeExecuteOptions = {},
-    chatContext?: ClaudeChatContext,
-    commandMeta?: { command?: string; customPrompt?: string },
-    systemPrompt?: string
-  ): void {
+  execute(params: ExecuteParams): void {
+    const {
+      requestId,
+      prompt,
+      workingDir,
+      options = {},
+      chatContext,
+      commandMeta,
+      systemPrompt,
+    } = params;
     const { sender } = this;
+
     if (this.processes.has(requestId)) {
       sender.send({
         type: 'error',
@@ -56,6 +68,77 @@ export class ClaudeSessionManager {
         );
       });
     }
+
+    this.attachEventForwarding(proc, requestId, workingDir, {
+      options,
+      chatContext,
+      commandMeta,
+    });
+
+    proc.sendInitialize(requestId, options.executionMode);
+    proc.sendPermissionMode(options.executionMode ?? 'default');
+    proc.sendPrompt(prompt);
+  }
+
+  respondToToolApproval(
+    requestId: string,
+    approvalRequestId: string,
+    behavior: 'allow' | 'deny',
+    message?: string,
+    updatedInput?: unknown
+  ): void {
+    const proc = this.processes.get(requestId);
+    if (!proc) return;
+
+    proc.sendApprovalResponse(
+      approvalRequestId,
+      behavior,
+      message,
+      updatedInput
+    );
+  }
+
+  respondToPlanApproval(
+    requestId: string,
+    approvalRequestId: string,
+    behavior: 'allow' | 'deny',
+    message?: string,
+    updatedInput?: unknown
+  ): void {
+    const proc = this.processes.get(requestId);
+    if (!proc) return;
+
+    proc.sendPlanApprovalResponse(
+      approvalRequestId,
+      behavior,
+      message,
+      updatedInput
+    );
+  }
+
+  abort(requestId: string): void {
+    this.processes.get(requestId)?.abort();
+  }
+
+  abortAll(): void {
+    for (const proc of this.processes.values()) {
+      proc.abort();
+    }
+    this.processes.clear();
+  }
+
+  private attachEventForwarding(
+    proc: ClaudeProcess,
+    requestId: string,
+    workingDir: string,
+    context: {
+      options: ClaudeExecuteOptions;
+      chatContext?: ClaudeChatContext;
+      commandMeta?: { command?: string; customPrompt?: string };
+    }
+  ): void {
+    const { sender } = this;
+    const { options, chatContext, commandMeta } = context;
 
     proc.on('text', (chunk) => sender.send({ type: 'text', requestId, chunk }));
     proc.on('tool_message', (toolId, toolName, input) =>
@@ -134,56 +217,5 @@ export class ClaudeSessionManager {
       sender.send({ type: 'error', requestId, message });
       this.processes.delete(requestId);
     });
-
-    proc.sendInitialize(requestId, options.executionMode);
-    proc.sendPermissionMode(options.executionMode ?? 'default');
-    proc.sendPrompt(prompt);
-  }
-
-  respondToToolApproval(
-    requestId: string,
-    approvalRequestId: string,
-    behavior: 'allow' | 'deny',
-    message?: string,
-    updatedInput?: unknown
-  ): void {
-    const proc = this.processes.get(requestId);
-    if (!proc) return;
-
-    proc.sendApprovalResponse(
-      approvalRequestId,
-      behavior,
-      message,
-      updatedInput
-    );
-  }
-
-  respondToPlanApproval(
-    requestId: string,
-    approvalRequestId: string,
-    behavior: 'allow' | 'deny',
-    message?: string,
-    updatedInput?: unknown
-  ): void {
-    const proc = this.processes.get(requestId);
-    if (!proc) return;
-
-    proc.sendPlanApprovalResponse(
-      approvalRequestId,
-      behavior,
-      message,
-      updatedInput
-    );
-  }
-
-  abort(requestId: string): void {
-    this.processes.get(requestId)?.abort();
-  }
-
-  abortAll(): void {
-    for (const proc of this.processes.values()) {
-      proc.abort();
-    }
-    this.processes.clear();
   }
 }
