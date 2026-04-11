@@ -273,10 +273,12 @@ export async function fetchPRDetail(
   }
 
   const raw = JSON.parse(stdout) as GhPRDetail;
+  const reviewIds = raw.reviews.map((r) => r.id);
+
   const inlineCommentsByReview = await fetchReviewInlineComments(
     repoOwnerName,
     prNumber,
-    raw.reviews.map((r) => r.id)
+    reviewIds
   );
   return PRDetailDto.fromGh(raw, inlineCommentsByReview);
 }
@@ -373,57 +375,84 @@ export async function checkoutPRBranch(
   };
 }
 
+async function fetchRawPRInlineComments(
+  repoOwnerName: string,
+  prNumber: number
+): Promise<GhReviewInlineComment[]> {
+  const { stdout } = await execFileAsync('gh', [
+    'api',
+    '--method',
+    'GET',
+    `repos/${repoOwnerName}/pulls/${prNumber}/comments`,
+  ]);
+  return JSON.parse(stdout) as GhReviewInlineComment[];
+}
+
+async function resolveNodeIdToNumericId(
+  repoOwnerName: string,
+  prNumber: number,
+  reviewIds: string[]
+): Promise<Map<string, number>> {
+  const nodeIds = reviewIds.filter((id) => id.startsWith('PRR_'));
+  if (nodeIds.length === 0) return new Map();
+
+  try {
+    const { stdout } = await execFileAsync('gh', [
+      'api',
+      `repos/${repoOwnerName}/pulls/${prNumber}/reviews`,
+    ]);
+    const reviewsList = JSON.parse(stdout) as Array<{
+      id: number;
+      node_id: string;
+    }>;
+    return new Map(
+      reviewsList
+        .filter((r) => nodeIds.includes(r.node_id))
+        .map((r) => [r.node_id, r.id])
+    );
+  } catch (err) {
+    console.error(
+      `[fetchReviewInlineComments] Failed to fetch reviews list for PR #${prNumber}:`,
+      err
+    );
+    return new Map();
+  }
+}
+
 async function fetchReviewInlineComments(
   repoOwnerName: string,
   prNumber: number,
   reviewIds: string[]
 ): Promise<Map<string, GhReviewInlineComment[]>> {
-  const hasNodeIds = reviewIds.some((id) => id.startsWith('PRR_'));
-  let reviewsList: Array<{ id: number; node_id: string }> = [];
-  if (hasNodeIds) {
-    try {
-      const { stdout } = await execFileAsync('gh', [
-        'api',
-        `repos/${repoOwnerName}/pulls/${prNumber}/reviews`,
-      ]);
-      reviewsList = JSON.parse(stdout);
-    } catch (err) {
-      console.error(
-        `[fetchReviewInlineComments] Failed to fetch reviews list for PR #${prNumber}:`,
-        err
-      );
+  const [allComments, nodeIdToNumericId] = await Promise.all([
+    fetchRawPRInlineComments(repoOwnerName, prNumber),
+    resolveNodeIdToNumericId(repoOwnerName, prNumber, reviewIds),
+  ]);
+
+  const toNumericId = (reviewId: string): number | null => {
+    if (reviewId.startsWith('PRR_')) {
+      return nodeIdToNumericId.get(reviewId) ?? null;
+    }
+    const parsed = parseInt(reviewId, 10);
+    return Number.isNaN(parsed) ? null : parsed;
+  };
+
+  const numericIdToReviewId = new Map(
+    reviewIds.flatMap((reviewId) => {
+      const numericId = toNumericId(reviewId);
+      return numericId !== null ? [[numericId, reviewId]] : [];
+    })
+  );
+
+  const grouped = new Map<string, GhReviewInlineComment[]>(
+    reviewIds.map((id) => [id, []])
+  );
+  for (const comment of allComments) {
+    const reviewId = numericIdToReviewId.get(comment.pull_request_review_id);
+    if (reviewId !== undefined) {
+      grouped.get(reviewId)!.push(comment);
     }
   }
 
-  const entries = await Promise.all(
-    reviewIds.map(async (reviewId) => {
-      let numericId: string | null;
-      if (reviewId.startsWith('PRR_')) {
-        const match = reviewsList.find((r) => r.node_id === reviewId);
-        numericId = match ? String(match.id) : null;
-      } else {
-        numericId = reviewId;
-      }
-
-      if (!numericId) return [reviewId, [] as GhReviewInlineComment[]] as const;
-
-      try {
-        const { stdout } = await execFileAsync('gh', [
-          'api',
-          `repos/${repoOwnerName}/pulls/${prNumber}/reviews/${numericId}/comments`,
-        ]);
-        return [
-          reviewId,
-          JSON.parse(stdout) as GhReviewInlineComment[],
-        ] as const;
-      } catch (err) {
-        console.error(
-          `[fetchReviewInlineComments] Failed to fetch comments for reviewId "${reviewId}" (numericId: ${numericId}):`,
-          err
-        );
-        return [reviewId, [] as GhReviewInlineComment[]] as const;
-      }
-    })
-  );
-  return new Map(entries);
+  return grouped;
 }

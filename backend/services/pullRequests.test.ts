@@ -482,10 +482,12 @@ describe('pullRequests service', () => {
         commits: [],
       };
 
-      mockExecAsync.mockResolvedValueOnce({
-        stdout: JSON.stringify(emptyDetailData),
-        stderr: '',
-      });
+      mockExecAsync
+        .mockResolvedValueOnce({
+          stdout: JSON.stringify(emptyDetailData),
+          stderr: '',
+        })
+        .mockResolvedValueOnce({ stdout: JSON.stringify([]), stderr: '' }); // pulls/comments
 
       const result = await fetchPRDetail('owner/repo', 1);
 
@@ -574,10 +576,12 @@ describe('pullRequests service', () => {
         commits: [],
       };
       const ghReviewsList = [{ id: 101, node_id: 'PRR_1' }];
+      // pull_request_review_id links the comment to review with numeric id 101
       const ghInlineComments = [
         {
           id: 9001,
           node_id: 'PRRC_1',
+          pull_request_review_id: 101,
           user: {
             login: 'reviewer1',
             id: 56902,
@@ -599,13 +603,14 @@ describe('pullRequests service', () => {
             stderr: '',
           });
         }
+        // node_id → numeric id resolution: pulls/{pr}/reviews
         if (path.includes('/reviews') && !path.includes('/comments')) {
           return Promise.resolve({
             stdout: JSON.stringify(ghReviewsList),
             stderr: '',
           });
         }
-        // review comments endpoint
+        // single pulls/{pr}/comments endpoint (replaces N per-review calls)
         return Promise.resolve({
           stdout: JSON.stringify(ghInlineComments),
           stderr: '',
@@ -625,6 +630,240 @@ describe('pullRequests service', () => {
       expect(result.reviews[0].inlineComments[0].author.login).toBe(
         'reviewer1'
       );
+    });
+
+    it('uses a single pulls/comments call regardless of review count (no N+1)', async () => {
+      const ghOutput = {
+        number: 1,
+        title: 'Test PR',
+        body: '',
+        assignees: [],
+        author: { login: 'author1' },
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-02T00:00:00Z',
+        state: 'OPEN',
+        comments: [],
+        reviews: [
+          {
+            id: 'PRR_1',
+            author: { login: 'r1' },
+            state: 'COMMENTED',
+            body: '',
+            submittedAt: '2024-01-01T11:00:00Z',
+          },
+          {
+            id: 'PRR_2',
+            author: { login: 'r2' },
+            state: 'APPROVED',
+            body: 'LGTM',
+            submittedAt: '2024-01-01T12:00:00Z',
+          },
+          {
+            id: 'PRR_3',
+            author: { login: 'r3' },
+            state: 'CHANGES_REQUESTED',
+            body: '',
+            submittedAt: '2024-01-01T13:00:00Z',
+          },
+        ],
+        commits: [],
+      };
+      const ghReviewsList = [
+        { id: 101, node_id: 'PRR_1' },
+        { id: 102, node_id: 'PRR_2' },
+        { id: 103, node_id: 'PRR_3' },
+      ];
+      const calls: string[][] = [];
+      mockExecAsync.mockImplementation((_cmd: string, args: string[]) => {
+        calls.push(args);
+        const path = args.join(' ');
+        if (path.includes('pr view'))
+          return Promise.resolve({
+            stdout: JSON.stringify(ghOutput),
+            stderr: '',
+          });
+        if (path.includes('/reviews') && !path.includes('/comments'))
+          return Promise.resolve({
+            stdout: JSON.stringify(ghReviewsList),
+            stderr: '',
+          });
+        return Promise.resolve({ stdout: JSON.stringify([]), stderr: '' });
+      });
+
+      await fetchPRDetail('owner/repo', 1);
+
+      const commentsCalls = calls.filter((args) =>
+        args.join(' ').includes('/comments')
+      );
+      // exactly 1 call to pulls/{pr}/comments — not 3 (one per review)
+      expect(commentsCalls).toHaveLength(1);
+      expect(commentsCalls[0].join(' ')).toContain(
+        'repos/owner/repo/pulls/1/comments'
+      );
+    });
+
+    it('groups inline comments from pulls/comments by pull_request_review_id', async () => {
+      const ghOutput = {
+        number: 1,
+        title: 'Test PR',
+        body: '',
+        assignees: [],
+        author: { login: 'author1' },
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-02T00:00:00Z',
+        state: 'OPEN',
+        comments: [],
+        reviews: [
+          {
+            id: 'PRR_1',
+            author: { login: 'r1' },
+            state: 'COMMENTED',
+            body: '',
+            submittedAt: '2024-01-01T11:00:00Z',
+          },
+          {
+            id: 'PRR_2',
+            author: { login: 'r2' },
+            state: 'COMMENTED',
+            body: '',
+            submittedAt: '2024-01-01T12:00:00Z',
+          },
+        ],
+        commits: [],
+      };
+      const ghReviewsList = [
+        { id: 101, node_id: 'PRR_1' },
+        { id: 102, node_id: 'PRR_2' },
+      ];
+      const allPrComments = [
+        {
+          id: 1,
+          node_id: 'PRRC_1',
+          pull_request_review_id: 101,
+          user: { login: 'r1', id: 1, node_id: 'U_1', type: 'User' },
+          body: 'Comment on review 1',
+          path: 'a.ts',
+          diff_hunk: '@@ -1 +1 @@',
+          created_at: '2024-01-01T11:00:00Z',
+          updated_at: '2024-01-01T11:00:00Z',
+        },
+        {
+          id: 2,
+          node_id: 'PRRC_2',
+          pull_request_review_id: 102,
+          user: { login: 'r2', id: 2, node_id: 'U_2', type: 'User' },
+          body: 'Comment on review 2',
+          path: 'b.ts',
+          diff_hunk: '@@ -2 +2 @@',
+          created_at: '2024-01-01T12:00:00Z',
+          updated_at: '2024-01-01T12:00:00Z',
+        },
+        {
+          id: 3,
+          node_id: 'PRRC_3',
+          pull_request_review_id: 101,
+          user: { login: 'r1', id: 1, node_id: 'U_1', type: 'User' },
+          body: 'Second comment on review 1',
+          path: 'a.ts',
+          diff_hunk: '@@ -5 +5 @@',
+          created_at: '2024-01-01T11:30:00Z',
+          updated_at: '2024-01-01T11:30:00Z',
+        },
+      ];
+      mockExecAsync.mockImplementation((_cmd: string, args: string[]) => {
+        const path = args.join(' ');
+        if (path.includes('pr view'))
+          return Promise.resolve({
+            stdout: JSON.stringify(ghOutput),
+            stderr: '',
+          });
+        if (path.includes('/reviews') && !path.includes('/comments'))
+          return Promise.resolve({
+            stdout: JSON.stringify(ghReviewsList),
+            stderr: '',
+          });
+        return Promise.resolve({
+          stdout: JSON.stringify(allPrComments),
+          stderr: '',
+        });
+      });
+
+      const result = await fetchPRDetail('owner/repo', 1);
+
+      expect(result.reviews[0].inlineComments).toHaveLength(2);
+      expect(result.reviews[0].inlineComments[0].body).toBe(
+        'Comment on review 1'
+      );
+      expect(result.reviews[0].inlineComments[1].body).toBe(
+        'Second comment on review 1'
+      );
+      expect(result.reviews[1].inlineComments).toHaveLength(1);
+      expect(result.reviews[1].inlineComments[0].body).toBe(
+        'Comment on review 2'
+      );
+    });
+
+    it('skips reviews list fetch when all review ids are numeric (no PRR_ node ids)', async () => {
+      const ghOutput = {
+        number: 1,
+        title: 'Test PR',
+        body: '',
+        assignees: [],
+        author: { login: 'author1' },
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-02T00:00:00Z',
+        state: 'OPEN',
+        comments: [],
+        reviews: [
+          {
+            id: '42',
+            author: { login: 'r1' },
+            state: 'APPROVED',
+            body: '',
+            submittedAt: '2024-01-01T11:00:00Z',
+          },
+        ],
+        commits: [],
+      };
+      const inlineComments = [
+        {
+          id: 9,
+          node_id: 'PRRC_9',
+          pull_request_review_id: 42,
+          user: { login: 'r1', id: 1, node_id: 'U_1', type: 'User' },
+          body: 'Inline nit',
+          path: 'x.ts',
+          diff_hunk: '@@ -1 +1 @@',
+          created_at: '2024-01-01T11:00:00Z',
+          updated_at: '2024-01-01T11:00:00Z',
+        },
+      ];
+      const calls: string[][] = [];
+      mockExecAsync.mockImplementation((_cmd: string, args: string[]) => {
+        calls.push(args);
+        const path = args.join(' ');
+        if (path.includes('pr view'))
+          return Promise.resolve({
+            stdout: JSON.stringify(ghOutput),
+            stderr: '',
+          });
+        return Promise.resolve({
+          stdout: JSON.stringify(inlineComments),
+          stderr: '',
+        });
+      });
+
+      const result = await fetchPRDetail('owner/repo', 1);
+
+      // no call to pulls/{pr}/reviews (node_id resolution not needed)
+      const reviewsListCalls = calls.filter(
+        (args) =>
+          args.join(' ').includes('/reviews') &&
+          !args.join(' ').includes('/comments')
+      );
+      expect(reviewsListCalls).toHaveLength(0);
+      expect(result.reviews[0].inlineComments).toHaveLength(1);
+      expect(result.reviews[0].inlineComments[0].body).toBe('Inline nit');
     });
   });
 
