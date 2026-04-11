@@ -230,28 +230,7 @@ export async function fetchPRList(
       cursor
     ));
   } catch (error) {
-    const errorMessage = getErrorMessage(error).toLowerCase();
-    if (errorMessage.includes('authentication')) {
-      throw new AppError(
-        'GitHub CLI is not authenticated. Please check your account in the header.',
-        HttpStatus.SERVICE_UNAVAILABLE,
-        error
-      );
-    }
-
-    if (errorMessage.includes('not found')) {
-      throw new AppError(
-        'Cannot access this repository. Try switching your GitHub account in the header.',
-        HttpStatus.FORBIDDEN,
-        error
-      );
-    }
-
-    throw new AppError(
-      'Failed to fetch PR data from GitHub',
-      HttpStatus.INTERNAL_SERVER_ERROR,
-      error
-    );
+    throw mapGhError(error, 'fetch');
   }
 
   const lastPage = Math.max(1, Math.ceil(totalCount / limit));
@@ -284,31 +263,7 @@ export async function fetchPRDetail(
       'number,title,body,baseRefName,headRefName,assignees,author,createdAt,updatedAt,state,comments,reviews,commits',
     ]));
   } catch (error) {
-    const errorMessage = getErrorMessage(error);
-
-    const msg = errorMessage.toLowerCase();
-
-    if (msg.includes('authentication')) {
-      throw new AppError(
-        'GitHub CLI is not authenticated. Please check your account in the header.',
-        HttpStatus.SERVICE_UNAVAILABLE,
-        error
-      );
-    }
-
-    if (msg.includes('could not resolve') || msg.includes('not found')) {
-      throw new AppError(
-        'Cannot access this repository. Try switching your GitHub account in the header.',
-        HttpStatus.FORBIDDEN,
-        error
-      );
-    }
-
-    throw new AppError(
-      'Failed to fetch PR data from GitHub',
-      HttpStatus.INTERNAL_SERVER_ERROR,
-      error
-    );
+    throw mapGhError(error, 'fetch');
   }
 
   const raw = JSON.parse(stdout) as GhPRDetail;
@@ -378,25 +333,7 @@ export async function checkoutPRBranch(
       { cwd: workingDir }
     );
   } catch (error) {
-    const errorMessage = getErrorMessage(error).toLowerCase();
-
-    if (errorMessage.includes('could not resolve')) {
-      throw new AppError('Pull request not found', HttpStatus.NOT_FOUND, error);
-    }
-
-    if (errorMessage.includes('authentication')) {
-      throw new AppError(
-        'GitHub CLI is not available or authenticated',
-        HttpStatus.SERVICE_UNAVAILABLE,
-        error
-      );
-    }
-
-    throw new AppError(
-      'Failed to checkout PR branch',
-      HttpStatus.INTERNAL_SERVER_ERROR,
-      error
-    );
+    throw mapGhError(error, 'checkout');
   }
 
   const { stdout: currentBranch } = await execFileAsync(
