@@ -419,6 +419,30 @@ async function resolveNodeIdToNumericId(
   }
 }
 
+/**
+ * Builds a map from numeric review ID → original review ID string.
+ * Handles both plain numeric IDs ("123") and GitHub node IDs ("PRR_xxx").
+ */
+export function buildReviewIdMap(
+  reviewIds: string[],
+  nodeIdToNumericId: Map<string, number>
+): Map<number, string> {
+  const toNumericId = (reviewId: string): number | null => {
+    if (reviewId.startsWith('PRR_')) {
+      return nodeIdToNumericId.get(reviewId) ?? null;
+    }
+    const parsed = parseInt(reviewId, 10);
+    return Number.isNaN(parsed) ? null : parsed;
+  };
+
+  return new Map(
+    reviewIds.flatMap((reviewId) => {
+      const numericId = toNumericId(reviewId);
+      return numericId !== null ? [[numericId, reviewId]] : [];
+    })
+  );
+}
+
 async function fetchReviewInlineComments(
   repoOwnerName: string,
   prNumber: number,
@@ -429,20 +453,7 @@ async function fetchReviewInlineComments(
     resolveNodeIdToNumericId(repoOwnerName, prNumber, reviewIds),
   ]);
 
-  const toNumericId = (reviewId: string): number | null => {
-    if (reviewId.startsWith('PRR_')) {
-      return nodeIdToNumericId.get(reviewId) ?? null;
-    }
-    const parsed = parseInt(reviewId, 10);
-    return Number.isNaN(parsed) ? null : parsed;
-  };
-
-  const numericIdToReviewId = new Map(
-    reviewIds.flatMap((reviewId) => {
-      const numericId = toNumericId(reviewId);
-      return numericId !== null ? [[numericId, reviewId]] : [];
-    })
-  );
+  const numericIdToReviewId = buildReviewIdMap(reviewIds, nodeIdToNumericId);
 
   const grouped = new Map<string, GhReviewInlineComment[]>(
     reviewIds.map((id) => [id, []])

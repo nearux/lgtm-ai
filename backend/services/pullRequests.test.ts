@@ -9,7 +9,7 @@ vi.mock('util', () => ({
 }));
 
 // Import after mocks are set up
-const { fetchPRList, fetchPRDetail, checkoutPRBranch } =
+const { fetchPRList, fetchPRDetail, checkoutPRBranch, buildReviewIdMap } =
   await import('./pullRequests.js');
 
 describe('pullRequests service', () => {
@@ -1034,6 +1034,55 @@ describe('pullRequests service', () => {
         message: 'Invalid repository name',
         statusCode: 400,
       });
+    });
+  });
+
+  describe('buildReviewIdMap', () => {
+    it('maps numeric review IDs to themselves', () => {
+      const reviewIds = ['111', '222'];
+      const nodeIdMap = new Map<string, number>();
+      const result = buildReviewIdMap(reviewIds, nodeIdMap);
+      expect(result).toEqual(
+        new Map([
+          [111, '111'],
+          [222, '222'],
+        ])
+      );
+    });
+
+    it('maps PRR_ node IDs via nodeIdToNumericId', () => {
+      const reviewIds = ['PRR_abc', 'PRR_def'];
+      const nodeIdMap = new Map([
+        ['PRR_abc', 10],
+        ['PRR_def', 20],
+      ]);
+      const result = buildReviewIdMap(reviewIds, nodeIdMap);
+      expect(result).toEqual(
+        new Map([
+          [10, 'PRR_abc'],
+          [20, 'PRR_def'],
+        ])
+      );
+    });
+
+    it('skips IDs that cannot be resolved', () => {
+      const reviewIds = ['PRR_missing', '999'];
+      const nodeIdMap = new Map<string, number>();
+      const result = buildReviewIdMap(reviewIds, nodeIdMap);
+      // PRR_missing has no entry in nodeIdMap → skipped
+      expect(result).toEqual(new Map([[999, '999']]));
+    });
+
+    it('handles mixed numeric and PRR_ IDs', () => {
+      const reviewIds = ['PRR_abc', '42'];
+      const nodeIdMap = new Map([['PRR_abc', 7]]);
+      const result = buildReviewIdMap(reviewIds, nodeIdMap);
+      expect(result).toEqual(
+        new Map([
+          [7, 'PRR_abc'],
+          [42, '42'],
+        ])
+      );
     });
   });
 });
