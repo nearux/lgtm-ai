@@ -27,6 +27,11 @@ SQLite via Prisma + libsql adapter. Schema: `prisma/schema.prisma`.
 - Default DB path: `~/.lgtmai/lgtmai.db` (override with `DB_PATH` env var)
 - Dev: `prisma migrate dev` | Prod: `prisma migrate deploy`
 
+## Conventions
+
+- Public methods must always be placed above private methods.
+- Prefer declarative, functional programming style using remeda for data transformation logic.
+
 ## Error Handling
 
 Use `AppError` (with `statusCode`) for HTTP errors. The error middleware also catches tsoa's `ValidateError` and returns consistent JSON responses.
@@ -40,3 +45,5 @@ Messages from server: `text`, `tool_message`, `tool_result`, `done`, `error`, `a
 ## Testing
 
 Vitest. Unit tests: `.test.ts`. Integration tests: `.int.test.ts` (use `createTestDatabase()` from `test/prismaTestDb.ts` for isolated DB instances).
+
+- When adding tests, always review at the end to ensure there are no excessive or duplicate test cases.
