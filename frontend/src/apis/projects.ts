@@ -6,8 +6,6 @@ import type {
   UpdateProjectBody,
 } from '@lgtmai/backend/types';
 
-export type { Project, ProjectDetail, CreateProjectBody, UpdateProjectBody };
-
 export const getProjectList = () => apiGet<Project[]>('/api/projects');
 
 export const getProjectDetail = (id: string) =>

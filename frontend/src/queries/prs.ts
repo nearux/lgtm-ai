@@ -1,6 +1,6 @@
 import { queryOptions, mutationOptions } from '@tanstack/react-query';
 import { getPrList, getPrDetail, postCheckoutPr } from '../apis';
-import type { PRState, CheckoutPRBranchBody } from '../apis';
+import type { PRState, CheckoutPRBranchBody } from '@lgtmai/backend/types';
 
 export const getPrListQueryOptions = (
   projectId: string,

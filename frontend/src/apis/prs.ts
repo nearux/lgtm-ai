@@ -7,14 +7,6 @@ import type {
   CheckoutPRBranchResult,
 } from '@lgtmai/backend/types';
 
-export type {
-  PaginatedPRList,
-  PRDetail,
-  PRState,
-  CheckoutPRBranchBody,
-  CheckoutPRBranchResult,
-};
-
 export const getPrList = (
   projectId: string,
   params?: { state: PRState; page: number; limit: number; origin?: string }

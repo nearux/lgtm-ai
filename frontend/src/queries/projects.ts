@@ -6,7 +6,7 @@ import {
   patchUpdateProject,
   deleteProject,
 } from '../apis';
-import type { UpdateProjectBody } from '../apis';
+import type { UpdateProjectBody } from '@lgtmai/backend/types';
 
 export const getProjectListQueryOptions = () =>
   queryOptions({

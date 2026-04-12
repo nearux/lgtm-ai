@@ -4,8 +4,6 @@ import type {
   ChatSessionHistoryResponse,
 } from '@lgtmai/backend/types';
 
-export type { ChatSessionSummary, ChatSessionHistoryResponse };
-
 export const getChatSessionList = (projectId: string, prNumber: number) =>
   apiGet<ChatSessionSummary[]>(
     `/api/projects/${projectId}/prs/${prNumber}/chat-sessions`

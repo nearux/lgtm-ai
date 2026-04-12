@@ -4,8 +4,6 @@ import type {
   CommitAndPushResponse,
 } from '@lgtmai/backend/types';
 
-export type { CommitMessageResponse, CommitAndPushResponse };
-
 export interface GenerateCommitMessageBody {
   prContext?: {
     title: string;

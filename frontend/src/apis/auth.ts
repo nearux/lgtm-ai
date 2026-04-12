@@ -4,8 +4,6 @@ import type {
   SwitchAccountBody,
 } from '@lgtmai/backend/types';
 
-export type { GitHubAuthStatus, SwitchAccountBody };
-
 export const getGithubStatus = () =>
   apiGet<GitHubAuthStatus>('/api/auth/github/status');
 
