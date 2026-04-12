@@ -1,22 +1,6 @@
 import { mutationOptions } from '@tanstack/react-query';
-import { apiPost } from '../apis/client';
-import type {
-  CommitMessageResponse,
-  CommitAndPushResponse,
-} from '@lgtmai/backend/types';
-
-interface GenerateCommitMessageBody {
-  prContext?: {
-    title: string;
-    body: string;
-    reviewComment: string;
-  };
-}
-
-interface CommitAndPushBody {
-  commitMessage: string;
-  push?: boolean;
-}
+import { generateCommitMessage, commitAndPush } from '../apis';
+import type { GenerateCommitMessageBody, CommitAndPushBody } from '../apis';
 
 export const generateCommitMessageMutationOptions = () =>
   mutationOptions({
@@ -26,11 +10,7 @@ export const generateCommitMessageMutationOptions = () =>
     }: {
       projectId: string;
       body: GenerateCommitMessageBody;
-    }) =>
-      apiPost<CommitMessageResponse, GenerateCommitMessageBody>(
-        `/api/projects/${projectId}/commit-message`,
-        body
-      ),
+    }) => generateCommitMessage(projectId, body),
   });
 
 export const commitAndPushMutationOptions = () =>
@@ -41,9 +21,5 @@ export const commitAndPushMutationOptions = () =>
     }: {
       projectId: string;
       body: CommitAndPushBody;
-    }) =>
-      apiPost<CommitAndPushResponse, CommitAndPushBody>(
-        `/api/projects/${projectId}/commit-and-push`,
-        body
-      ),
+    }) => commitAndPush(projectId, body),
   });

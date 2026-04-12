@@ -1,37 +1,37 @@
 import { queryOptions, mutationOptions } from '@tanstack/react-query';
-import { apiGet, apiPost, apiPatch, apiDelete } from '../apis/client';
-import type {
-  Project,
-  ProjectDetail,
-  CreateProjectBody,
-  UpdateProjectBody,
-} from '@lgtmai/backend/types';
+import {
+  getProjectList,
+  getProjectDetail,
+  createProject,
+  updateProject,
+  deleteProject,
+} from '../apis';
+import type { UpdateProjectBody } from '../apis';
 
 export const getProjectListQueryOptions = () =>
   queryOptions({
     queryKey: ['projects', 'list'],
-    queryFn: () => apiGet<Project[]>('/api/projects'),
+    queryFn: () => getProjectList(),
   });
 
 export const getProjectDetailQueryOptions = (id: string) =>
   queryOptions({
     queryKey: ['projects', 'detail', id],
-    queryFn: () => apiGet<ProjectDetail>(`/api/projects/${id}`),
+    queryFn: () => getProjectDetail(id),
   });
 
 export const createProjectMutationOptions = () =>
   mutationOptions({
-    mutationFn: (data: CreateProjectBody) =>
-      apiPost<Project, CreateProjectBody>('/api/projects', data),
+    mutationFn: createProject,
   });
 
 export const updateProjectMutationOptions = () =>
   mutationOptions({
     mutationFn: ({ id, data }: { id: string; data: UpdateProjectBody }) =>
-      apiPatch<Project, UpdateProjectBody>(`/api/projects/${id}`, data),
+      updateProject(id, data),
   });
 
 export const deleteProjectMutationOptions = () =>
   mutationOptions({
-    mutationFn: (id: string) => apiDelete(`/api/projects/${id}`),
+    mutationFn: deleteProject,
   });

@@ -1,9 +1,5 @@
 import { queryOptions } from '@tanstack/react-query';
-import { apiGet } from '../apis/client';
-import type {
-  ChatSessionSummary,
-  ChatSessionHistoryResponse,
-} from '@lgtmai/backend/types';
+import { getChatSessionList, getChatSessionHistory } from '../apis';
 
 export const getChatSessionListQueryOptions = (
   projectId: string,
@@ -11,10 +7,7 @@ export const getChatSessionListQueryOptions = (
 ) =>
   queryOptions({
     queryKey: ['chatSessions', 'list', projectId, prNumber],
-    queryFn: () =>
-      apiGet<ChatSessionSummary[]>(
-        `/api/projects/${projectId}/prs/${prNumber}/chat-sessions`
-      ),
+    queryFn: () => getChatSessionList(projectId, prNumber),
   });
 
 export const getChatSessionHistoryQueryOptions = (
@@ -24,8 +17,5 @@ export const getChatSessionHistoryQueryOptions = (
 ) =>
   queryOptions({
     queryKey: ['chatSessions', 'history', projectId, prNumber, sessionId],
-    queryFn: () =>
-      apiGet<ChatSessionHistoryResponse>(
-        `/api/projects/${projectId}/prs/${prNumber}/chat-sessions/${sessionId}/history`
-      ),
+    queryFn: () => getChatSessionHistory(projectId, prNumber, sessionId),
   });

@@ -1,12 +1,6 @@
 import { queryOptions, mutationOptions } from '@tanstack/react-query';
-import { apiGet, apiPost } from '../apis/client';
-import type {
-  PaginatedPRList,
-  PRDetail,
-  PRState,
-  CheckoutPRBranchBody,
-  CheckoutPRBranchResult,
-} from '@lgtmai/backend/types';
+import { getPrList, getPrDetail, checkoutPr } from '../apis';
+import type { PRState, CheckoutPRBranchBody } from '../apis';
 
 export const getPrListQueryOptions = (
   projectId: string,
@@ -14,17 +8,7 @@ export const getPrListQueryOptions = (
 ) =>
   queryOptions({
     queryKey: ['prs', 'list', projectId, params ?? {}],
-    queryFn: () => {
-      const searchParams = new URLSearchParams();
-      if (params?.state) searchParams.set('state', params.state);
-      if (params?.page) searchParams.set('page', String(params.page));
-      if (params?.limit) searchParams.set('limit', String(params.limit));
-      if (params?.origin) searchParams.set('origin', params.origin);
-      const query = searchParams.toString();
-      return apiGet<PaginatedPRList>(
-        `/api/projects/${projectId}/prs${query ? `?${query}` : ''}`
-      );
-    },
+    queryFn: () => getPrList(projectId, params),
   });
 
 export const getPrDetailQueryOptions = (
@@ -40,12 +24,7 @@ export const getPrDetailQueryOptions = (
       prNumber,
       ...(origin ? [origin] : []),
     ],
-    queryFn: () => {
-      const params = origin ? `?origin=${encodeURIComponent(origin)}` : '';
-      return apiGet<PRDetail>(
-        `/api/projects/${projectId}/prs/${prNumber}${params}`
-      );
-    },
+    queryFn: () => getPrDetail(projectId, prNumber, origin),
   });
 
 export const checkoutPrMutationOptions = () =>
@@ -58,9 +37,5 @@ export const checkoutPrMutationOptions = () =>
       projectId: string;
       prNumber: number;
       body?: CheckoutPRBranchBody;
-    }) =>
-      apiPost<CheckoutPRBranchResult, CheckoutPRBranchBody | undefined>(
-        `/api/projects/${projectId}/prs/${prNumber}/checkout`,
-        body
-      ),
+    }) => checkoutPr(projectId, prNumber, body),
   });
