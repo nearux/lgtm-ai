@@ -2,7 +2,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { AsyncBoundary, Select, Spinner, Tabs } from '@/shared/components';
 import { usePRListParams } from './hooks/usePRListParams';
 import { useQuery } from '@tanstack/react-query';
-import { projectsQuery } from '@/shared/apis';
+import { getProjectDetailQueryOptions } from '@/shared/queries';
 import { PRTable } from './components/PRTable/PRTable';
 import type { PRState } from '@lgtmai/backend/types';
 
@@ -12,7 +12,7 @@ export const PRListPage = () => {
   const { state, page, limit, setState, setPage } = usePRListParams();
 
   const { data: project } = useQuery({
-    ...projectsQuery.detail(projectId!),
+    ...getProjectDetailQueryOptions(projectId!),
     throwOnError: false,
     enabled: !!projectId,
   });

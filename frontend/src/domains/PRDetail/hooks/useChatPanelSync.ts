@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useChatPanel } from '../contexts';
-import { chatSessionsQueryKey } from '@/shared/apis';
+import { getChatSessionListQueryOptions } from '@/shared/queries';
 import type { UseClaudeWebSocketReturn } from './useClaudeWebSocket';
 
 /**
@@ -19,10 +19,10 @@ export function useChatPanelSync(ws: UseClaudeWebSocketReturn) {
 
     if (doneCount > prevDoneCountRef.current && state.prContext) {
       queryClient.invalidateQueries({
-        queryKey: chatSessionsQueryKey.list(
+        queryKey: getChatSessionListQueryOptions(
           state.prContext.projectId,
           state.prContext.prNumber
-        ),
+        ).queryKey,
       });
     }
 

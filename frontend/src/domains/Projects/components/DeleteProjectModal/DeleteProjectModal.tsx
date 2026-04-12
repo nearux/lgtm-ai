@@ -1,6 +1,9 @@
 import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { projectsMutation, projectsQuery } from '@/shared/apis';
+import {
+  deleteProjectMutationOptions,
+  getProjectListQueryOptions,
+} from '@/shared/queries';
 import { Modal, Button } from '@/shared/components';
 import type { Project } from '@lgtmai/backend/types';
 
@@ -12,9 +15,9 @@ interface Props {
 
 export const DeleteProjectModal = ({ isOpen, close, project }: Props) => {
   const { mutate, isPending } = useMutation({
-    ...projectsMutation.delete(),
+    ...deleteProjectMutationOptions(),
     meta: {
-      invalidates: [projectsQuery.list().queryKey],
+      invalidates: [getProjectListQueryOptions().queryKey],
     },
     onSuccess: close,
     onError: (error) => toast.error(error.message),

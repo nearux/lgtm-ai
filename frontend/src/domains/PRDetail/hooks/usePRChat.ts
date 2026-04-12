@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { chatSessionsQuery } from '@/shared/apis';
+import { getChatSessionHistoryQueryOptions } from '@/shared/queries';
 import type {
   PRMeta,
   ClaudeChatContext,
@@ -50,7 +50,11 @@ export function usePRChat({
     null
   );
   const { data: historyData } = useQuery({
-    ...chatSessionsQuery.history(projectId, prNumber, selectedSessionId ?? ''),
+    ...getChatSessionHistoryQueryOptions(
+      projectId,
+      prNumber,
+      selectedSessionId ?? ''
+    ),
     enabled: !!selectedSessionId,
   });
 

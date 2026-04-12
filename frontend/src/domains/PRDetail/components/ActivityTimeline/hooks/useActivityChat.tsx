@@ -3,7 +3,10 @@ import { useChatPanelParams } from '../../../hooks';
 import type { UseClaudeWebSocketReturn } from '../../../hooks';
 import { useChatPanel } from '../../../contexts';
 import { ACTION_LABELS } from '../../../utils/reviewPrompts';
-import { prsMutation, projectsQueryKey } from '@/shared/apis';
+import {
+  checkoutPrMutationOptions,
+  getProjectDetailQueryOptions,
+} from '@/shared/queries';
 import { useOverlay } from '@/shared/hooks';
 import { CheckoutModal } from '../../ReviewList/components/CheckoutModal/CheckoutModal';
 import type { PRMeta, ClaudeChatContext } from '@lgtmai/backend/types';
@@ -66,7 +69,7 @@ export function useActivityChat({
   } = ws;
   const overlay = useOverlay();
   const queryClient = useQueryClient();
-  const { mutateAsync: checkoutPR } = useMutation(prsMutation.checkout());
+  const { mutateAsync: checkoutPR } = useMutation(checkoutPrMutationOptions());
 
   const executeAction = (
     actionId: string,
@@ -140,7 +143,7 @@ export function useActivityChat({
               body: { force: true, origin },
             });
             await queryClient.invalidateQueries({
-              queryKey: projectsQueryKey.detail(projectId),
+              queryKey: getProjectDetailQueryOptions(projectId).queryKey,
             });
             close();
             executeAction(actionId, customPrompt, target);

@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { MessageSquare } from 'lucide-react';
-import { chatSessionsQuery } from '@/shared/apis';
+import { getChatSessionListQueryOptions } from '@/shared/queries';
 import { Spinner } from '@/shared/components';
 import type { ChatSessionSummary } from '@lgtmai/backend/types';
 import { formatRelativeTime } from '../../utils/formatRelativeTime';
@@ -20,7 +20,7 @@ export const ChatHistoryList = ({
     data: sessions,
     isLoading,
     error,
-  } = useQuery(chatSessionsQuery.list(projectId, prNumber));
+  } = useQuery(getChatSessionListQueryOptions(projectId, prNumber));
 
   if (isLoading) {
     return (

@@ -2,7 +2,10 @@ import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Folder } from 'lucide-react';
-import { projectsMutation, projectsQuery } from '@/shared/apis';
+import {
+  createProjectMutationOptions,
+  getProjectListQueryOptions,
+} from '@/shared/queries';
 import { Modal, Input, Button, AsyncBoundary } from '@/shared/components';
 import type { CreateProjectBody } from '@lgtmai/backend/types';
 import { FolderBrowser } from '../FolderBrowser/FolderBrowser';
@@ -21,9 +24,9 @@ export const CreateProjectModal = ({ isOpen, close }: Props) => {
   const [showBrowser, setShowBrowser] = useState(false);
 
   const { mutate, isPending } = useMutation({
-    ...projectsMutation.create(),
+    ...createProjectMutationOptions(),
     meta: {
-      invalidates: [projectsQuery.list().queryKey],
+      invalidates: [getProjectListQueryOptions().queryKey],
     },
     onSuccess: close,
     onError: (error) => toast.error(error.message),

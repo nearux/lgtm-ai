@@ -1,5 +1,8 @@
 import { useSuspenseQueries } from '@tanstack/react-query';
-import { projectsQuery, prsQuery } from '@/shared/apis';
+import {
+  getProjectDetailQueryOptions,
+  getPrDetailQueryOptions,
+} from '@/shared/queries';
 import { parseGitHubUrl, linkifyGitHubReferences } from '@/shared/utils';
 import type { PRMeta } from '@lgtmai/backend/types';
 import type { UseClaudeWebSocketReturn } from '../../hooks';
@@ -19,8 +22,8 @@ interface Props {
 export const PRDetailContent = ({ projectId, prNumber, origin, ws }: Props) => {
   const [{ data: project }, { data: pr }] = useSuspenseQueries({
     queries: [
-      projectsQuery.detail(projectId),
-      prsQuery.detail(projectId, Number(prNumber), origin),
+      getProjectDetailQueryOptions(projectId),
+      getPrDetailQueryOptions(projectId, Number(prNumber), origin),
     ],
   });
 
