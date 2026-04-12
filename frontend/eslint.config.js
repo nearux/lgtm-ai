@@ -2,6 +2,7 @@ import js from '@eslint/js';
 import globals from 'globals';
 import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
+import importLayers from 'eslint-plugin-import-layers';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
@@ -20,12 +21,22 @@ export default tseslint.config(
     plugins: {
       'react-hooks': reactHooks,
       'react-refresh': reactRefresh,
+      'import-layers': importLayers,
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
       'react-refresh/only-export-components': [
         'warn',
         { allowConstantExport: true },
+      ],
+      'import-layers/layers': [
+        'error',
+        {
+          layers: ['domains', 'features', 'queries', 'apis', 'shared'],
+          aliases: { '@': 'src' },
+          allowCrossSlice: ['shared'],
+          allowedImports: [{ from: 'shared', to: 'apis' }],
+        },
       ],
     },
   }
