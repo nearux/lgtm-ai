@@ -3,7 +3,7 @@ import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Folder } from 'lucide-react';
 import {
-  createProjectMutationOptions,
+  postCreateProjectMutationOptions,
   getProjectListQueryOptions,
 } from '@/shared/queries';
 import { Modal, Input, Button, AsyncBoundary } from '@/shared/components';
@@ -24,7 +24,7 @@ export const CreateProjectModal = ({ isOpen, close }: Props) => {
   const [showBrowser, setShowBrowser] = useState(false);
 
   const { mutate, isPending } = useMutation({
-    ...createProjectMutationOptions(),
+    ...postCreateProjectMutationOptions(),
     meta: {
       invalidates: [getProjectListQueryOptions().queryKey],
     },

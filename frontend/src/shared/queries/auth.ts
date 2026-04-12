@@ -1,5 +1,5 @@
 import { queryOptions, mutationOptions } from '@tanstack/react-query';
-import { getGithubStatus, switchAccount } from '../apis';
+import { getGithubStatus, postSwitchAccount } from '../apis';
 
 export const getGithubStatusQueryOptions = () =>
   queryOptions({
@@ -7,7 +7,7 @@ export const getGithubStatusQueryOptions = () =>
     queryFn: () => getGithubStatus(),
   });
 
-export const switchAccountMutationOptions = () =>
+export const postSwitchAccountMutationOptions = () =>
   mutationOptions({
-    mutationFn: switchAccount,
+    mutationFn: postSwitchAccount,
   });

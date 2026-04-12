@@ -19,7 +19,7 @@ export interface CommitAndPushBody {
   push?: boolean;
 }
 
-export const generateCommitMessage = (
+export const postGenerateCommitMessage = (
   projectId: string,
   body: GenerateCommitMessageBody
 ) =>
@@ -28,7 +28,7 @@ export const generateCommitMessage = (
     body
   );
 
-export const commitAndPush = (projectId: string, body: CommitAndPushBody) =>
+export const postCommitAndPush = (projectId: string, body: CommitAndPushBody) =>
   apiPost<CommitAndPushResponse, CommitAndPushBody>(
     `/api/projects/${projectId}/commit-and-push`,
     body

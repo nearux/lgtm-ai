@@ -1,8 +1,8 @@
 import { queryOptions } from '@tanstack/react-query';
-import { browseFs } from '../apis';
+import { getBrowseFs } from '../apis';
 
-export const browseFsQueryOptions = (path?: string) =>
+export const getBrowseFsQueryOptions = (path?: string) =>
   queryOptions({
     queryKey: ['fs', 'browse', path],
-    queryFn: () => browseFs(path),
+    queryFn: () => getBrowseFs(path),
   });

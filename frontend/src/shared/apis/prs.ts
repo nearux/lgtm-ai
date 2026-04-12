@@ -41,7 +41,7 @@ export const getPrDetail = (
   );
 };
 
-export const checkoutPr = (
+export const postCheckoutPr = (
   projectId: string,
   prNumber: number,
   body?: CheckoutPRBranchBody

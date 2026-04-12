@@ -9,5 +9,5 @@ export type { GitHubAuthStatus, SwitchAccountBody };
 export const getGithubStatus = () =>
   apiGet<GitHubAuthStatus>('/api/auth/github/status');
 
-export const switchAccount = (data: SwitchAccountBody) =>
+export const postSwitchAccount = (data: SwitchAccountBody) =>
   apiPost<GitHubAuthStatus, SwitchAccountBody>('/api/auth/github/switch', data);

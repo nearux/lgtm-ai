@@ -1,8 +1,8 @@
 import { mutationOptions } from '@tanstack/react-query';
-import { generateCommitMessage, commitAndPush } from '../apis';
+import { postGenerateCommitMessage, postCommitAndPush } from '../apis';
 import type { GenerateCommitMessageBody, CommitAndPushBody } from '../apis';
 
-export const generateCommitMessageMutationOptions = () =>
+export const postGenerateCommitMessageMutationOptions = () =>
   mutationOptions({
     mutationFn: ({
       projectId,
@@ -10,10 +10,10 @@ export const generateCommitMessageMutationOptions = () =>
     }: {
       projectId: string;
       body: GenerateCommitMessageBody;
-    }) => generateCommitMessage(projectId, body),
+    }) => postGenerateCommitMessage(projectId, body),
   });
 
-export const commitAndPushMutationOptions = () =>
+export const postCommitAndPushMutationOptions = () =>
   mutationOptions({
     mutationFn: ({
       projectId,
@@ -21,5 +21,5 @@ export const commitAndPushMutationOptions = () =>
     }: {
       projectId: string;
       body: CommitAndPushBody;
-    }) => commitAndPush(projectId, body),
+    }) => postCommitAndPush(projectId, body),
   });

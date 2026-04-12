@@ -2,8 +2,8 @@ import { queryOptions, mutationOptions } from '@tanstack/react-query';
 import {
   getProjectList,
   getProjectDetail,
-  createProject,
-  updateProject,
+  postCreateProject,
+  patchUpdateProject,
   deleteProject,
 } from '../apis';
 import type { UpdateProjectBody } from '../apis';
@@ -20,15 +20,15 @@ export const getProjectDetailQueryOptions = (id: string) =>
     queryFn: () => getProjectDetail(id),
   });
 
-export const createProjectMutationOptions = () =>
+export const postCreateProjectMutationOptions = () =>
   mutationOptions({
-    mutationFn: createProject,
+    mutationFn: postCreateProject,
   });
 
-export const updateProjectMutationOptions = () =>
+export const patchUpdateProjectMutationOptions = () =>
   mutationOptions({
     mutationFn: ({ id, data }: { id: string; data: UpdateProjectBody }) =>
-      updateProject(id, data),
+      patchUpdateProject(id, data),
   });
 
 export const deleteProjectMutationOptions = () =>

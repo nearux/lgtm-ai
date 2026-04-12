@@ -3,7 +3,7 @@ import { useMutation, useSuspenseQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
   getGithubStatusQueryOptions,
-  switchAccountMutationOptions,
+  postSwitchAccountMutationOptions,
 } from '@/shared/queries';
 
 export const AccountMenu = () => {
@@ -13,7 +13,7 @@ export const AccountMenu = () => {
   const { data: authStatus } = useSuspenseQuery(getGithubStatusQueryOptions());
 
   const { mutate: switchAccount, isPending } = useMutation({
-    ...switchAccountMutationOptions(),
+    ...postSwitchAccountMutationOptions(),
     onSuccess: () => {
       window.location.reload();
     },

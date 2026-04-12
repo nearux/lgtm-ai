@@ -4,7 +4,7 @@ import type { UseClaudeWebSocketReturn } from '../../../hooks';
 import { useChatPanel } from '../../../contexts';
 import { ACTION_LABELS } from '../../../utils/reviewPrompts';
 import {
-  checkoutPrMutationOptions,
+  postCheckoutPrMutationOptions,
   getProjectDetailQueryOptions,
 } from '@/shared/queries';
 import { useOverlay } from '@/shared/hooks';
@@ -69,7 +69,9 @@ export function useActivityChat({
   } = ws;
   const overlay = useOverlay();
   const queryClient = useQueryClient();
-  const { mutateAsync: checkoutPR } = useMutation(checkoutPrMutationOptions());
+  const { mutateAsync: checkoutPR } = useMutation(
+    postCheckoutPrMutationOptions()
+  );
 
   const executeAction = (
     actionId: string,

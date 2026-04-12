@@ -1,5 +1,5 @@
 import { queryOptions, mutationOptions } from '@tanstack/react-query';
-import { getPrList, getPrDetail, checkoutPr } from '../apis';
+import { getPrList, getPrDetail, postCheckoutPr } from '../apis';
 import type { PRState, CheckoutPRBranchBody } from '../apis';
 
 export const getPrListQueryOptions = (
@@ -27,7 +27,7 @@ export const getPrDetailQueryOptions = (
     queryFn: () => getPrDetail(projectId, prNumber, origin),
   });
 
-export const checkoutPrMutationOptions = () =>
+export const postCheckoutPrMutationOptions = () =>
   mutationOptions({
     mutationFn: ({
       projectId,
@@ -37,5 +37,5 @@ export const checkoutPrMutationOptions = () =>
       projectId: string;
       prNumber: number;
       body?: CheckoutPRBranchBody;
-    }) => checkoutPr(projectId, prNumber, body),
+    }) => postCheckoutPr(projectId, prNumber, body),
   });
