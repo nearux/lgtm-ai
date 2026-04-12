@@ -6,7 +6,7 @@ import { ACTION_LABELS } from '../../../utils/reviewPrompts';
 import {
   postCheckoutPrMutationOptions,
   getProjectDetailQueryOptions,
-} from '@/shared/queries';
+} from '@/queries';
 import { useOverlay } from '@/shared/hooks';
 import { CheckoutModal } from '../../ReviewList/components/CheckoutModal/CheckoutModal';
 import type { PRMeta, ClaudeChatContext } from '@lgtmai/backend/types';

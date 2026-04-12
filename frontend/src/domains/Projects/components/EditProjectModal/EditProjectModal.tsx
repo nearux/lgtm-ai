@@ -5,7 +5,7 @@ import { Folder } from 'lucide-react';
 import {
   patchUpdateProjectMutationOptions,
   getProjectListQueryOptions,
-} from '@/shared/queries';
+} from '@/queries';
 import { Modal, Input, Button, AsyncBoundary } from '@/shared/components';
 import type { Project, UpdateProjectBody } from '@lgtmai/backend/types';
 import { FolderBrowser } from '../FolderBrowser/FolderBrowser';

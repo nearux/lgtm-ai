@@ -4,6 +4,8 @@
 
 ```
 src/
+├── apis/             # 순수 HTTP 함수 + 타입
+├── queries/          # TanStack Query options
 ├── domains/          # Domain-specific pages and related code
 │   ├── Projects/
 │   ├── PRList/
@@ -21,7 +23,7 @@ src/
 ## API & Query Layer
 
 ```
-shared/
+src/
 ├── apis/              # 순수 HTTP 함수 + 타입 (TanStack Query 무관)
 │   ├── client.ts      # fetch wrapper (apiGet, apiPost, apiPatch, apiDelete)
 │   ├── auth.ts        # getGithubStatus, postSwitchAccount

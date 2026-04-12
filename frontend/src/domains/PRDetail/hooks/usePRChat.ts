@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getChatSessionHistoryQueryOptions } from '@/shared/queries';
+import { getChatSessionHistoryQueryOptions } from '@/queries';
 import type {
   PRMeta,
   ClaudeChatContext,

@@ -2,7 +2,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { AsyncBoundary, Select, Spinner, Tabs } from '@/shared/components';
 import { usePRListParams } from './hooks/usePRListParams';
 import { useQuery } from '@tanstack/react-query';
-import { getProjectDetailQueryOptions } from '@/shared/queries';
+import { getProjectDetailQueryOptions } from '@/queries';
 import { PRTable } from './components/PRTable/PRTable';
 import type { PRState } from '@lgtmai/backend/types';
 

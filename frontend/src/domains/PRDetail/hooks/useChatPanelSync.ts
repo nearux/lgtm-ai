@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useChatPanel } from '../contexts';
-import { getChatSessionListQueryOptions } from '@/shared/queries';
+import { getChatSessionListQueryOptions } from '@/queries';
 import type { UseClaudeWebSocketReturn } from './useClaudeWebSocket';
 
 /**

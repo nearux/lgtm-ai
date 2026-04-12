@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useSuspenseQuery } from '@tanstack/react-query';
-import { getProjectListQueryOptions } from '@/shared/queries';
+import { getProjectListQueryOptions } from '@/queries';
 import { useOverlay } from '@/shared/hooks';
 import { ProjectCard } from '../ProjectCard/ProjectCard';
 import { EditProjectModal } from '../EditProjectModal/EditProjectModal';

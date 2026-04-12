@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import {
   deleteProjectMutationOptions,
   getProjectListQueryOptions,
-} from '@/shared/queries';
+} from '@/queries';
 import { Modal, Button } from '@/shared/components';
 import type { Project } from '@lgtmai/backend/types';
 

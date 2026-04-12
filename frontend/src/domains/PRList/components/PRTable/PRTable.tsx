@@ -3,7 +3,7 @@ import { Pagination } from '@/shared/components';
 import { StatusBadge } from '../StatusBadge/StatusBadge';
 import type { PRListItem, PRState } from '@lgtmai/backend/types';
 import { useSuspenseQuery } from '@tanstack/react-query';
-import { getPrListQueryOptions } from '@/shared/queries';
+import { getPrListQueryOptions } from '@/queries';
 import { useNavigate } from 'react-router-dom';
 import { Spinner } from '@/shared/components';
 import { MessageCircle } from 'lucide-react';

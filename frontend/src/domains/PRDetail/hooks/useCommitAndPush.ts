@@ -3,7 +3,7 @@ import { useMutation } from '@tanstack/react-query';
 import {
   postGenerateCommitMessageMutationOptions,
   postCommitAndPushMutationOptions,
-} from '@/shared/queries';
+} from '@/queries';
 import type { CommitState } from '../components/ChatPanel';
 
 export function useCommitAndPush(projectId: string | undefined) {

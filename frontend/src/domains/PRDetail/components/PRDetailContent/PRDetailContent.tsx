@@ -2,7 +2,7 @@ import { useSuspenseQueries } from '@tanstack/react-query';
 import {
   getProjectDetailQueryOptions,
   getPrDetailQueryOptions,
-} from '@/shared/queries';
+} from '@/queries';
 import { parseGitHubUrl, linkifyGitHubReferences } from '@/shared/utils';
 import type { PRMeta } from '@lgtmai/backend/types';
 import type { UseClaudeWebSocketReturn } from '../../hooks';

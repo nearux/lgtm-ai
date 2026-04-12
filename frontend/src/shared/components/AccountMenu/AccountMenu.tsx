@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import {
   getGithubStatusQueryOptions,
   postSwitchAccountMutationOptions,
-} from '@/shared/queries';
+} from '@/queries';
 
 export const AccountMenu = () => {
   const [isOpen, setIsOpen] = useState(false);

@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { MessageSquare } from 'lucide-react';
-import { getChatSessionListQueryOptions } from '@/shared/queries';
+import { getChatSessionListQueryOptions } from '@/queries';
 import { Spinner } from '@/shared/components';
 import type { ChatSessionSummary } from '@lgtmai/backend/types';
 import { formatRelativeTime } from '../../utils/formatRelativeTime';

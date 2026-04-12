@@ -9,7 +9,7 @@ import {
   AlertCircle,
   Search,
 } from 'lucide-react';
-import { getBrowseFsQueryOptions } from '@/shared/queries';
+import { getBrowseFsQueryOptions } from '@/queries';
 import { Button, IconButton, Input, Spinner } from '@/shared/components';
 import { cn } from '@/shared/lib';
 import { parsePathSegments, buildPathFromSegments } from '@/shared/utils';
