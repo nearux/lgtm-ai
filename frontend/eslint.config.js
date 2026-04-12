@@ -35,7 +35,6 @@ export default tseslint.config(
           layers: ['domains', 'features', 'queries', 'apis', 'shared'],
           aliases: { '@': 'src' },
           allowCrossSlice: ['shared'],
-          allowedImports: [{ from: 'shared', to: 'apis' }],
         },
       ],
     },
