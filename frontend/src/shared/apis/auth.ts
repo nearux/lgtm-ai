@@ -1,0 +1,13 @@
+import { apiGet, apiPost } from './client';
+import type {
+  GitHubAuthStatus,
+  SwitchAccountBody,
+} from '@lgtmai/backend/types';
+
+export type { GitHubAuthStatus, SwitchAccountBody };
+
+export const getGithubStatus = () =>
+  apiGet<GitHubAuthStatus>('/api/auth/github/status');
+
+export const switchAccount = (data: SwitchAccountBody) =>
+  apiPost<GitHubAuthStatus, SwitchAccountBody>('/api/auth/github/switch', data);
