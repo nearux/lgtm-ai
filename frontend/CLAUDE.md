@@ -18,6 +18,29 @@ src/
 - **features**: Code with business logic shared across multiple domains
 - **shared**: Pure utilities and UI components with no business logic
 
+## API & Query Layer
+
+```
+shared/
+├── apis/              # 순수 HTTP 함수 + 타입 (TanStack Query 무관)
+│   ├── client.ts      # fetch wrapper (apiGet, apiPost, apiPatch, apiDelete)
+│   ├── auth.ts        # getGithubStatus, switchAccount
+│   ├── projects.ts    # getProjectList, getProjectDetail, createProject, ...
+│   └── ...
+├── queries/           # TanStack Query options (queryKey 인라인 정의)
+│   ├── auth.ts        # getGithubStatusQueryOptions, switchAccountMutationOptions
+│   ├── projects.ts    # getProjectListQueryOptions, createProjectMutationOptions, ...
+│   └── ...
+```
+
+### Convention
+
+- **apis/**: 순수 HTTP 함수 + 타입 관리. GET → `getXxx`, 변경 → 액션 동사
+- **queries/**: `queryOptions`/`mutationOptions` 정의. queryKey 인라인 배열
+- **Naming**: API `getProjectList` → Query `getProjectListQueryOptions`
+- **Type inference**: queryOptions/mutationOptions에 명시적 제네릭 사용하지 않음
+- **Invalidation**: `getProjectDetailQueryOptions(id).queryKey` 사용
+
 ## Component Convention
 
 ### File Structure
