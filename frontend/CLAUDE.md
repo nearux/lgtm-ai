@@ -1,5 +1,7 @@
 # Frontend Architecture
 
+React 19 + Vite + React Query + Tailwind CSS 4.
+
 ## Folder Structure (Layer Hierarchy)
 
 ```
@@ -16,7 +18,18 @@ src/
 
 - **domains**: Hooks, components, and pages used only within each domain (Projects, PRList, PRDetail)
 - **features**: Code with business logic shared across multiple domains
-- **shared**: Pure utilities and UI components with no business logic
+- **shared**: Pure utilities, UI components, and API layer (fetch functions + React Query hooks shared across domains)
+
+## API Layer
+
+Each domain has its own folder under `shared/apis/{domain}/`:
+
+- `index.ts` — fetch functions
+- `query.ts` — React Query query hooks
+- `mutation.ts` — React Query mutation hooks
+- `queryKey.ts` — query key factory
+
+Low-level fetch utilities (`apiGet`, `apiPost`, etc.) are in `shared/apis/client.ts`. Use `ApiClientError` for error handling.
 
 ## Component Convention
 
