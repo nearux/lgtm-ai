@@ -9,11 +9,12 @@ Analyze the changes in the current branch, generate a PR title and body in Engli
 </Instruction>
 
 <Steps>
-1. Check current branch status and commit history
-2. Get the diff using `git diff main...HEAD` to see all commits since branching from main
-3. Analyze the changes and generate PR title and body
-4. Push the branch to remote if needed with `-u` flag
-5. Create the PR using `gh pr create`
+1. Determine the base branch dynamically from the repo's default branch using `gh repo view --json defaultBranchRef -q .defaultBranchRef.name` (fallback to `main` if unavailable)
+2. Check current branch status and commit history
+3. Get the diff using `git diff <base>...HEAD` to see all commits since branching from the base
+4. Analyze the changes and generate PR title and body
+5. Push the branch to remote if needed with `-u` flag
+6. Create the PR using `gh pr create --base <base>`
 </Steps>
 
 <Rules>
