@@ -10,6 +10,7 @@ import type {
 } from '../types/pullRequests.js';
 import { GhAuthorDto } from './ghAuthorDto.js';
 import { GhInlineCommentDto } from './ghInlineCommentDto.js';
+import { countNonEmptyReviewBodies } from './commentCounts.js';
 
 export class PRDetailDto implements PRDetail {
   number: number;
@@ -49,12 +50,10 @@ export class PRDetailDto implements PRDetail {
     inlineCommentsByReview: Map<string, GhReviewInlineComment[]>
   ): PRDetailDto {
     const inlineCount = sumBy(
-      raw.reviews,
-      (r) => inlineCommentsByReview.get(r.id)?.length ?? 0
+      Array.from(inlineCommentsByReview.values()),
+      (arr) => arr.length
     );
-    const reviewBodyCount = raw.reviews.filter(
-      (r) => r.body.trim().length > 0
-    ).length;
+    const reviewBodyCount = countNonEmptyReviewBodies(raw.reviews);
     const totalCommentsCount =
       raw.comments.length + inlineCount + reviewBodyCount;
 

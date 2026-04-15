@@ -97,6 +97,10 @@ export interface PRListItem {
   number: number;
   title: string;
   body: string;
+  /**
+   * Total comment count shown in GitHub's PR UI:
+   * issue comments + review inline comments + non-empty review bodies.
+   */
   totalCommentsCount: number;
   assignees: PRAssignee[];
   author: PRAuthor;
@@ -194,7 +198,6 @@ export interface GraphQLPRNode {
   updatedAt: string;
   comments: { totalCount: number };
   reviewThreads: {
-    totalCount: number;
     nodes: Array<{ comments: { totalCount: number } }>;
   };
   reviews: {

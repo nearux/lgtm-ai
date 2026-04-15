@@ -12,13 +12,13 @@ describe('PRListItemDto.fromGraphQL', () => {
     updatedAt: '2024-01-02T00:00:00Z',
     comments: { totalCount: 3 },
     reviewThreads: {
-      totalCount: 2,
       nodes: [{ comments: { totalCount: 3 } }, { comments: { totalCount: 2 } }],
     },
     reviews: {
       nodes: [
         { body: 'LGTM' },
         { body: '' },
+        { body: '   \n  ' },
         { body: 'Please address the comments' },
       ],
     },
@@ -44,7 +44,7 @@ describe('PRListItemDto.fromGraphQL', () => {
   });
 
   it('computes totalCommentsCount as issue + inline + non-empty review bodies', () => {
-    // issue: 3, inline: 3+2=5, non-empty review bodies: 2 → total 10
+    // issue: 3, inline: 3+2=5, non-empty review bodies: 2 (empty + whitespace-only filtered) → total 10
     const dto = PRListItemDto.fromGraphQL(baseNode);
     expect(dto.totalCommentsCount).toBe(10);
   });
