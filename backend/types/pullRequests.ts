@@ -97,8 +97,7 @@ export interface PRListItem {
   number: number;
   title: string;
   body: string;
-  commentsCount: number;
-  reviewCommentsCount: number;
+  totalCommentsCount: number;
   assignees: PRAssignee[];
   author: PRAuthor;
   createdAt: string;
@@ -194,7 +193,13 @@ export interface GraphQLPRNode {
   createdAt: string;
   updatedAt: string;
   comments: { totalCount: number };
-  reviewThreads: { totalCount: number };
+  reviewThreads: {
+    totalCount: number;
+    nodes: Array<{ comments: { totalCount: number } }>;
+  };
+  reviews: {
+    nodes: Array<{ body: string }>;
+  };
   assignees: { nodes: GraphQLPRAssignee[] };
   author: GraphQLPRAuthor;
 }
