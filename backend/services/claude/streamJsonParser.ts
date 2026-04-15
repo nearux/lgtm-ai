@@ -88,7 +88,6 @@ function parseStreamEvent(parsed: Parsed): ParsedStreamEvent | null {
   return null;
 }
 
-
 /**
  * Tool call complete: assistant message containing tool_use content blocks
  */
