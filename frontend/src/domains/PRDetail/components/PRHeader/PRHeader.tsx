@@ -81,8 +81,7 @@ export const PRHeader = ({
             <span>Created {formatDate(pr.createdAt)}</span>
             <span className="flex items-center gap-1" title="Comments">
               <MessageCircle className="h-4 w-4" />
-              {pr.comments.length +
-                pr.reviews.reduce((sum, r) => sum + r.inlineComments.length, 0)}
+              {pr.totalCommentsCount}
             </span>
           </div>
         </div>
