@@ -173,7 +173,7 @@ export const ChatPanel = ({
         messages.length > 0 &&
         onSendFollowUp && (
           <FollowUpInput
-            sessionId={sessionId}
+            sessionId={state.claudeSessionId || sessionId}
             onSendFollowUp={onSendFollowUp}
           />
         )}
