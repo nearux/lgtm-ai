@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { chatSessionsQuery } from '@/shared/apis';
+import { getChatSessionHistoryQueryOptions } from '@/queries';
 import type {
   PRMeta,
   ClaudeChatContext,
@@ -8,8 +8,10 @@ import type {
 } from '@lgtmai/backend/types';
 import { useChatPanel } from '../contexts';
 import { useChatPanelParams } from './useChatPanelParams';
-import { useChatPanelSync } from './useChatPanelSync';
-import type { ClaudeMessage } from './useClaudeWebSocket';
+import type {
+  ClaudeMessage,
+  UseClaudeWebSocketReturn,
+} from './useClaudeWebSocket';
 import { ACTION_LABELS } from '../utils/reviewPrompts';
 
 interface UsePRChatOptions {
@@ -19,6 +21,7 @@ interface UsePRChatOptions {
   prAuthor: string;
   prBody: string;
   workingDir: string;
+  ws: UseClaudeWebSocketReturn;
 }
 
 export function usePRChat({
@@ -28,6 +31,7 @@ export function usePRChat({
   prAuthor,
   prBody,
   workingDir,
+  ws,
 }: UsePRChatOptions) {
   const {
     setTitle,
@@ -35,17 +39,22 @@ export function usePRChat({
     setPRContext,
     setOnExecuteAction,
     setOnResumeSession,
+    setOnSendFollowUp,
     setClaudeSessionId,
+    state,
   } = useChatPanel();
   const { openActionSelector, openChat, resumeSession } = useChatPanelParams();
-  const ws = useChatPanelSync(workingDir);
 
   // --- Session resume ---
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(
     null
   );
   const { data: historyData } = useQuery({
-    ...chatSessionsQuery.history(projectId, prNumber, selectedSessionId ?? ''),
+    ...getChatSessionHistoryQueryOptions(
+      projectId,
+      prNumber,
+      selectedSessionId ?? ''
+    ),
     enabled: !!selectedSessionId,
   });
 
@@ -66,6 +75,27 @@ export function usePRChat({
     selectedSessionId,
     ws.loadHistoryMessages,
     setClaudeSessionId,
+  ]);
+
+  // Set up follow-up handler
+  useEffect(() => {
+    const handleFollowUp = (message: string) => {
+      const sessionIdToUse = state.claudeSessionId || ws.sessionId;
+      if (sessionIdToUse) {
+        ws.execute({ type: 'followUp', message }, workingDir, {
+          executionMode: 'bypassPermissions',
+          sessionId: sessionIdToUse,
+        });
+      }
+    };
+    setOnSendFollowUp(handleFollowUp);
+    return () => setOnSendFollowUp(null);
+  }, [
+    state.claudeSessionId,
+    ws.sessionId,
+    ws.execute,
+    workingDir,
+    setOnSendFollowUp,
   ]);
 
   // --- Public API ---
@@ -104,7 +134,6 @@ export function usePRChat({
         {
           type: 'command',
           command: actionId as 'validate' | 'fix' | 'explain' | 'custom',
-          // Backend treats type:'review' without path/diffHunk as PR-level scope
           context: { type: 'review', author: prAuthor, body: prBody, prMeta },
           ...(customPrompt ? { customPrompt } : {}),
         },

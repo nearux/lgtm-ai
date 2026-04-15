@@ -3,7 +3,7 @@ import { Pagination } from '@/shared/components';
 import { StatusBadge } from '../StatusBadge/StatusBadge';
 import type { PRListItem, PRState } from '@lgtmai/backend/types';
 import { useSuspenseQuery } from '@tanstack/react-query';
-import { prsQuery } from '@/shared/apis';
+import { getPrListQueryOptions } from '@/queries';
 import { useNavigate } from 'react-router-dom';
 import { Spinner } from '@/shared/components';
 import { MessageCircle } from 'lucide-react';
@@ -27,7 +27,7 @@ export const PRTable = ({
 }: Props) => {
   const navigate = useNavigate();
   const { data } = useSuspenseQuery(
-    prsQuery.list(projectId, { state, page, limit, origin })
+    getPrListQueryOptions(projectId, { state, page, limit, origin })
   );
 
   const { items: prs, lastPage } = data;

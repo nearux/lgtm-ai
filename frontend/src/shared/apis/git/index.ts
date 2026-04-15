@@ -1,1 +1,0 @@
-export { gitMutation } from './mutations';

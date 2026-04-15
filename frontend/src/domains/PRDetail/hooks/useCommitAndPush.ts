@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { gitMutation } from '@/shared/apis';
+import {
+  postGenerateCommitMessageMutationOptions,
+  postCommitAndPushMutationOptions,
+} from '@/queries';
 import type { CommitState } from '../components/ChatPanel';
 
 export function useCommitAndPush(projectId: string | undefined) {
@@ -8,10 +11,10 @@ export function useCommitAndPush(projectId: string | undefined) {
     isCommitting: false,
   });
   const { mutateAsync: generateMessage } = useMutation(
-    gitMutation.generateCommitMessage()
+    postGenerateCommitMessageMutationOptions()
   );
   const { mutateAsync: commitAndPush } = useMutation(
-    gitMutation.commitAndPush()
+    postCommitAndPushMutationOptions()
   );
 
   const handleCommitAndPush = async (push: boolean) => {

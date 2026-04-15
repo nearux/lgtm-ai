@@ -1,0 +1,47 @@
+import { useState, useCallback } from 'react';
+import type { ClaudeMessage, FileChangesData } from './types';
+
+export function useWebSocketMessages() {
+  const [messages, setMessages] = useState<ClaudeMessage[]>([]);
+  const [fileChanges, setFileChanges] = useState<FileChangesData | null>(null);
+
+  const addMessage = useCallback(
+    (msg: Omit<ClaudeMessage, 'id' | 'timestamp'>) => {
+      setMessages((prev) => [
+        ...prev,
+        {
+          ...msg,
+          id: crypto.randomUUID(),
+          timestamp: new Date(),
+        },
+      ]);
+    },
+    []
+  );
+
+  const clearMessages = useCallback(() => {
+    setMessages([]);
+    setFileChanges(null);
+  }, []);
+
+  const addUserMessage = useCallback(
+    (content: string) => {
+      addMessage({ type: 'user', content });
+    },
+    [addMessage]
+  );
+
+  const loadHistoryMessages = useCallback((msgs: ClaudeMessage[]) => {
+    setMessages(msgs);
+  }, []);
+
+  return {
+    messages,
+    fileChanges,
+    setFileChanges,
+    addMessage,
+    clearMessages,
+    addUserMessage,
+    loadHistoryMessages,
+  };
+}

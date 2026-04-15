@@ -1,17 +1,19 @@
 import { useState, useRef, useEffect } from 'react';
 import { useMutation, useSuspenseQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { authQuery } from '@/shared/apis/auth/queries';
-import { authMutation } from '@/shared/apis/auth/mutations';
+import {
+  getGithubStatusQueryOptions,
+  postSwitchAccountMutationOptions,
+} from '@/queries';
 
 export const AccountMenu = () => {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const { data: authStatus } = useSuspenseQuery(authQuery.githubStatus());
+  const { data: authStatus } = useSuspenseQuery(getGithubStatusQueryOptions());
 
   const { mutate: switchAccount, isPending } = useMutation({
-    ...authMutation.switchAccount(),
+    ...postSwitchAccountMutationOptions(),
     onSuccess: () => {
       window.location.reload();
     },

@@ -1,5 +1,5 @@
-import { AsyncBoundary } from '../AsyncBoundary/AsyncBoundary';
-import { AccountMenu } from '../AccountMenu/AccountMenu';
+import { AsyncBoundary } from '@/shared/components';
+import { AccountMenu } from './components/AccountMenu/AccountMenu';
 
 export const AppHeader = () => {
   return (

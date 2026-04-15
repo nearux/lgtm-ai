@@ -28,11 +28,6 @@ export function useChatPanelController() {
     // chat mode title is set by ReviewList when action is executed or session is resumed
   }, [panelMode, state.targetContext, setTitle]);
 
-  const handleBackFromChat = () => {
-    state.clearMessages?.();
-    goBack();
-  };
-
   return {
     state,
     mode,
@@ -40,6 +35,5 @@ export function useChatPanelController() {
     onClose: closePanel,
     onShowHistory: openHistory,
     onHideHistory: goBack,
-    onBackToChat: handleBackFromChat,
   };
 }

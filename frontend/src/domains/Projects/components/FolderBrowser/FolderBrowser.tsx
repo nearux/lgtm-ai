@@ -9,7 +9,7 @@ import {
   AlertCircle,
   Search,
 } from 'lucide-react';
-import { fsQuery } from '@/shared/apis';
+import { getBrowseFsQueryOptions } from '@/queries';
 import { Button, IconButton, Input, Spinner } from '@/shared/components';
 import { cn } from '@/shared/lib';
 import { parsePathSegments, buildPathFromSegments } from '@/shared/utils';
@@ -28,7 +28,7 @@ export const FolderBrowser = ({ initialPath, onSelect, onCancel }: Props) => {
   const [isPending, startTransition] = useTransition();
   const [filterKeyword, setFilterKeyword] = useState('');
 
-  const { data } = useSuspenseQuery(fsQuery.browse(currentPath));
+  const { data } = useSuspenseQuery(getBrowseFsQueryOptions(currentPath));
 
   const handleNavigate = (path: string) => {
     startTransition(() => {
