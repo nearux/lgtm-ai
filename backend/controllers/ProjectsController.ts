@@ -25,9 +25,7 @@ function parseUUID(id: string): string {
   return id;
 }
 import * as projectsService from '../services/projects.js';
-import * as prListService from '../services/prList.js';
-import * as prDetailService from '../services/prDetail.js';
-import * as checkoutService from '../services/checkoutPRBranch.js';
+import * as pullRequestsService from '../services/pullRequests.js';
 import * as chatSessionsService from '../services/chatSessions.js';
 import * as gitService from '../services/git.js';
 import type {
@@ -170,7 +168,7 @@ export class ProjectsController extends Controller {
       parseUUID(projectId),
       origin ?? 'origin'
     );
-    return prListService.fetchPRList(repoOwnerName, {
+    return pullRequestsService.fetchPRList(repoOwnerName, {
       page,
       limit,
       state,
@@ -207,7 +205,7 @@ export class ProjectsController extends Controller {
       parseUUID(projectId),
       origin ?? 'origin'
     );
-    return prDetailService.fetchPRDetail(repoOwnerName, prNumber);
+    return pullRequestsService.fetchPRDetail(repoOwnerName, prNumber);
   }
 
   /**
@@ -298,13 +296,11 @@ export class ProjectsController extends Controller {
       normalizedProjectId,
       body?.origin ?? 'origin'
     );
-    return checkoutService.checkoutPRBranch(
+    return pullRequestsService.checkoutPRBranch(
       repoOwnerName,
       prNumber,
       project.working_dir,
-      {
-        force: body?.force,
-      }
+      { force: body?.force }
     );
   }
 
