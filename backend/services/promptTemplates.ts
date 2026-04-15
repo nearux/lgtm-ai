@@ -15,7 +15,17 @@ export interface SystemPromptParams {
   body: string;
 }
 
-export function systemPrompt(p: SystemPromptParams): string {
+export type ReviewScope = 'pr' | 'thread';
+
+export function systemPrompt(
+  p: SystemPromptParams,
+  scope: ReviewScope = 'thread'
+): string {
+  const guideline =
+    scope === 'pr'
+      ? 'Focus on the overall changes introduced in this pull request.'
+      : 'Focus on the specific review comment provided by the user.';
+
   return `You are a code review assistant for a GitHub Pull Request.
 
 ## PR Context
@@ -29,24 +39,7 @@ ${p.body || '(no description)'}
 ## Guidelines
 - You have access to the local codebase (already checked out to the PR branch).
 - Use \`gh\` CLI or file reading tools to explore additional context when needed.
-- Focus on the specific review comment provided by the user.`;
-}
-
-export function systemPromptForPR(p: SystemPromptParams): string {
-  return `You are a code review assistant for a GitHub Pull Request.
-
-## PR Context
-- Repository: ${p.repoOwnerName}
-- PR #${p.number}: ${p.title}
-- Branch: ${p.headBranch} → ${p.baseBranch}
-
-## PR Description
-${p.body || '(no description)'}
-
-## Guidelines
-- You have access to the local codebase (already checked out to the PR branch).
-- Use \`gh\` CLI or file reading tools to explore additional context when needed.
-- Focus on the overall changes introduced in this pull request.`;
+- ${guideline}`;
 }
 
 // ── Review comment section ──────────────────────────────────────────
