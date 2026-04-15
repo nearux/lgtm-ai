@@ -51,6 +51,31 @@ describe('parseGitHubUrl', () => {
     expect(parseGitHubUrl('not-a-url')).toBeNull();
     expect(parseGitHubUrl('github.com/owner/repo')).toBeNull();
   });
+
+  it('parses HTTPS URL with embedded credentials', () => {
+    const url = 'https://username:ghp_token@github.com/owner/repo.git';
+    expect(parseGitHubUrl(url)).toBe('https://github.com/owner/repo');
+  });
+
+  it('parses HTTPS URL with username only', () => {
+    const url = 'https://username@github.com/owner/repo.git';
+    expect(parseGitHubUrl(url)).toBe('https://github.com/owner/repo');
+  });
+
+  it('handles repo name containing dots with .git suffix', () => {
+    const url = 'https://github.com/owner/repo.js.git';
+    expect(parseGitHubUrl(url)).toBe('https://github.com/owner/repo.js');
+  });
+
+  it('handles repo name containing dots without .git suffix', () => {
+    const url = 'https://github.com/owner/my.repo';
+    expect(parseGitHubUrl(url)).toBe('https://github.com/owner/my.repo');
+  });
+
+  it('handles SSH URL with repo name containing dots', () => {
+    const url = 'git@github.com:owner/repo.js.git';
+    expect(parseGitHubUrl(url)).toBe('https://github.com/owner/repo.js');
+  });
 });
 
 describe('linkifyIssueReferences', () => {

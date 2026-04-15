@@ -9,16 +9,18 @@
 export const parseGitHubUrl = (remoteUrl: string | null): string | null => {
   if (!remoteUrl) return null;
 
-  // HTTPS format
+  // HTTPS format (allows optional userinfo like `user:token@`)
   const httpsMatch = remoteUrl.match(
-    /https:\/\/github\.com\/([^/]+)\/([^/.]+)/
+    /https:\/\/(?:[^@/]+@)?github\.com\/([^/]+)\/([^/]+?)(?:\.git)?\/?$/
   );
   if (httpsMatch) {
     return `https://github.com/${httpsMatch[1]}/${httpsMatch[2]}`;
   }
 
   // SSH format
-  const sshMatch = remoteUrl.match(/git@github\.com:([^/]+)\/([^/.]+)/);
+  const sshMatch = remoteUrl.match(
+    /git@github\.com:([^/]+)\/([^/]+?)(?:\.git)?\/?$/
+  );
   if (sshMatch) {
     return `https://github.com/${sshMatch[1]}/${sshMatch[2]}`;
   }
