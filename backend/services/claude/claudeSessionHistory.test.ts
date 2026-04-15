@@ -63,11 +63,13 @@ describe('claudeSessionHistory', () => {
       entries: [
         {
           role: 'user',
+          messageType: 'user',
           content: 'Validate this review',
           timestamp: '2026-03-11T00:00:00.000Z',
         },
         {
           role: 'assistant',
+          messageType: 'text',
           content: 'This review is actionable.',
           timestamp: '2026-03-11T00:00:02.000Z',
         },
@@ -129,7 +131,7 @@ describe('claudeSessionHistory', () => {
     expect(result.entries[0].content).toBe('Validate this review');
   });
 
-  it('skips non-chat events and preserves tool text when present', async () => {
+  it('filters out non user/assistant transcript lines', async () => {
     const rootDir = await mkdtemp(path.join(os.tmpdir(), 'claude-history-'));
     tempDirs.push(rootDir);
 
@@ -149,14 +151,7 @@ describe('claudeSessionHistory', () => {
           timestamp: '2026-03-11T00:00:02.000Z',
           message: {
             role: 'assistant',
-            content: [
-              {
-                type: 'tool_use',
-                name: 'Read',
-                input: { file_path: 'foo.ts' },
-              },
-              { type: 'text', text: 'Done.' },
-            ],
+            content: [{ type: 'text', text: 'Done.' }],
           },
         }),
       ].join('\n')
@@ -171,7 +166,8 @@ describe('claudeSessionHistory', () => {
     expect(result.entries).toEqual([
       {
         role: 'assistant',
-        content: '[tool:Read] {"file_path":"foo.ts"}\nDone.',
+        messageType: 'text',
+        content: 'Done.',
         timestamp: '2026-03-11T00:00:02.000Z',
       },
     ]);
@@ -179,14 +175,16 @@ describe('claudeSessionHistory', () => {
 });
 
 describe('replaceFirstUserMessage', () => {
-  const baseEntries = [
+  const baseEntries: Parameters<typeof replaceFirstUserMessage>[0] = [
     {
       role: 'user',
+      messageType: 'user',
       content: 'some long generated prompt',
       timestamp: '2026-03-11T00:00:00.000Z',
     },
     {
       role: 'assistant',
+      messageType: 'text',
       content: 'Done.',
       timestamp: '2026-03-11T00:00:02.000Z',
     },

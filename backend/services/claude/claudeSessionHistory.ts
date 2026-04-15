@@ -2,9 +2,10 @@ import { readFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import HttpStatus from 'http-status';
-import { filter, map, pipe } from 'remeda';
+import { filter, flatMap, map, pipe } from 'remeda';
 import { AppError } from '../../errors/AppError.js';
 import type { ChatSessionHistoryEntry } from '../../types/chatSessions.js';
+import { expandContentBlocks } from './contentBlockExpander.js';
 
 interface ClaudeTranscriptHistory {
   claudeSessionId: string;
@@ -92,12 +93,12 @@ export async function getClaudeSessionHistory({
       (line): line is TranscriptLine & { type: string } =>
         line.type === 'user' || line.type === 'assistant'
     ),
-    map((line) => ({
-      role: line.message?.role ?? line.type,
-      content: normalizeContent(line.message?.content),
-      timestamp: line.timestamp,
-    })),
-    filter((entry) => entry.content.length > 0)
+    flatMap((line) =>
+      expandContentBlocks(line.message?.content, {
+        role: line.message?.role ?? line.type,
+        timestamp: line.timestamp,
+      })
+    )
   );
 
   return {
@@ -108,39 +109,4 @@ export async function getClaudeSessionHistory({
 
 function toProjectTranscriptDir(workingDir: string): string {
   return workingDir.replace(/[\\/]/g, '-');
-}
-
-function normalizeContent(
-  content: string | Array<Record<string, unknown>> | undefined
-): string {
-  if (typeof content === 'string') {
-    return content.trim();
-  }
-
-  if (!Array.isArray(content)) {
-    return '';
-  }
-
-  return content
-    .map((block) => {
-      if (block.type === 'text' && typeof block.text === 'string') {
-        return block.text.trim();
-      }
-
-      if (block.type === 'tool_use' && typeof block.name === 'string') {
-        return `[tool:${block.name}] ${JSON.stringify(block.input ?? {})}`;
-      }
-
-      if (block.type === 'tool_result') {
-        if (typeof block.content === 'string') {
-          return `[tool_result] ${block.content.trim()}`;
-        }
-        return `[tool_result] ${JSON.stringify(block.content ?? '')}`;
-      }
-
-      return '';
-    })
-    .filter(Boolean)
-    .join('\n')
-    .trim();
 }
