@@ -68,6 +68,17 @@ export interface WsCommandExecuteMessage {
   chatContext?: ClaudeChatContext;
 }
 
+export interface WsBatchExecuteMessage {
+  type: 'batchExecute';
+  requestId: string;
+  workingDir: string;
+  command: ClaudeCommand;
+  contexts: (ReviewCommandContext | CommentCommandContext)[];
+  customPrompt?: string;
+  options?: ClaudeExecuteOptions;
+  chatContext?: ClaudeChatContext;
+}
+
 export interface WsFollowUpExecuteMessage {
   type: 'followUp';
   requestId: string;
@@ -109,7 +120,8 @@ export type WsClientMessage =
   | WsFollowUpExecuteMessage
   | WsAbortMessage
   | WsApprovalResponseMessage
-  | WsPlanApprovalResponseMessage;
+  | WsPlanApprovalResponseMessage
+  | WsBatchExecuteMessage;
 
 // ── Server → Client ──────────────────────────────────────────────────
 

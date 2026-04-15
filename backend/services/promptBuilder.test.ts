@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { buildSystemPrompt, buildUserPrompt } from './promptBuilder.js';
+import {
+  buildSystemPrompt,
+  buildUserPrompt,
+  buildBatchUserPrompt,
+} from './promptBuilder.js';
 import type { CommandContext, PRMeta, ClaudeCommand } from '../types/claude.js';
 
 const prMeta: PRMeta = {
@@ -204,5 +208,112 @@ describe('buildUserPrompt', () => {
     expect(() =>
       buildUserPrompt('unknown' as ClaudeCommand, reviewContext)
     ).toThrow('Unknown command: unknown');
+  });
+});
+
+const batchContexts = [
+  {
+    type: 'review' as const,
+    author: 'alice',
+    body: 'This variable name is unclear',
+    prMeta,
+  },
+  {
+    type: 'comment' as const,
+    author: 'bob',
+    body: 'Missing null check here',
+    path: 'src/utils/helper.ts',
+    diffHunk:
+      '@@ -10,6 +10,8 @@\n function helper() {\n+  const x = getValue();\n+  x.doSomething();',
+    prMeta,
+  },
+];
+
+describe('buildBatchUserPrompt', () => {
+  describe('fix', () => {
+    it('includes all comment authors', () => {
+      const result = buildBatchUserPrompt('fix', batchContexts);
+      expect(result).toContain('alice');
+      expect(result).toContain('bob');
+    });
+
+    it('numbers each comment', () => {
+      const result = buildBatchUserPrompt('fix', batchContexts);
+      expect(result).toContain('[1]');
+      expect(result).toContain('[2]');
+    });
+
+    it('includes instruction to not use git', () => {
+      const result = buildBatchUserPrompt('fix', batchContexts);
+      expect(result).toContain('Do NOT use git commands');
+    });
+
+    it('includes instruction to summarize per comment', () => {
+      const result = buildBatchUserPrompt('fix', batchContexts);
+      expect(result).toContain('per comment');
+    });
+  });
+
+  describe('explain', () => {
+    it('includes all comment bodies', () => {
+      const result = buildBatchUserPrompt('explain', batchContexts);
+      expect(result).toContain('This variable name is unclear');
+      expect(result).toContain('Missing null check here');
+    });
+
+    it('includes diff hunk when present', () => {
+      const result = buildBatchUserPrompt('explain', batchContexts);
+      expect(result).toContain('x.doSomething()');
+    });
+
+    it('includes file path when present', () => {
+      const result = buildBatchUserPrompt('explain', batchContexts);
+      expect(result).toContain('src/utils/helper.ts');
+    });
+  });
+
+  describe('validate', () => {
+    it('includes VALID/INVALID instructions', () => {
+      const result = buildBatchUserPrompt('validate', batchContexts);
+      expect(result).toContain('VALID');
+      expect(result).toContain('INVALID');
+    });
+
+    it('numbers each comment', () => {
+      const result = buildBatchUserPrompt('validate', batchContexts);
+      expect(result).toContain('[1]');
+      expect(result).toContain('[2]');
+    });
+  });
+
+  describe('custom', () => {
+    it('includes custom prompt and all contexts', () => {
+      const result = buildBatchUserPrompt(
+        'custom',
+        batchContexts,
+        'Check security'
+      );
+      expect(result).toContain('Check security');
+      expect(result).toContain('alice');
+      expect(result).toContain('bob');
+    });
+
+    it('throws if customPrompt is missing', () => {
+      expect(() => buildBatchUserPrompt('custom', batchContexts)).toThrow(
+        'customPrompt is required'
+      );
+    });
+  });
+
+  it('throws on review command', () => {
+    expect(() => buildBatchUserPrompt('review', batchContexts)).toThrow(
+      "Command 'review' is not supported for batch"
+    );
+  });
+
+  it('throws on unknown command', () => {
+    expect(() =>
+      buildBatchUserPrompt('unknown' as ClaudeCommand, batchContexts)
+    ).toThrow();
   });
 });
