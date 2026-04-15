@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useChatPanelSync, useChatPanelParams } from '../../../hooks';
+import { useChatPanelParams } from '../../../hooks';
 import { useChatPanel } from '../../../contexts';
 import { ACTION_LABELS } from '../../../utils/reviewPrompts';
 import { prsMutation, projectsQueryKey } from '@/shared/apis';
@@ -7,6 +7,7 @@ import { useOverlay } from '@/shared/hooks';
 import { CheckoutModal } from '../../ReviewList/components/CheckoutModal/CheckoutModal';
 import type { PRMeta, ClaudeChatContext } from '@lgtmai/backend/types';
 import type { ValidationStatus } from '../../ReviewList/components';
+import { useEffect } from 'react';
 
 export interface ValidationState {
   status: ValidationStatus;
@@ -51,19 +52,26 @@ export function useActivityChat({
   setValidations,
   setActiveTarget,
 }: UseActivityChatOptions) {
-  const { setTargetContext, setOnExecuteAction } = useChatPanel();
-  const { openActionSelector, openChat } = useChatPanelParams();
   const {
-    status: wsStatus,
-    messages,
+    state,
+    setTargetContext,
+    setPRContext,
+    setOnExecuteAction,
+    setWorkingDir,
     connect,
     execute,
     clearMessages,
     addUserMessage,
-  } = useChatPanelSync(workingDir);
+  } = useChatPanel();
+  const { openActionSelector, openChat } = useChatPanelParams();
   const overlay = useOverlay();
   const queryClient = useQueryClient();
   const { mutateAsync: checkoutPR } = useMutation(prsMutation.checkout());
+
+  // Set workingDir for follow-up handler
+  useEffect(() => {
+    setWorkingDir(workingDir);
+  }, [workingDir, setWorkingDir]);
 
   const executeAction = (
     actionId: string,
@@ -149,7 +157,7 @@ export function useActivityChat({
   };
 
   const handleOpenChat = (target: ValidationTarget) => {
-    if (wsStatus !== 'connected') {
+    if (state.status !== 'connected') {
       connect();
     }
     setActiveTarget(target);
@@ -163,6 +171,8 @@ export function useActivityChat({
       prNumber,
     });
 
+    setPRContext({ projectId, prNumber });
+
     setOnExecuteAction((actionId: string, customPrompt?: string) => {
       handleActionWithCheckout(actionId, customPrompt, target);
     });
@@ -170,5 +180,5 @@ export function useActivityChat({
     openActionSelector(target.type, target.id);
   };
 
-  return { handleOpenChat, messages };
+  return { handleOpenChat, messages: state.messages };
 }

@@ -4,7 +4,7 @@ import { MessageCircle } from 'lucide-react';
 import { formatDateTime } from '@/shared/utils';
 import { Button, GFMMarkdown } from '@/shared/components';
 import { chatSessionsQuery, prsMutation } from '@/shared/apis';
-import { useChatPanelSync, useChatPanelParams } from '../../hooks';
+import { useChatPanelParams } from '../../hooks';
 import { useChatPanel } from '../../contexts';
 import { useOverlay } from '@/shared/hooks';
 import type { ClaudeMessage } from '../../hooks';
@@ -54,12 +54,19 @@ export const CommentList = ({
   const { mutateAsync: checkoutPR } = useMutation(prsMutation.checkout());
 
   const {
+    state,
     setTitle,
     setTargetContext,
     setPRContext,
     setOnExecuteAction,
     setOnResumeSession,
     setClaudeSessionId,
+    setWorkingDir,
+    connect,
+    execute,
+    clearMessages,
+    addUserMessage,
+    loadHistoryMessages,
   } = useChatPanel();
 
   const {
@@ -68,16 +75,10 @@ export const CommentList = ({
     resumeSession: resumeSessionUrl,
   } = useChatPanelParams();
 
-  const {
-    status: wsStatus,
-    messages,
-    sessionId,
-    connect,
-    execute,
-    clearMessages,
-    addUserMessage,
-    loadHistoryMessages,
-  } = useChatPanelSync(workingDir);
+  // Set workingDir for follow-up handler
+  useEffect(() => {
+    setWorkingDir(workingDir);
+  }, [workingDir, setWorkingDir]);
 
   // Fetch history for selected session
   const { data: historyData } = useQuery({
@@ -91,8 +92,11 @@ export const CommentList = ({
       const convertedMessages: ClaudeMessage[] = historyData.entries.map(
         (entry, index) => ({
           id: `history-${index}`,
-          type: entry.role === 'user' ? 'user' : 'text',
+          type: entry.messageType,
           content: entry.content,
+          toolName: entry.toolName,
+          toolId: entry.toolId,
+          isError: entry.isError,
           timestamp: entry.timestamp ? new Date(entry.timestamp) : new Date(),
         })
       );
@@ -104,7 +108,7 @@ export const CommentList = ({
   }, [historyData, selectedSessionId, loadHistoryMessages, setClaudeSessionId]);
 
   const handleResumeSession = (session: ChatSessionSummary) => {
-    if (wsStatus !== 'connected') {
+    if (state.status !== 'connected') {
       connect();
     }
     setSelectedSessionId(session.id);
@@ -180,7 +184,7 @@ export const CommentList = ({
   };
 
   const handleOpenChat = (target: ValidationTarget) => {
-    if (wsStatus !== 'connected') {
+    if (state.status !== 'connected') {
       connect();
     }
     setActiveTarget(target);
@@ -211,18 +215,11 @@ export const CommentList = ({
   useEffect(() => {
     if (!activeTarget) return;
 
-    const isDone = messages.some((m) => m.type === 'done');
+    const isDone = state.messages.some((m) => m.type === 'done');
     if (isDone) {
       setActiveTarget(null);
     }
-  }, [messages, activeTarget]);
-
-  // Sync sessionId to claudeSessionId when a new session completes
-  useEffect(() => {
-    if (sessionId) {
-      setClaudeSessionId(sessionId);
-    }
-  }, [sessionId, setClaudeSessionId]);
+  }, [state.messages, activeTarget]);
 
   return (
     <section className="mb-8">

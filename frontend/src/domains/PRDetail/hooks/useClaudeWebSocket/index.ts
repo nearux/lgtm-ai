@@ -5,4 +5,7 @@ export type {
   ClaudeMessage,
   ApprovalRequest,
   FileChangesData,
+  CommandPayload,
+  FollowUpPayload,
+  ClaudeExecuteOptions,
 } from './types';

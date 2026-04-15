@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { useChatPanelSync, useChatPanelParams } from '../../hooks';
+import { useChatPanelParams } from '../../hooks';
 import { useChatPanel } from '../../contexts';
 import type {
   PRReview,
@@ -62,12 +62,19 @@ export const ReviewList = ({
   const { mutateAsync: checkoutPR } = useMutation(prsMutation.checkout());
 
   const {
+    state,
     setTitle,
     setTargetContext,
     setPRContext,
     setOnExecuteAction,
     setOnResumeSession,
     setClaudeSessionId,
+    setWorkingDir,
+    connect,
+    execute,
+    clearMessages,
+    addUserMessage,
+    loadHistoryMessages,
   } = useChatPanel();
 
   const {
@@ -76,16 +83,10 @@ export const ReviewList = ({
     resumeSession: resumeSessionUrl,
   } = useChatPanelParams();
 
-  const {
-    status: wsStatus,
-    messages,
-    sessionId,
-    connect,
-    execute,
-    clearMessages,
-    addUserMessage,
-    loadHistoryMessages,
-  } = useChatPanelSync(workingDir);
+  // Set workingDir for follow-up handler
+  useEffect(() => {
+    setWorkingDir(workingDir);
+  }, [workingDir, setWorkingDir]);
 
   // Fetch history for selected session
   const { data: historyData } = useQuery({
@@ -99,8 +100,11 @@ export const ReviewList = ({
       const convertedMessages: ClaudeMessage[] = historyData.entries.map(
         (entry, index) => ({
           id: `history-${index}`,
-          type: entry.role === 'user' ? 'user' : 'text',
+          type: entry.messageType,
           content: entry.content,
+          toolName: entry.toolName,
+          toolId: entry.toolId,
+          isError: entry.isError,
           timestamp: entry.timestamp ? new Date(entry.timestamp) : new Date(),
         })
       );
@@ -193,7 +197,7 @@ export const ReviewList = ({
   };
 
   const handleResumeSession = (session: ChatSessionSummary) => {
-    if (wsStatus !== 'connected') {
+    if (state.status !== 'connected') {
       connect();
     }
     setSelectedSessionId(session.id);
@@ -205,7 +209,7 @@ export const ReviewList = ({
   };
 
   const handleOpenChat = (target: ValidationTarget) => {
-    if (wsStatus !== 'connected') {
+    if (state.status !== 'connected') {
       connect();
     }
     setActiveTarget(target);
@@ -238,9 +242,9 @@ export const ReviewList = ({
   useEffect(() => {
     if (!activeTarget) return;
 
-    const isDone = messages.some((m) => m.type === 'done');
+    const isDone = state.messages.some((m) => m.type === 'done');
     if (isDone) {
-      const textMessages = messages.filter((m) => m.type === 'text');
+      const textMessages = state.messages.filter((m) => m.type === 'text');
       const fullText = textMessages.map((m) => m.content).join('');
       const isValid =
         fullText.toUpperCase().includes('VALID') &&
@@ -254,14 +258,7 @@ export const ReviewList = ({
       }));
       setActiveTarget(null);
     }
-  }, [messages, activeTarget]);
-
-  // Sync sessionId to claudeSessionId when a new session completes
-  useEffect(() => {
-    if (sessionId) {
-      setClaudeSessionId(sessionId);
-    }
-  }, [sessionId, setClaudeSessionId]);
+  }, [state.messages, activeTarget]);
 
   return (
     <>

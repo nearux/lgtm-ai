@@ -8,7 +8,6 @@ import type {
 } from '@lgtmai/backend/types';
 import { useChatPanel } from '../contexts';
 import { useChatPanelParams } from './useChatPanelParams';
-import { useChatPanelSync } from './useChatPanelSync';
 import type { ClaudeMessage } from './useClaudeWebSocket';
 import { ACTION_LABELS } from '../utils/reviewPrompts';
 
@@ -30,15 +29,26 @@ export function usePRChat({
   workingDir,
 }: UsePRChatOptions) {
   const {
+    state,
     setTitle,
     setTargetContext,
     setPRContext,
     setOnExecuteAction,
     setOnResumeSession,
     setClaudeSessionId,
+    setWorkingDir,
+    connect,
+    execute,
+    clearMessages,
+    addUserMessage,
+    loadHistoryMessages,
   } = useChatPanel();
   const { openActionSelector, openChat, resumeSession } = useChatPanelParams();
-  const ws = useChatPanelSync(workingDir);
+
+  // Set workingDir for follow-up handler
+  useEffect(() => {
+    setWorkingDir(workingDir);
+  }, [workingDir, setWorkingDir]);
 
   // --- Session resume ---
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(
@@ -53,31 +63,28 @@ export function usePRChat({
     if (!historyData || !selectedSessionId) return;
     const msgs: ClaudeMessage[] = historyData.entries.map((e, i) => ({
       id: `history-${i}`,
-      type: e.role === 'user' ? ('user' as const) : ('text' as const),
+      type: e.messageType,
       content: e.content,
+      toolName: e.toolName,
+      toolId: e.toolId,
+      isError: e.isError,
       timestamp: e.timestamp ? new Date(e.timestamp) : new Date(),
     }));
-    ws.loadHistoryMessages(msgs);
+    loadHistoryMessages(msgs);
     setClaudeSessionId(historyData.claudeSessionId);
     setSelectedSessionId(null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    historyData,
-    selectedSessionId,
-    ws.loadHistoryMessages,
-    setClaudeSessionId,
-  ]);
+  }, [historyData, selectedSessionId, loadHistoryMessages, setClaudeSessionId]);
 
   // --- Public API ---
   const openPRChat = () => {
-    if (ws.status !== 'connected') ws.connect();
-    ws.clearMessages();
+    if (state.status !== 'connected') connect();
+    clearMessages();
 
     setTargetContext({ type: 'pr', author: prAuthor, body: prBody, prNumber });
     setPRContext({ projectId, prNumber });
 
     setOnResumeSession((session: ChatSessionSummary) => {
-      if (ws.status !== 'connected') ws.connect();
+      if (state.status !== 'connected') connect();
       setSelectedSessionId(session.id);
       setTitle(session.title || `Chat ${session.id.slice(0, 8)}`);
       const isPR = session.scopeType === 'REVIEW' && !session.scopeTargetId;
@@ -89,7 +96,7 @@ export function usePRChat({
 
     setOnExecuteAction((actionId: string, customPrompt?: string) => {
       const label = ACTION_LABELS[actionId] || customPrompt || actionId;
-      ws.addUserMessage(label);
+      addUserMessage(label);
 
       const chatContext: ClaudeChatContext = {
         projectId,
@@ -100,11 +107,10 @@ export function usePRChat({
       };
 
       openChat();
-      ws.execute(
+      execute(
         {
           type: 'command',
           command: actionId as 'validate' | 'fix' | 'explain' | 'custom',
-          // Backend treats type:'review' without path/diffHunk as PR-level scope
           context: { type: 'review', author: prAuthor, body: prBody, prMeta },
           ...(customPrompt ? { customPrompt } : {}),
         },

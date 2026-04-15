@@ -28,9 +28,15 @@ export interface ListChatSessionsFilters {
   scopeTargetId?: string;
 }
 
+export type ChatMessageType = 'text' | 'tool' | 'tool_result' | 'user';
+
 export interface ChatSessionHistoryEntry {
   role: string;
+  messageType: ChatMessageType;
   content: string;
+  toolName?: string;
+  toolId?: string;
+  isError?: boolean;
   timestamp?: string;
 }
 

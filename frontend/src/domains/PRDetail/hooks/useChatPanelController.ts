@@ -7,7 +7,7 @@ import { useChatPanelParams } from './useChatPanelParams';
  * Handles title sync and navigation callbacks.
  */
 export function useChatPanelController() {
-  const { state, setTitle } = useChatPanel();
+  const { state, setTitle, clearMessages } = useChatPanel();
   const { mode, isOpen, panelMode, goBack, closePanel, openHistory } =
     useChatPanelParams();
 
@@ -29,7 +29,7 @@ export function useChatPanelController() {
   }, [panelMode, state.targetContext, setTitle]);
 
   const handleBackFromChat = () => {
-    state.clearMessages?.();
+    clearMessages();
     goBack();
   };
 

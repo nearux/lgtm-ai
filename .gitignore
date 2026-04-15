@@ -16,3 +16,5 @@ backend/routes.ts
 
 
 .claude/worktrees/*
+
+docs/superpowers
