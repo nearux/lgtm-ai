@@ -2,13 +2,6 @@
  * Parses a single stream-json line and extracts structured events,
  * or returns null if the line should be skipped.
  *
- * Real-time text tokens arrive as:
- *   {"type":"stream_event","event":{"type":"content_block_delta","delta":{"type":"text_delta","text":"..."}}}
- *
- * Tool call events:
- *   tool_start  – stream_event > content_block_start with content_block.type === 'tool_use'
- *   tool_complete – assistant message with content[].type === 'tool_use'
- *   tool_result – user message with content[].type === 'tool_result'
  */
 
 export type ParsedStreamEvent =
@@ -39,118 +32,143 @@ export type ParsedStreamEvent =
       input: unknown;
     };
 
+type Parsed = Record<string, unknown>;
+
 export function parseStreamJsonLine(line: string): ParsedStreamEvent | null {
   if (!line.trim()) return null;
 
-  let parsed: Record<string, unknown>;
+  let parsed: Parsed;
   try {
-    parsed = JSON.parse(line) as Record<string, unknown>;
+    parsed = JSON.parse(line) as Parsed;
   } catch {
-    // Not valid JSON – forward as-is (e.g. early diagnostic output)
     return { kind: 'text', text: line };
   }
 
-  if (parsed['type'] === 'stream_event') {
-    const event = parsed['event'] as Record<string, unknown> | undefined;
+  switch (parsed['type']) {
+    case 'stream_event':
+      return parseStreamEvent(parsed);
+    case 'assistant':
+      return parseAssistantMessage(parsed);
+    case 'user':
+      return parseUserMessage(parsed);
+    case 'result':
+      return parseResultMessage(parsed);
+    case 'control_request':
+      return parseControlRequest(parsed);
+    case 'system':
+      return parseInitMessage(parsed);
+    default:
+      return null;
+  }
+}
 
-    // Real-time token streaming: stream_event > content_block_delta > text_delta
-    if (event?.['type'] === 'content_block_delta') {
-      const delta = event['delta'] as Record<string, unknown> | undefined;
-      if (delta?.['type'] === 'text_delta') {
-        const text = delta['text'];
-        return typeof text === 'string' && text ? { kind: 'text', text } : null;
-      }
+function parseStreamEvent(parsed: Parsed): ParsedStreamEvent | null {
+  const event = parsed['event'] as Parsed | undefined;
+
+  if (event?.['type'] === 'content_block_delta') {
+    const delta = event['delta'] as Parsed | undefined;
+    if (delta?.['type'] === 'text_delta') {
+      const text = delta['text'];
+      return typeof text === 'string' && text ? { kind: 'text', text } : null;
     }
+  }
 
-    // Tool call start: stream_event > content_block_start with tool_use block
-    if (event?.['type'] === 'content_block_start') {
-      const block = event['content_block'] as
-        | Record<string, unknown>
-        | undefined;
-      if (block?.['type'] === 'tool_use') {
-        const toolId = block['id'];
-        const toolName = block['name'];
-        if (typeof toolId === 'string' && typeof toolName === 'string') {
-          return { kind: 'tool_start', toolId, toolName };
-        }
+  // Tool call start: stream_event > content_block_start with tool_use block
+  if (event?.['type'] === 'content_block_start') {
+    const block = event['content_block'] as Parsed | undefined;
+    if (block?.['type'] === 'tool_use') {
+      const toolId = block['id'];
+      const toolName = block['name'];
+      if (typeof toolId === 'string' && typeof toolName === 'string') {
+        return { kind: 'tool_start', toolId, toolName };
       }
     }
   }
 
-  // Tool call complete: assistant message containing tool_use content blocks
-  if (parsed['type'] === 'assistant') {
-    const message = parsed['message'] as Record<string, unknown> | undefined;
-    const content = message?.['content'] as unknown[] | undefined;
-    if (Array.isArray(content)) {
-      const toolUse = content.find(
-        (c): c is Record<string, unknown> =>
-          typeof c === 'object' &&
-          c !== null &&
-          (c as Record<string, unknown>)['type'] === 'tool_use'
-      );
-      if (toolUse) {
-        const toolId = toolUse['id'];
-        const toolName = toolUse['name'];
-        const input = toolUse['input'];
-        if (typeof toolId === 'string' && typeof toolName === 'string') {
-          return { kind: 'tool_complete', toolId, toolName, input };
-        }
-      }
-    }
-  }
+  return null;
+}
 
-  // Tool result: user message containing tool_result content blocks
-  if (parsed['type'] === 'user') {
-    const message = parsed['message'] as Record<string, unknown> | undefined;
-    const content = message?.['content'] as unknown[] | undefined;
-    if (Array.isArray(content)) {
-      const toolResult = content.find(
-        (c): c is Record<string, unknown> =>
-          typeof c === 'object' &&
-          c !== null &&
-          (c as Record<string, unknown>)['type'] === 'tool_result'
-      );
-      if (toolResult) {
-        const toolId = toolResult['tool_use_id'];
-        const rawContent = toolResult['content'];
-        const isError = toolResult['is_error'];
-        if (typeof toolId === 'string') {
-          const contentStr =
-            typeof rawContent === 'string'
-              ? rawContent
-              : JSON.stringify(rawContent);
-          return {
-            kind: 'tool_result',
-            toolId,
-            content: contentStr,
-            isError: isError === true,
-          };
-        }
-      }
-    }
-  }
 
-  // Response completion: result message emitted when a turn finishes
-  if (parsed['type'] === 'result') {
-    const result = parsed['result'];
-    const sessionId = parsed['session_id'];
-    const isError = parsed['is_error'];
+/**
+ * Tool call complete: assistant message containing tool_use content blocks
+ */
+function parseAssistantMessage(parsed: Parsed): ParsedStreamEvent | null {
+  const message = parsed['message'] as Parsed | undefined;
+  const content = message?.['content'] as unknown[] | undefined;
+  if (!Array.isArray(content)) return null;
+
+  const toolUse = content.find(
+    (c): c is Parsed =>
+      typeof c === 'object' &&
+      c !== null &&
+      (c as Parsed)['type'] === 'tool_use'
+  );
+  if (!toolUse) return null;
+
+  const toolId = toolUse['id'];
+  const toolName = toolUse['name'];
+  const input = toolUse['input'];
+  if (typeof toolId === 'string' && typeof toolName === 'string') {
+    return { kind: 'tool_complete', toolId, toolName, input };
+  }
+  return null;
+}
+
+/**
+ * Tool result: user message containing tool_result content blocks
+ */
+function parseUserMessage(parsed: Parsed): ParsedStreamEvent | null {
+  const message = parsed['message'] as Parsed | undefined;
+  const content = message?.['content'] as unknown[] | undefined;
+  if (!Array.isArray(content)) return null;
+
+  const toolResult = content.find(
+    (c): c is Parsed =>
+      typeof c === 'object' &&
+      c !== null &&
+      (c as Parsed)['type'] === 'tool_result'
+  );
+  if (!toolResult) return null;
+
+  const toolId = toolResult['tool_use_id'];
+  const rawContent = toolResult['content'];
+  const isError = toolResult['is_error'];
+  if (typeof toolId === 'string') {
+    const contentStr =
+      typeof rawContent === 'string' ? rawContent : JSON.stringify(rawContent);
     return {
-      kind: 'result',
-      result: typeof result === 'string' ? result : '',
-      sessionId: typeof sessionId === 'string' ? sessionId : undefined,
+      kind: 'tool_result',
+      toolId,
+      content: contentStr,
       isError: isError === true,
     };
   }
+  return null;
+}
 
-  // Control requests from Claude
-  if (parsed['type'] === 'control_request') {
-    const requestId = parsed['request_id'];
-    const request = parsed['request'] as Record<string, unknown> | undefined;
-    if (typeof requestId !== 'string') return null;
+/**
+ * Response completion: result message emitted when a turn finishes
+ */
+function parseResultMessage(parsed: Parsed): ParsedStreamEvent | null {
+  const result = parsed['result'];
+  const sessionId = parsed['session_id'];
+  const isError = parsed['is_error'];
+  return {
+    kind: 'result',
+    result: typeof result === 'string' ? result : '',
+    sessionId: typeof sessionId === 'string' ? sessionId : undefined,
+    isError: isError === true,
+  };
+}
 
-    // can_use_tool: SDK escalated from hook "ask" decision
-    if (request?.['subtype'] === 'can_use_tool') {
+function parseControlRequest(parsed: Parsed): ParsedStreamEvent | null {
+  const requestId = parsed['request_id'];
+  const request = parsed['request'] as Parsed | undefined;
+  if (typeof requestId !== 'string') return null;
+
+  // can_use_tool: SDK escalated from hook "ask" decision
+  switch (request?.['subtype']) {
+    case 'can_use_tool': {
       const toolUseId = request['tool_use_id'];
       const toolName = request['tool_name'];
       const toolInput = request['input'];
@@ -163,12 +181,13 @@ export function parseStreamJsonLine(line: string): ParsedStreamEvent | null {
           input: toolInput,
         };
       }
+      return null;
     }
 
     // hook_callback: PreToolUse hook fired — respond directly with allow/deny
-    if (request?.['subtype'] === 'hook_callback') {
+    case 'hook_callback': {
       const callbackId = request['callback_id'];
-      const input = request['input'] as Record<string, unknown> | undefined;
+      const input = request['input'] as Parsed | undefined;
       const toolUseId = input?.['tool_use_id'];
       const toolName = input?.['tool_name'];
       const toolInput = input?.['tool_input'];
@@ -182,15 +201,19 @@ export function parseStreamJsonLine(line: string): ParsedStreamEvent | null {
           input: toolInput,
         };
       }
+      return null;
     }
+    default:
+      return null;
   }
+}
 
-  if (parsed['type'] === 'system' && parsed['subtype'] === 'init') {
-    const sessionId = parsed['session_id'];
-    if (typeof sessionId === 'string') {
-      return { kind: 'init', sessionId };
-    }
+function parseInitMessage(parsed: Parsed): ParsedStreamEvent | null {
+  if (parsed['subtype'] !== 'init') return null;
+
+  const sessionId = parsed['session_id'];
+  if (typeof sessionId === 'string') {
+    return { kind: 'init', sessionId };
   }
-
   return null;
 }

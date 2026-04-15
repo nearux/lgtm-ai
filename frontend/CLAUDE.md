@@ -1,9 +1,13 @@
 # Frontend Architecture
 
+React 19 + Vite + React Query + Tailwind CSS 4.
+
 ## Folder Structure (Layer Hierarchy)
 
 ```
 src/
+├── apis/             # 순수 HTTP 함수 + 타입
+├── queries/          # TanStack Query options
 ├── domains/          # Domain-specific pages and related code
 │   ├── Projects/
 │   ├── PRList/
@@ -16,7 +20,41 @@ src/
 
 - **domains**: Hooks, components, and pages used only within each domain (Projects, PRList, PRDetail)
 - **features**: Code with business logic shared across multiple domains
-- **shared**: Pure utilities and UI components with no business logic
+- **shared**: Pure utilities, UI components, and API layer (fetch functions + React Query hooks shared across domains)
+
+## API Layer
+
+Each domain has its own folder under `shared/apis/{domain}/`:
+
+- `index.ts` — fetch functions
+- `query.ts` — React Query query hooks
+- `mutation.ts` — React Query mutation hooks
+- `queryKey.ts` — query key factory
+
+Low-level fetch utilities (`apiGet`, `apiPost`, etc.) are in `shared/apis/client.ts`. Use `ApiClientError` for error handling.
+
+## API & Query Layer
+
+```
+src/
+├── apis/              # 순수 HTTP 함수 + 타입 (TanStack Query 무관)
+│   ├── client.ts      # fetch wrapper (apiGet, apiPost, apiPatch, apiDelete)
+│   ├── auth.ts        # getGithubStatus, postSwitchAccount
+│   ├── projects.ts    # getProjectList, getProjectDetail, postCreateProject, patchUpdateProject, deleteProject
+│   └── ...
+├── queries/           # TanStack Query options (queryKey 인라인 정의)
+│   ├── auth.ts        # getGithubStatusQueryOptions, postSwitchAccountMutationOptions
+│   ├── projects.ts    # getProjectListQueryOptions, postCreateProjectMutationOptions, ...
+│   └── ...
+```
+
+### Convention
+
+- **apis/**: 순수 HTTP 함수 + 타입 관리. 함수명은 HTTP verb로 시작: `getXxx`, `postXxx`, `patchXxx`, `deleteXxx`, `putXxx`
+- **queries/**: `queryOptions`/`mutationOptions` 정의. queryKey 인라인 배열
+- **Naming**: API `getProjectList` → Query `getProjectListQueryOptions`, API `postCreateProject` → Query `postCreateProjectMutationOptions`
+- **Type inference**: queryOptions/mutationOptions에 명시적 제네릭 사용하지 않음
+- **Invalidation**: `getProjectDetailQueryOptions(id).queryKey` 사용
 
 ## Component Convention
 

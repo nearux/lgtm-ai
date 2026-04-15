@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useSuspenseQuery } from '@tanstack/react-query';
-import { projectsQuery } from '@/shared/apis';
+import { getProjectListQueryOptions } from '@/queries';
 import { useOverlay } from '@/shared/hooks';
 import { ProjectCard } from '../ProjectCard/ProjectCard';
 import { EditProjectModal } from '../EditProjectModal/EditProjectModal';
@@ -11,7 +11,7 @@ export const ProjectCardList = () => {
   const navigate = useNavigate();
   const overlay = useOverlay();
 
-  const { data: projects } = useSuspenseQuery(projectsQuery.list());
+  const { data: projects } = useSuspenseQuery(getProjectListQueryOptions());
 
   const handleProjectClick = (project: Project) => {
     navigate(`/projects/${project.id}/prs`);

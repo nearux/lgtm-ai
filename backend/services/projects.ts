@@ -1,6 +1,7 @@
 import HttpStatus from 'http-status';
 import { existsSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
+import { filter, map, pipe } from 'remeda';
 import { AppError } from '../errors/AppError.js';
 import { ProjectGitRemoteDto } from '../dtos/projectGitInfoDto.js';
 import { GitHubRepoDto } from '../dtos/gitHubRepoDto.js';
@@ -13,49 +14,6 @@ import type {
   CreateProjectBody,
   UpdateProjectBody,
 } from '../types/projects.js';
-
-async function getGitInfo(workingDir: string): Promise<ProjectGitInfo> {
-  let remoteUrl: string | null = null;
-  let currentBranch: string | null = null;
-  let branches: string[] = [];
-  let remotes: Array<{ name: string; url: string }> = [];
-
-  try {
-    remoteUrl = (await git(workingDir, ['remote', 'get-url', 'origin'])).trim();
-  } catch (error) {
-    console.error('[getGitInfo] Failed to resolve origin remote URL:', error);
-    remoteUrl = null;
-  }
-
-  try {
-    const raw = await git(workingDir, ['remote', '-v']);
-    remotes = ProjectGitRemoteDto.fromGitRemoteList(raw);
-  } catch (error) {
-    console.error('[getGitInfo] Failed to list git remotes:', error);
-    remotes = [];
-  }
-
-  try {
-    currentBranch =
-      (await git(workingDir, ['branch', '--show-current'])).trim() || null;
-  } catch (error) {
-    console.error('[getGitInfo] Failed to get current branch:', error);
-    currentBranch = null;
-  }
-
-  try {
-    const raw = await git(workingDir, ['branch']);
-    branches = raw
-      .split('\n')
-      .map((line) => line.replace(/^\*?\s+/, '').trim())
-      .filter((line) => line.length > 0);
-  } catch (error) {
-    console.error('[getGitInfo] Failed to list branches:', error);
-    branches = [];
-  }
-
-  return { remoteUrl, currentBranch, branches, remotes };
-}
 
 export async function create(input: CreateProjectBody): Promise<Project> {
   const { name, description, working_dir } = input;
@@ -127,21 +85,81 @@ export async function remove(id: string): Promise<void> {
  * Resolves the GitHub "owner/repo" string for a project, using the specified
  * remote name (defaults to "origin"). Throws an AppError on invalid input.
  */
+const REMOTE_NAME_RE = /^[\w.-]+$/;
+
 export async function resolveGitHubRepo(
   projectId: string,
   remoteName: string
 ): Promise<string> {
-  const project = await findById(projectId);
-  const selectedRemoteUrl = project.gitInfo.remotes.find(
-    (remote) => remote.name === remoteName
-  )?.url;
+  if (!REMOTE_NAME_RE.test(remoteName)) {
+    throw new AppError('Invalid remote name', HttpStatus.BAD_REQUEST);
+  }
 
-  if (!selectedRemoteUrl) {
+  const project = await projectRepository.findById(projectId);
+  if (!project) throw new AppError('Project not found', HttpStatus.NOT_FOUND);
+
+  try {
+    const remoteUrl = (
+      await git(project.working_dir, ['remote', 'get-url', remoteName])
+    ).trim();
+    return GitHubRepoDto.fromRemoteUrl(remoteUrl).toString();
+  } catch {
     throw new AppError(
       `Project does not have a configured Git remote named '${remoteName}'`,
       HttpStatus.UNPROCESSABLE_ENTITY
     );
   }
+}
 
-  return GitHubRepoDto.fromRemoteUrl(selectedRemoteUrl).toString();
+async function getGitInfo(workingDir: string): Promise<ProjectGitInfo> {
+  const [remoteUrl, remotes, currentBranch, branches] = await Promise.all([
+    withFallback(
+      'Failed to resolve origin remote URL',
+      null as string | null
+    )(
+      git(workingDir, ['remote', 'get-url', 'origin']).then((out) => out.trim())
+    ),
+    withFallback(
+      'Failed to list git remotes',
+      [] as Array<{ name: string; url: string }>
+    )(
+      git(workingDir, ['remote', '-v']).then((raw) =>
+        ProjectGitRemoteDto.fromGitRemoteList(raw)
+      )
+    ),
+    withFallback(
+      'Failed to get current branch',
+      null as string | null
+    )(
+      git(workingDir, ['branch', '--show-current']).then(
+        (out) => out.trim() || null
+      )
+    ),
+    withFallback(
+      'Failed to list branches',
+      [] as string[]
+    )(
+      git(workingDir, ['branch']).then((raw) =>
+        pipe(
+          raw.split('\n'),
+          map((line) => line.replace(/^\*?\s+/, '').trim()),
+          filter((line) => line.length > 0)
+        )
+      )
+    ),
+  ]);
+
+  return { remoteUrl, currentBranch, branches, remotes };
+}
+
+/**
+ * Returns a function that catches errors from a promise, logs them, and
+ * returns the given fallback value instead.
+ */
+function withFallback<T>(label: string, fallback: T) {
+  return (promise: Promise<T>): Promise<T> =>
+    promise.catch((error) => {
+      console.error(`[getGitInfo] ${label}:`, error);
+      return fallback;
+    });
 }

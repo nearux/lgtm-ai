@@ -1,47 +1,35 @@
 # Project Overview
 
-LGTM AI automates PR review application using Claude Code. This is a pnpm workspaces monorepo with three packages: `cli`, `backend`, `frontend`.
+LGTM AI automates PR review using Claude Code. pnpm workspaces monorepo: `cli`, `backend`, `frontend`.
 
 # Common Commands
 
 ```bash
-# Build all workspaces
-pnpm run build
+pnpm run build          # Build all workspaces
+pnpm run dev            # Backend + frontend with file watching
+pnpm start              # Run CLI from source
+pnpm test               # Run tests (all packages)
 
-# Development (backend + frontend with file watching)
-pnpm run dev
-
-# Run CLI from source
-pnpm start
-
-# Build and run specific workspace
 pnpm --filter @lgtmai/cli build
 pnpm --filter @lgtmai/backend dev
 ```
 
 # Architecture
 
-**IMPORTANT**: This is a monorepo. The CLI orchestrates backend (Express on :5051) and frontend (Vite on :5050) as child processes.
+The CLI orchestrates backend (Express :5051) and frontend (Vite :5050) as child processes. Frontend proxies `/api/*` to backend.
 
-- `cli/`: Validates `gh` and `claude` CLIs, launches servers, opens browser
-- `backend/`: Express API server (proxied via `/api` in frontend)
-- `frontend/`: React 19 + Vite UI
-
-Port config in `cli/utils/ports.ts`. Frontend proxies `/api/*` to backend.
+- `cli/`: Validates `gh`/`claude` CLIs, launches servers, opens browser. Port config: `cli/utils/ports.ts`
+- `backend/`: Express + tsoa API server.
+- `frontend/`: React 19 + Vite UI.
 
 # Prerequisites
 
-The CLI requires these tools installed and authenticated:
 - GitHub CLI (`gh auth login`)
 - Claude Code CLI
 
 # Publishing
 
 `bin/lgtmai.js` wraps `cli/dist/index.js`. `prepublishOnly` builds all workspaces.
-
-# Coding Rules
-
-- **Backend tsoa imports**: Always import from `@tsoa/runtime`, never from `tsoa`. The `tsoa` package is a build-time code generation tool and is excluded from the production bundle via esbuild externals.
 
 # GitHub Write Actions Policy
 

@@ -222,6 +222,9 @@ importers:
       eslint:
         specifier: ^9.39.1
         version: 9.39.3(jiti@2.6.1)
+      eslint-plugin-import-layers:
+        specifier: ^0.1.1
+        version: 0.1.1(eslint@9.39.3(jiti@2.6.1))
       eslint-plugin-react-hooks:
         specifier: ^5.1.0
         version: 5.2.0(eslint@9.39.3(jiti@2.6.1))
@@ -2033,6 +2036,12 @@ packages:
   escape-string-regexp@5.0.0:
     resolution: {integrity: sha512-/veY75JbMK4j1yjvuUxuVsiS/hr/4iHs9FTT6cgTexxdE0Ly/glccBAkloH/DofkjRbZU3bnoj38mOmhkZ0lHw==}
     engines: {node: '>=12'}
+
+  eslint-plugin-import-layers@0.1.1:
+    resolution: {integrity: sha512-pIzVSUOqHx1hVfm3W8hAfnW/3Ij9PUuIOnRmN3DzMzEca8CGfUvhuJrJELq2zlaX/xKHSVARiGY5z5gtCl0oMQ==}
+    engines: {node: '>=18.0.0'}
+    peerDependencies:
+      eslint: '>=8.0.0'
 
   eslint-plugin-react-hooks@5.2.0:
     resolution: {integrity: sha512-+f15FfK64YQwZdJNELETdn5ibXEUQmW1DZL6KXhNnc2heoy/sg9VJJeT7n8TlMWouzWqSWavFkIhHyIbIAEapg==}
@@ -5736,6 +5745,10 @@ snapshots:
   escape-string-regexp@4.0.0: {}
 
   escape-string-regexp@5.0.0: {}
+
+  eslint-plugin-import-layers@0.1.1(eslint@9.39.3(jiti@2.6.1)):
+    dependencies:
+      eslint: 9.39.3(jiti@2.6.1)
 
   eslint-plugin-react-hooks@5.2.0(eslint@9.39.3(jiti@2.6.1)):
     dependencies:

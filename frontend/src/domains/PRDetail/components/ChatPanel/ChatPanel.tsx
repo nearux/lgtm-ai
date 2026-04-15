@@ -6,6 +6,7 @@ import type {
   ChatPanelMode,
   ChatPanelState,
 } from '../../contexts/ChatPanelContext';
+import type { UseClaudeWebSocketReturn } from '../../hooks';
 import { ActionSelector } from './ActionSelector';
 import { ChatHistoryList } from './ChatHistoryList';
 import { groupMessages } from './utils/groupMessages';
@@ -16,7 +17,6 @@ import { ToolBubble } from './components/ToolBubble';
 import { FollowUpInput } from './components/FollowUpInput';
 import { FileChangesCard } from './components/FileChangesCard';
 import { useAutoScroll } from './hooks/useAutoScroll';
-import type { FileChangesData } from '../../hooks';
 
 export interface CommitState {
   isCommitting: boolean;
@@ -27,11 +27,10 @@ interface Props {
   isOpen: boolean;
   state: ChatPanelState;
   mode: ChatPanelMode;
-  fileChanges: FileChangesData | null;
+  ws: UseClaudeWebSocketReturn;
   onClose: () => void;
   onShowHistory: () => void;
   onHideHistory: () => void;
-  onBackToChat: () => void;
   onCommitAndPush?: (push: boolean) => void;
   commitState?: CommitState;
 }
@@ -40,24 +39,16 @@ export const ChatPanel = ({
   isOpen,
   state,
   mode,
-  fileChanges,
+  ws,
   onClose,
   onShowHistory,
   onHideHistory,
-  onBackToChat,
   onCommitAndPush,
   commitState,
 }: Props) => {
-  const {
-    title,
-    messages,
-    status,
-    sessionId,
-    onSendFollowUp,
-    prContext,
-    onExecuteAction,
-    onResumeSession,
-  } = state;
+  const { title, prContext, onExecuteAction, onResumeSession, onSendFollowUp } =
+    state;
+  const { messages, status, sessionId, fileChanges } = ws;
   const [expandedTools, setExpandedTools] = useState<Set<string>>(new Set());
   const { containerRef, handleScroll } = useAutoScroll(messages);
 
@@ -81,6 +72,11 @@ export const ChatPanel = ({
     });
   };
 
+  const handleBackFromChat = () => {
+    ws.clearMessages();
+    onHideHistory();
+  };
+
   return (
     <div
       className={`fixed top-0 right-0 z-50 flex h-full w-[480px] transform flex-col border-l border-gray-200 bg-gray-50 shadow-lg transition-transform duration-300 ease-in-out ${
@@ -94,7 +90,7 @@ export const ChatPanel = ({
         hasMessages={messages.length > 0}
         showStatusBadge={!showActionSelector && !showHistory}
         onClose={onClose}
-        onBackToChat={onBackToChat}
+        onBackToChat={handleBackFromChat}
         onHideHistory={onHideHistory}
       />
 
@@ -177,7 +173,7 @@ export const ChatPanel = ({
         messages.length > 0 &&
         onSendFollowUp && (
           <FollowUpInput
-            sessionId={sessionId}
+            sessionId={state.claudeSessionId || sessionId}
             onSendFollowUp={onSendFollowUp}
           />
         )}

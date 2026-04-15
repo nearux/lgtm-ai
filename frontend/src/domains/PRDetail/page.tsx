@@ -3,8 +3,13 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { AsyncBoundary } from '@/shared/components';
 import { PRDetailContent } from './components/PRDetailContent/PRDetailContent';
 import { ChatPanel } from './components/ChatPanel';
-import { ChatPanelProvider, useChatPanel } from './contexts';
-import { useChatPanelController, useChatPanelParams } from './hooks';
+import { ChatPanelProvider } from './contexts';
+import {
+  useChatPanelController,
+  useChatPanelParams,
+  useClaudeWebSocket,
+} from './hooks';
+import { useChatPanelSync } from './hooks/useChatPanelSync';
 import { useCommitAndPush } from './hooks/useCommitAndPush';
 
 export const PRDetailPage = () => {
@@ -26,7 +31,8 @@ const PRDetailPageContent = () => {
 
   const { closePanel } = useChatPanelParams();
   const chatPanel = useChatPanelController();
-  const { state } = useChatPanel();
+  const ws = useClaudeWebSocket();
+  useChatPanelSync(ws);
   const { commitState, handleCommitAndPush } = useCommitAndPush(projectId);
 
   // NOTE: Clear panel params on mount (page refresh)
@@ -48,14 +54,15 @@ const PRDetailPageContent = () => {
               projectId={projectId!}
               prNumber={prNumber!}
               origin={origin}
+              ws={ws}
             />
           </AsyncBoundary>
         </div>
       </div>
       <ChatPanel
         {...chatPanel}
-        fileChanges={state.fileChanges}
-        onCommitAndPush={state.fileChanges ? handleCommitAndPush : undefined}
+        ws={ws}
+        onCommitAndPush={handleCommitAndPush}
         commitState={commitState}
       />
     </div>

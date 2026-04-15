@@ -50,21 +50,19 @@ describe('ClaudeSessionManager', () => {
   it('persists a chat session when a new claude execution initializes with session id', async () => {
     const manager = new ClaudeSessionManager(ws as never);
 
-    manager.execute(
-      'request-1',
-      'prompt',
-      '/tmp/project',
-      {
-        executionMode: 'default',
-      },
-      {
+    manager.execute({
+      requestId: 'request-1',
+      prompt: 'prompt',
+      workingDir: '/tmp/project',
+      options: { executionMode: 'default' },
+      chatContext: {
         projectId: 'project-1',
         prNumber: 45,
         scopeType: 'REVIEW',
         scopeTargetId: 'review-123',
         title: 'Validate review',
-      }
-    );
+      },
+    });
 
     const proc = processInstances[0];
     expect(proc).toBeDefined();
@@ -87,14 +85,19 @@ describe('ClaudeSessionManager', () => {
 
   it('passes commandMeta to createChatSessionFromExecution when provided', async () => {
     const manager = new ClaudeSessionManager(ws as never);
-    manager.execute(
-      'request-meta',
-      'some prompt',
-      '/tmp/project',
-      { executionMode: 'default' },
-      { projectId: 'p', prNumber: 1, scopeType: 'REVIEW', scopeTargetId: 'r' },
-      { command: 'validate', customPrompt: undefined }
-    );
+    manager.execute({
+      requestId: 'request-meta',
+      prompt: 'some prompt',
+      workingDir: '/tmp/project',
+      options: { executionMode: 'default' },
+      chatContext: {
+        projectId: 'p',
+        prNumber: 1,
+        scopeType: 'REVIEW',
+        scopeTargetId: 'r',
+      },
+      commandMeta: { command: 'validate', customPrompt: undefined },
+    });
     processInstances[0]!.emit('init', 'claude-session-meta');
     await Promise.resolve();
     expect(mockCreateChatSessionFromExecution).toHaveBeenCalledWith(
@@ -107,19 +110,19 @@ describe('ClaudeSessionManager', () => {
   it('does not persist a new chat session on done without init', async () => {
     const manager = new ClaudeSessionManager(ws as never);
 
-    manager.execute(
-      'request-4',
-      'prompt',
-      '/tmp/project',
-      { executionMode: 'default' },
-      {
+    manager.execute({
+      requestId: 'request-4',
+      prompt: 'prompt',
+      workingDir: '/tmp/project',
+      options: { executionMode: 'default' },
+      chatContext: {
         projectId: 'project-1',
         prNumber: 45,
         scopeType: 'REVIEW',
         scopeTargetId: 'review-456',
         title: 'Done should not persist',
-      }
-    );
+      },
+    });
 
     const proc = processInstances[0];
     expect(proc).toBeDefined();
@@ -133,9 +136,14 @@ describe('ClaudeSessionManager', () => {
   it('touches an existing chat session when resuming with a claude session id', () => {
     const manager = new ClaudeSessionManager(ws as never);
 
-    manager.execute('request-2', 'prompt', '/tmp/project', {
-      executionMode: 'default',
-      sessionId: 'claude-session-1',
+    manager.execute({
+      requestId: 'request-2',
+      prompt: 'prompt',
+      workingDir: '/tmp/project',
+      options: {
+        executionMode: 'default',
+        sessionId: 'claude-session-1',
+      },
     });
 
     expect(mockMarkChatSessionAsUsed).toHaveBeenCalledWith('claude-session-1');
@@ -144,15 +152,13 @@ describe('ClaudeSessionManager', () => {
 
   it('passes systemPrompt to ClaudeProcess when provided', () => {
     const manager = new ClaudeSessionManager(ws as never);
-    manager.execute(
-      'request-sp',
-      'some prompt',
-      '/tmp/project',
-      { executionMode: 'default' },
-      undefined,
-      undefined,
-      'You are a code review assistant.'
-    );
+    manager.execute({
+      requestId: 'request-sp',
+      prompt: 'some prompt',
+      workingDir: '/tmp/project',
+      options: { executionMode: 'default' },
+      systemPrompt: 'You are a code review assistant.',
+    });
 
     const proc = processInstances[0];
     expect(proc).toBeDefined();
@@ -161,7 +167,11 @@ describe('ClaudeSessionManager', () => {
 
   it('leaves systemPrompt undefined when not provided', () => {
     const manager = new ClaudeSessionManager(ws as never);
-    manager.execute('request-no-sp', 'prompt', '/tmp/project');
+    manager.execute({
+      requestId: 'request-no-sp',
+      prompt: 'prompt',
+      workingDir: '/tmp/project',
+    });
 
     const proc = processInstances[0];
     expect(proc!.systemPrompt).toBeUndefined();
@@ -170,8 +180,11 @@ describe('ClaudeSessionManager', () => {
   it('forwards init events from the claude process to websocket', () => {
     const manager = new ClaudeSessionManager(ws as never);
 
-    manager.execute('request-3', 'prompt', '/tmp/project', {
-      executionMode: 'default',
+    manager.execute({
+      requestId: 'request-3',
+      prompt: 'prompt',
+      workingDir: '/tmp/project',
+      options: { executionMode: 'default' },
     });
 
     const proc = processInstances[0];

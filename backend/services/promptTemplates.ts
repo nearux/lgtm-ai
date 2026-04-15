@@ -15,7 +15,17 @@ export interface SystemPromptParams {
   body: string;
 }
 
-export function systemPrompt(p: SystemPromptParams): string {
+export type ReviewScope = 'pr' | 'thread';
+
+export function systemPrompt(
+  p: SystemPromptParams,
+  scope: ReviewScope = 'thread'
+): string {
+  const guideline =
+    scope === 'pr'
+      ? 'Focus on the overall changes introduced in this pull request.'
+      : 'Focus on the specific review comment provided by the user.';
+
   return `You are a code review assistant for a GitHub Pull Request.
 
 ## PR Context
@@ -29,24 +39,7 @@ ${p.body || '(no description)'}
 ## Guidelines
 - You have access to the local codebase (already checked out to the PR branch).
 - Use \`gh\` CLI or file reading tools to explore additional context when needed.
-- Focus on the specific review comment provided by the user.`;
-}
-
-export function systemPromptForPR(p: SystemPromptParams): string {
-  return `You are a code review assistant for a GitHub Pull Request.
-
-## PR Context
-- Repository: ${p.repoOwnerName}
-- PR #${p.number}: ${p.title}
-- Branch: ${p.headBranch} → ${p.baseBranch}
-
-## PR Description
-${p.body || '(no description)'}
-
-## Guidelines
-- You have access to the local codebase (already checked out to the PR branch).
-- Use \`gh\` CLI or file reading tools to explore additional context when needed.
-- Focus on the overall changes introduced in this pull request.`;
+- ${guideline}`;
 }
 
 // ── Review comment section ──────────────────────────────────────────
@@ -177,4 +170,61 @@ export function customPrPrompt(
 
 ## PR Context
 Use \`gh pr diff ${prNumber} --repo ${repoOwnerName}\` to view the full diff if needed.`;
+}
+
+// ── Batch prompt templates ──────────────────────────────────────────
+
+export function batchReviewCommentSection(
+  contexts: ReviewCommentParams[]
+): string {
+  return contexts
+    .map((ctx, i) => `### [${i + 1}]\n${reviewCommentSection(ctx)}`)
+    .join('\n\n');
+}
+
+export function batchFixPrompt(batchSection: string): string {
+  return `Multiple reviewers left the following comments. Apply all suggested fixes to the codebase.
+
+## Review Comments
+${batchSection}
+
+## Instructions
+- Address each comment in order ([1], [2], ...)
+- Read relevant files before making changes
+- Do NOT use git commands — only modify local files
+- After all changes, briefly summarize what you changed per comment`;
+}
+
+export function batchExplainPrompt(batchSection: string): string {
+  return `Multiple reviewers left the following comments. Explain what each reviewer is pointing out and why it matters.
+
+## Review Comments
+${batchSection}
+
+## Instructions
+1. For each comment ([1], [2], ...), summarize what the reviewer is asking for in plain language
+2. Explain WHY it matters (performance, readability, correctness, etc.)
+3. If applicable, show a brief code example of what the fix would look like`;
+}
+
+export function batchValidatePrompt(batchSection: string): string {
+  return `Evaluate whether each of the following review comments is a valid, actionable code review suggestion.
+
+## Review Comments
+${batchSection}
+
+## Instructions
+For each comment ([1], [2], ...), respond with VALID or INVALID, then explain in 1-2 sentences:
+- VALID: points out a real issue, is specific, and can be addressed with code changes
+- INVALID: is vague, incorrect, stylistic nitpick without substance, or not actionable`;
+}
+
+export function batchCustomPrompt(
+  userPrompt: string,
+  batchSection: string
+): string {
+  return `${userPrompt}
+
+## Review Comments Context
+${batchSection}`;
 }
