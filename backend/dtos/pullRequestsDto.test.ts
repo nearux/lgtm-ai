@@ -10,8 +10,7 @@ describe('PRListItemDto.fromGraphQL', () => {
     state: 'OPEN',
     createdAt: '2024-01-01T00:00:00Z',
     updatedAt: '2024-01-02T00:00:00Z',
-    comments: { totalCount: 3 },
-    reviewThreads: { totalCount: 2 },
+    totalCommentsCount: 10,
     assignees: {
       nodes: [{ id: 'U_1', login: 'alice', name: 'Alice' }],
     },
@@ -33,10 +32,9 @@ describe('PRListItemDto.fromGraphQL', () => {
     expect(dto.updatedAt).toBe('2024-01-02T00:00:00Z');
   });
 
-  it('maps commentsCount and reviewCommentsCount', () => {
+  it('maps totalCommentsCount from GraphQL', () => {
     const dto = PRListItemDto.fromGraphQL(baseNode);
-    expect(dto.commentsCount).toBe(3);
-    expect(dto.reviewCommentsCount).toBe(2);
+    expect(dto.totalCommentsCount).toBe(10);
   });
 
   it('maps assignees', () => {

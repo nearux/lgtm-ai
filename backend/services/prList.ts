@@ -124,8 +124,7 @@ async function fetchPRListGraphQL(
         state
         createdAt
         updatedAt
-        comments { totalCount }
-        reviewThreads { totalCount }
+        totalCommentsCount
         assignees(first: 20) {
           nodes { id login name }
         }
