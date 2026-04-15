@@ -63,11 +63,13 @@ describe('claudeSessionHistory', () => {
       entries: [
         {
           role: 'user',
+          messageType: 'user',
           content: 'Validate this review',
           timestamp: '2026-03-11T00:00:00.000Z',
         },
         {
           role: 'assistant',
+          messageType: 'text',
           content: 'This review is actionable.',
           timestamp: '2026-03-11T00:00:02.000Z',
         },
@@ -171,7 +173,16 @@ describe('claudeSessionHistory', () => {
     expect(result.entries).toEqual([
       {
         role: 'assistant',
-        content: '[tool:Read] {"file_path":"foo.ts"}\nDone.',
+        messageType: 'tool',
+        content: '{\n  "file_path": "foo.ts"\n}',
+        toolName: 'Read',
+        toolId: undefined,
+        timestamp: '2026-03-11T00:00:02.000Z',
+      },
+      {
+        role: 'assistant',
+        messageType: 'text',
+        content: 'Done.',
         timestamp: '2026-03-11T00:00:02.000Z',
       },
     ]);
@@ -179,14 +190,16 @@ describe('claudeSessionHistory', () => {
 });
 
 describe('replaceFirstUserMessage', () => {
-  const baseEntries = [
+  const baseEntries: Parameters<typeof replaceFirstUserMessage>[0] = [
     {
       role: 'user',
+      messageType: 'user',
       content: 'some long generated prompt',
       timestamp: '2026-03-11T00:00:00.000Z',
     },
     {
       role: 'assistant',
+      messageType: 'text',
       content: 'Done.',
       timestamp: '2026-03-11T00:00:02.000Z',
     },
