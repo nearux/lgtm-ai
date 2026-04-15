@@ -40,10 +40,8 @@ function buildPrUserPrompt(
     case 'explain':
       return templates.explainPrPrompt(repoOwnerName, prNumber);
     case 'custom': {
-      if (!customPrompt || customPrompt.trim() === '') {
-        throw new Error('customPrompt is required for custom command');
-      }
-      return templates.customPrPrompt(customPrompt, repoOwnerName, prNumber);
+      requireCustomPrompt(customPrompt);
+      return templates.customPrPrompt(customPrompt!, repoOwnerName, prNumber);
     }
     default:
       throw new Error(
@@ -67,15 +65,46 @@ function buildReviewCommentUserPrompt(
     case 'validate':
       return templates.validatePrompt(reviewComment);
     case 'custom': {
-      if (!customPrompt || customPrompt.trim() === '') {
-        throw new AppError(
-          'customPrompt is required for custom command',
-          HttpStatus.BAD_REQUEST
-        );
-      }
-      return templates.customPrompt(customPrompt, reviewComment);
+      requireCustomPrompt(customPrompt);
+      return templates.customPrompt(customPrompt!, reviewComment);
     }
     default:
       throw new AppError(`Unknown command: ${command}`, HttpStatus.BAD_REQUEST);
+  }
+}
+
+export function buildBatchUserPrompt(
+  command: ClaudeCommand,
+  contexts: (ReviewCommandContext | CommentCommandContext)[],
+  customPrompt?: string
+): string {
+  const batchSection = templates.batchReviewCommentSection(contexts);
+
+  switch (command) {
+    case 'fix':
+      return templates.batchFixPrompt(batchSection);
+    case 'explain':
+      return templates.batchExplainPrompt(batchSection);
+    case 'validate':
+      return templates.batchValidatePrompt(batchSection);
+    case 'custom': {
+      requireCustomPrompt(customPrompt);
+      return templates.batchCustomPrompt(customPrompt!, batchSection);
+    }
+    default:
+      throw new AppError(
+        `Command '${command}' is not supported for batch`,
+        HttpStatus.BAD_REQUEST
+      );
+  }
+}
+
+
+function requireCustomPrompt(customPrompt?: string): void {
+  if (!customPrompt || customPrompt.trim() === '') {
+    throw new AppError(
+      'customPrompt is required for custom command',
+      HttpStatus.BAD_REQUEST
+    );
   }
 }
