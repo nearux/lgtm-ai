@@ -18,8 +18,8 @@ describe('fetchPRDetail', () => {
     number: 1,
     title: 'Test PR',
     body: 'Test body',
-    commentsCount: 1,
-    reviewCommentsCount: 0,
+    // 1 issue + 0 inline + 1 non-empty review body ('LGTM') = 2
+    totalCommentsCount: 2,
     baseBranch: 'main',
     headBranch: 'feature/test',
     assignees: [{ id: '1', login: 'user1', name: 'User One' }],
@@ -593,6 +593,95 @@ describe('fetchPRDetail', () => {
     expect(reviewsListCalls).toHaveLength(0);
     expect(result.reviews[0].inlineComments).toHaveLength(1);
     expect(result.reviews[0].inlineComments[0].body).toBe('Inline nit');
+  });
+
+  it('totalCommentsCount sums issue comments, inline comments, and non-empty review bodies', async () => {
+    const ghOutput = {
+      number: 1,
+      title: 'Test PR',
+      body: '',
+      baseRefName: 'main',
+      headRefName: 'feat',
+      assignees: [],
+      author: { login: 'author1' },
+      createdAt: '2024-01-01T00:00:00Z',
+      updatedAt: '2024-01-02T00:00:00Z',
+      state: 'OPEN',
+      comments: [
+        {
+          id: 'IC_1',
+          author: { login: 'a' },
+          body: 'hi',
+          createdAt: '2024-01-01T10:00:00Z',
+          updatedAt: '2024-01-01T10:00:00Z',
+        },
+        {
+          id: 'IC_2',
+          author: { login: 'b' },
+          body: 'hello',
+          createdAt: '2024-01-01T10:01:00Z',
+          updatedAt: '2024-01-01T10:01:00Z',
+        },
+      ],
+      reviews: [
+        {
+          id: '101',
+          author: { login: 'r1' },
+          state: 'COMMENTED',
+          body: '',
+          submittedAt: '2024-01-01T11:00:00Z',
+        },
+        {
+          id: '102',
+          author: { login: 'r2' },
+          state: 'APPROVED',
+          body: 'LGTM',
+          submittedAt: '2024-01-01T12:00:00Z',
+        },
+      ],
+      commits: [],
+    };
+    const inlineComments = [
+      {
+        id: 1,
+        node_id: 'PRRC_1',
+        pull_request_review_id: 101,
+        user: { login: 'r1', id: 1, node_id: 'U_1', type: 'User' },
+        body: 'inline 1',
+        path: 'a.ts',
+        diff_hunk: '@@ -1 +1 @@',
+        created_at: '2024-01-01T11:00:00Z',
+        updated_at: '2024-01-01T11:00:00Z',
+      },
+      {
+        id: 2,
+        node_id: 'PRRC_2',
+        pull_request_review_id: 101,
+        user: { login: 'r1', id: 1, node_id: 'U_1', type: 'User' },
+        body: 'inline 2',
+        path: 'a.ts',
+        diff_hunk: '@@ -2 +2 @@',
+        created_at: '2024-01-01T11:01:00Z',
+        updated_at: '2024-01-01T11:01:00Z',
+      },
+    ];
+    mockExecAsync.mockImplementation((_cmd: string, args: string[]) => {
+      const path = args.join(' ');
+      if (path.includes('pr view'))
+        return Promise.resolve({
+          stdout: JSON.stringify(ghOutput),
+          stderr: '',
+        });
+      return Promise.resolve({
+        stdout: JSON.stringify(inlineComments),
+        stderr: '',
+      });
+    });
+
+    const result = await fetchPRDetail('owner/repo', 1);
+
+    // 2 issue + 2 inline + 1 non-empty review body = 5
+    expect(result.totalCommentsCount).toBe(5);
   });
 });
 

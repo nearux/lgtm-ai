@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Loader2 } from 'lucide-react';
 import { Spinner } from '@/shared/components';
@@ -16,6 +16,7 @@ import { UserBubble } from './components/UserBubble';
 import { ToolBubble } from './components/ToolBubble';
 import { FollowUpInput } from './components/FollowUpInput';
 import { FileChangesCard } from './components/FileChangesCard';
+import { useAutoScroll } from './hooks/useAutoScroll';
 
 export interface CommitState {
   isCommitting: boolean;
@@ -48,8 +49,8 @@ export const ChatPanel = ({
   const { title, prContext, onExecuteAction, onResumeSession, onSendFollowUp } =
     state;
   const { messages, status, sessionId, fileChanges } = ws;
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const [expandedTools, setExpandedTools] = useState<Set<string>>(new Set());
+  const { containerRef, handleScroll } = useAutoScroll(messages);
 
   const lastMessage = messages[messages.length - 1];
   const isWaitingForResponse =
@@ -59,10 +60,6 @@ export const ChatPanel = ({
     mode === 'action-selection' && messages.length === 0 && onExecuteAction;
 
   const showHistory = mode === 'history' && prContext;
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
 
   const grouped = groupMessages(messages, status === 'connected');
 
@@ -98,7 +95,11 @@ export const ChatPanel = ({
       />
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto">
+      <div
+        ref={containerRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto"
+      >
         {showHistory && prContext ? (
           <ChatHistoryList
             projectId={prContext.projectId}
@@ -163,7 +164,6 @@ export const ChatPanel = ({
                 commitResult={commitState?.result}
               />
             )}
-            <div ref={messagesEndRef} />
           </div>
         )}
       </div>

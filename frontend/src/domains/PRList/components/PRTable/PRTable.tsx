@@ -111,7 +111,7 @@ export const PRTable = ({
                 <td className="px-6 py-4 text-center">
                   <span className="inline-flex items-center gap-1 text-sm text-gray-500">
                     <MessageCircle className="h-4 w-4" />
-                    {pr.commentsCount + pr.reviewCommentsCount}
+                    {pr.totalCommentsCount}
                   </span>
                 </td>
               </tr>

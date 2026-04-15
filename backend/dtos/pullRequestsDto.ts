@@ -5,8 +5,7 @@ export class PRListItemDto implements PRListItem {
   number: number;
   title: string;
   body: string;
-  commentsCount: number;
-  reviewCommentsCount: number;
+  totalCommentsCount: number;
   assignees: PRListItem['assignees'];
   author: PRListItem['author'];
   createdAt: string;
@@ -17,8 +16,7 @@ export class PRListItemDto implements PRListItem {
     this.number = data.number;
     this.title = data.title;
     this.body = data.body;
-    this.commentsCount = data.commentsCount;
-    this.reviewCommentsCount = data.reviewCommentsCount;
+    this.totalCommentsCount = data.totalCommentsCount;
     this.assignees = data.assignees;
     this.author = data.author;
     this.createdAt = data.createdAt;
@@ -31,8 +29,7 @@ export class PRListItemDto implements PRListItem {
       number: node.number,
       title: node.title,
       body: isString(node.body) ? node.body : '',
-      commentsCount: node.comments.totalCount,
-      reviewCommentsCount: node.reviewThreads.totalCount,
+      totalCommentsCount: node.totalCommentsCount,
       assignees: node.assignees.nodes.map((u) => ({
         id: u.id,
         login: u.login,
