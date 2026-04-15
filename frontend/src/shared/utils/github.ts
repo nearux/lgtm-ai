@@ -11,15 +11,15 @@ export const parseGitHubUrl = (remoteUrl: string | null): string | null => {
 
   // HTTPS format (allows optional userinfo like `user:token@`)
   const httpsMatch = remoteUrl.match(
-    /https:\/\/(?:[^@/]+@)?github\.com\/([^/]+)\/([^/]+?)(?:\.git)?\/?$/
+    /^https:\/\/(?:[^@/]+@)?github\.com\/([^/]+)\/([^/]+?)(?:\.git)?\/?$/
   );
   if (httpsMatch) {
     return `https://github.com/${httpsMatch[1]}/${httpsMatch[2]}`;
   }
 
-  // SSH format
+  // SSH format (supports both SCP-like `git@github.com:owner/repo` and `ssh://git@github.com/owner/repo`)
   const sshMatch = remoteUrl.match(
-    /git@github\.com:([^/]+)\/([^/]+?)(?:\.git)?\/?$/
+    /^(?:ssh:\/\/)?git@github\.com[:/]([^/]+)\/([^/]+?)(?:\.git)?\/?$/
   );
   if (sshMatch) {
     return `https://github.com/${sshMatch[1]}/${sshMatch[2]}`;

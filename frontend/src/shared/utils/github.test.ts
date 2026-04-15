@@ -76,6 +76,23 @@ describe('parseGitHubUrl', () => {
     const url = 'git@github.com:owner/repo.js.git';
     expect(parseGitHubUrl(url)).toBe('https://github.com/owner/repo.js');
   });
+
+  it('handles HTTPS URL with trailing slash', () => {
+    expect(parseGitHubUrl('https://github.com/owner/repo/')).toBe(
+      'https://github.com/owner/repo'
+    );
+  });
+
+  it('handles HTTPS URL with .git suffix and trailing slash', () => {
+    expect(parseGitHubUrl('https://github.com/owner/repo.git/')).toBe(
+      'https://github.com/owner/repo'
+    );
+  });
+
+  it('parses ssh:// protocol URL', () => {
+    const url = 'ssh://git@github.com/owner/repo.git';
+    expect(parseGitHubUrl(url)).toBe('https://github.com/owner/repo');
+  });
 });
 
 describe('linkifyIssueReferences', () => {
