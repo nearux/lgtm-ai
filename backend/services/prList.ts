@@ -125,7 +125,12 @@ async function fetchPRListGraphQL(
         createdAt
         updatedAt
         comments { totalCount }
-        reviewThreads { totalCount }
+        reviewThreads(first: 100) {
+          nodes { comments { totalCount } }
+        }
+        reviews(first: 100) {
+          nodes { body }
+        }
         assignees(first: 20) {
           nodes { id login name }
         }

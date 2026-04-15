@@ -23,7 +23,18 @@ describe('fetchPRList', () => {
       createdAt: '2024-01-01T00:00:00Z',
       updatedAt: '2024-01-02T00:00:00Z',
       comments: { totalCount: 3 },
-      reviewThreads: { totalCount: 5 },
+      reviewThreads: {
+        nodes: [
+          { comments: { totalCount: 2 } },
+          { comments: { totalCount: 1 } },
+          { comments: { totalCount: 1 } },
+          { comments: { totalCount: 3 } },
+          { comments: { totalCount: 1 } },
+        ],
+      },
+      reviews: {
+        nodes: [{ body: 'LGTM' }, { body: '' }],
+      },
       assignees: { nodes: [{ id: 'U_1', login: 'user1', name: 'User One' }] },
       author: {
         id: 'U_2',
@@ -40,7 +51,13 @@ describe('fetchPRList', () => {
       createdAt: '2024-01-03T00:00:00Z',
       updatedAt: '2024-01-04T00:00:00Z',
       comments: { totalCount: 0 },
-      reviewThreads: { totalCount: 2 },
+      reviewThreads: {
+        nodes: [
+          { comments: { totalCount: 1 } },
+          { comments: { totalCount: 1 } },
+        ],
+      },
+      reviews: { nodes: [] },
       assignees: { nodes: [] },
       author: {
         login: 'author2',
@@ -54,8 +71,8 @@ describe('fetchPRList', () => {
       number: 1,
       title: 'Test PR',
       body: 'Test body',
-      commentsCount: 3,
-      reviewCommentsCount: 5,
+      // 3 issue + (2+1+1+3+1) inline + 1 non-empty review body = 12
+      totalCommentsCount: 12,
       assignees: [{ id: 'U_1', login: 'user1', name: 'User One' }],
       author: {
         id: 'U_2',
@@ -71,8 +88,8 @@ describe('fetchPRList', () => {
       number: 2,
       title: 'Another PR',
       body: '',
-      commentsCount: 0,
-      reviewCommentsCount: 2,
+      // 0 issue + (1+1) inline + 0 review bodies = 2
+      totalCommentsCount: 2,
       assignees: [],
       author: {
         id: 'author2',
