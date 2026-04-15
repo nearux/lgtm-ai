@@ -1,4 +1,5 @@
 export { useClaudeWebSocket } from './useClaudeWebSocket';
+export { useSessionResume } from './useSessionResume';
 export { useChatPanelSync } from './useChatPanelSync';
 export { useChatPanelParams } from './useChatPanelParams';
 export { useChatPanelController } from './useChatPanelController';

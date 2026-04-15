@@ -29,7 +29,7 @@ SQLite via Prisma + libsql adapter. Schema: `prisma/schema.prisma`.
 
 ## Conventions
 
-- Order methods by caller → callee (top-down readability); public methods above private.
+- Order methods by caller → callee (top-down readability); public methods above private. When a caller invokes multiple callees, place the callees in the same order they are invoked.
 - Prefer declarative, functional programming style using remeda for data transformation logic.
 
 ## Error Handling

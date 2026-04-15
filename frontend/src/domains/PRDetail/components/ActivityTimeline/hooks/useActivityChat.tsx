@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useChatPanelParams } from '../../../hooks';
 import type { UseClaudeWebSocketReturn } from '../../../hooks';
 import { useChatPanel } from '../../../contexts';
+import { useSessionResume } from '../../../hooks/useSessionResume';
 import { ACTION_LABELS } from '../../../utils/reviewPrompts';
 import {
   postCheckoutPrMutationOptions,
@@ -57,8 +58,14 @@ export function useActivityChat({
   setValidations,
   setActiveTarget,
 }: UseActivityChatOptions) {
-  const { setTargetContext, setOnExecuteAction } = useChatPanel();
+  const { setTargetContext, setPRContext, setOnExecuteAction } = useChatPanel();
   const { openActionSelector, openChat } = useChatPanelParams();
+  const { registerResumeSession } = useSessionResume({
+    projectId,
+    prNumber,
+    workingDir,
+    ws,
+  });
   const {
     status: wsStatus,
     messages,
@@ -170,6 +177,8 @@ export function useActivityChat({
       path: target.path,
       prNumber,
     });
+    setPRContext({ projectId, prNumber });
+    registerResumeSession();
 
     setOnExecuteAction((actionId: string, customPrompt?: string) => {
       handleActionWithCheckout(actionId, customPrompt, target);
