@@ -10,18 +10,7 @@ describe('PRListItemDto.fromGraphQL', () => {
     state: 'OPEN',
     createdAt: '2024-01-01T00:00:00Z',
     updatedAt: '2024-01-02T00:00:00Z',
-    comments: { totalCount: 3 },
-    reviewThreads: {
-      nodes: [{ comments: { totalCount: 3 } }, { comments: { totalCount: 2 } }],
-    },
-    reviews: {
-      nodes: [
-        { body: 'LGTM' },
-        { body: '' },
-        { body: '   \n  ' },
-        { body: 'Please address the comments' },
-      ],
-    },
+    totalCommentsCount: 10,
     assignees: {
       nodes: [{ id: 'U_1', login: 'alice', name: 'Alice' }],
     },
@@ -43,8 +32,7 @@ describe('PRListItemDto.fromGraphQL', () => {
     expect(dto.updatedAt).toBe('2024-01-02T00:00:00Z');
   });
 
-  it('computes totalCommentsCount as issue + inline + non-empty review bodies', () => {
-    // issue: 3, inline: 3+2=5, non-empty review bodies: 2 (empty + whitespace-only filtered) → total 10
+  it('maps totalCommentsCount from GraphQL', () => {
     const dto = PRListItemDto.fromGraphQL(baseNode);
     expect(dto.totalCommentsCount).toBe(10);
   });

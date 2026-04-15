@@ -1,9 +1,5 @@
 import { isString } from 'remeda';
 import type { PRListItem, GraphQLPRNode } from '../types/pullRequests.js';
-import {
-  countNonEmptyReviewBodies,
-  sumThreadInlineComments,
-} from './commentCounts.js';
 
 export class PRListItemDto implements PRListItem {
   number: number;
@@ -29,16 +25,11 @@ export class PRListItemDto implements PRListItem {
   }
 
   static fromGraphQL(node: GraphQLPRNode): PRListItemDto {
-    const inlineCount = sumThreadInlineComments(node.reviewThreads.nodes);
-    const reviewBodyCount = countNonEmptyReviewBodies(node.reviews.nodes);
-    const totalCommentsCount =
-      node.comments.totalCount + inlineCount + reviewBodyCount;
-
     return new PRListItemDto({
       number: node.number,
       title: node.title,
       body: isString(node.body) ? node.body : '',
-      totalCommentsCount,
+      totalCommentsCount: node.totalCommentsCount,
       assignees: node.assignees.nodes.map((u) => ({
         id: u.id,
         login: u.login,

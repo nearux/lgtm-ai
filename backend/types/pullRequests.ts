@@ -196,13 +196,7 @@ export interface GraphQLPRNode {
   state: string;
   createdAt: string;
   updatedAt: string;
-  comments: { totalCount: number };
-  reviewThreads: {
-    nodes: Array<{ comments: { totalCount: number } }>;
-  };
-  reviews: {
-    nodes: Array<{ body: string }>;
-  };
+  totalCommentsCount: number;
   assignees: { nodes: GraphQLPRAssignee[] };
   author: GraphQLPRAuthor;
 }
