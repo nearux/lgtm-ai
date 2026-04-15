@@ -125,6 +125,7 @@ async function fetchPRListGraphQL(
         createdAt
         updatedAt
         comments { totalCount }
+        # GraphQL caps first at 100; PRs with more threads/reviews will undercount.
         reviewThreads(first: 100) {
           nodes { comments { totalCount } }
         }
