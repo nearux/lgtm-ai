@@ -3,17 +3,21 @@ import { join } from 'node:path';
 import open from 'open';
 import { PORT, FRONTEND_URL } from './utils/ports.js';
 
-async function waitForBackend(url: string, timeoutMs = 30000): Promise<void> {
+async function waitForBackend(
+  url: string,
+  timeoutMs = 30000
+): Promise<boolean> {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
     try {
       const res = await fetch(url, { signal: AbortSignal.timeout(1000) });
-      if (res.ok || res.status < 500) return;
+      if (res.ok || res.status < 500) return true;
     } catch {
       // not ready yet
     }
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
+  return false;
 }
 
 export async function launchServers(): Promise<void> {
@@ -33,8 +37,14 @@ export async function launchServers(): Promise<void> {
   processes.push(backend);
 
   // Poll until backend is ready, then open browser
-  waitForBackend(FRONTEND_URL).then(() => {
-    open(FRONTEND_URL);
+  void waitForBackend(FRONTEND_URL).then((ready) => {
+    if (!ready) {
+      console.warn(
+        `\n⚠️  Backend did not respond within the timeout. Skipping browser launch.`
+      );
+      return;
+    }
+    void open(FRONTEND_URL);
   });
 
   const cleanup = () => {
