@@ -15,7 +15,21 @@
     "lint": "pnpm --filter '*' --if-present run lint",
     "lint:fix": "pnpm --filter '*' --if-present run lint:fix",
     "postinstall": "prisma generate --schema=backend/prisma/schema.prisma",
+    "prepare": "husky",
     "prepublishOnly": "pnpm run build"
+  },
+  "lint-staged": {
+    "backend/**/*.ts": [
+      "pnpm --filter @lgtmai/backend exec eslint --fix",
+      "pnpm --filter @lgtmai/backend exec vitest related --run"
+    ],
+    "frontend/**/*.{ts,tsx}": [
+      "pnpm --filter frontend exec eslint --fix",
+      "pnpm --filter frontend exec vitest related --run"
+    ],
+    "cli/**/*.ts": [
+      "pnpm --filter @lgtmai/cli exec eslint --fix"
+    ]
   },
   "keywords": [
     "cli",
@@ -57,6 +71,8 @@
   },
   "devDependencies": {
     "concurrently": "^9.2.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
     "prettier": "^3.8.1",
     "prettier-plugin-tailwindcss": "^0.7.2",
     "wait-on": "^9.0.4"
