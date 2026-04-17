@@ -171,12 +171,11 @@ describe('auth service', () => {
         new Error('account "unknown" not found')
       );
 
-      await expect(switchAccount('unknown')).rejects.toMatchObject({
-        message: expect.stringContaining(
-          'Failed to switch GitHub account to "unknown"'
-        ),
-        statusCode: 400,
-      });
+      const result = switchAccount('unknown');
+      await expect(result).rejects.toThrow(
+        'Failed to switch GitHub account to "unknown"'
+      );
+      await expect(result).rejects.toMatchObject({ statusCode: 400 });
     });
   });
 });

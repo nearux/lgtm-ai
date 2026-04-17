@@ -247,7 +247,7 @@ describe('fetchPRList', () => {
 
     await fetchPRList('owner/repo', { state: 'closed' });
 
-    const args: string[] = mockExecAsync.mock.calls[0][1];
+    const args = mockExecAsync.mock.calls[0][1] as string[];
     const statesArgs = args.filter(
       (_, i) => args[i - 1] === '-f' && args[i].startsWith('states[]=')
     );
@@ -259,7 +259,7 @@ describe('fetchPRList', () => {
 
     await fetchPRList('owner/repo', { state: 'all' });
 
-    const args: string[] = mockExecAsync.mock.calls[0][1];
+    const args = mockExecAsync.mock.calls[0][1] as string[];
     const statesArgs = args.filter(
       (_, i) => args[i - 1] === '-f' && args[i].startsWith('states[]=')
     );

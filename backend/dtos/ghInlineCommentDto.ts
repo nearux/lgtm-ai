@@ -1,7 +1,10 @@
 import type { PRReview, GhReviewInlineComment } from '../types/pullRequests.js';
 
 export class GhInlineCommentDto {
-  static fromGh(c: GhReviewInlineComment): PRReview['inlineComments'][number] {
+  static fromGh(
+    this: void,
+    c: GhReviewInlineComment
+  ): PRReview['inlineComments'][number] {
     return {
       id: String(c.id),
       ...(c.in_reply_to_id != null

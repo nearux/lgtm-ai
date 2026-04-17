@@ -30,7 +30,7 @@ export async function createApp(
     const { readFileSync } = await import('node:fs');
     const swaggerDocument = JSON.parse(
       readFileSync(join(__dirname, 'public', 'swagger.json'), 'utf-8')
-    );
+    ) as Record<string, unknown>;
     swaggerDocument.servers = [{ url: '/' }];
     app.use(
       '/api-docs',

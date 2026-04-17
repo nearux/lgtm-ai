@@ -13,7 +13,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx prettier --write \"$CLAUDE_TOOL_INPUT_FILE_PATH\" 2>/dev/null || true"
+            "command": "FILE=$(jq -r '.tool_input.file_path // empty'); [ -n \"$FILE\" ] && [ -f \"$FILE\" ] && npx prettier --write \"$FILE\" 2>/dev/null || true"
           }
         ]
       }

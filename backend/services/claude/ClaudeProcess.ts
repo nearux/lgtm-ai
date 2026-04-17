@@ -257,6 +257,8 @@ export class ClaudeProcess extends EventEmitter<ClaudeStreamEvents> {
       case 'init':
         this.emit('init', result.sessionId);
         break;
+      case 'tool_start':
+        break;
       case 'tool_complete':
         this.emit('tool_message', result.toolId, result.toolName, result.input);
         break;

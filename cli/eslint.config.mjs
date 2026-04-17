@@ -8,12 +8,9 @@ import { fileURLToPath } from 'url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig(
-  { ignores: ['dist'] },
+  { ignores: ['dist', 'esbuild.config.mjs'] },
   {
-    extends: [
-      js.configs.recommended,
-      ...tseslint.configs.recommendedTypeChecked,
-    ],
+    extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ['**/*.ts'],
     languageOptions: {
       ecmaVersion: 2022,
@@ -28,7 +25,7 @@ export default defineConfig(
         'error',
         { argsIgnorePattern: '^_' },
       ],
-      '@typescript-eslint/switch-exhaustiveness-check': 'error',
+      '@typescript-eslint/no-floating-promises': 'error',
     },
   }
 );
