@@ -10,7 +10,10 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 export default defineConfig(
   { ignores: ['dist'] },
   {
-    extends: [js.configs.recommended, ...tseslint.configs.recommended],
+    extends: [
+      js.configs.recommended,
+      ...tseslint.configs.recommendedTypeChecked,
+    ],
     files: ['**/*.ts'],
     languageOptions: {
       ecmaVersion: 2022,
@@ -25,8 +28,6 @@ export default defineConfig(
         'error',
         { argsIgnorePattern: '^_' },
       ],
-      '@typescript-eslint/no-floating-promises': 'error',
-      '@typescript-eslint/no-misused-promises': 'error',
       '@typescript-eslint/switch-exhaustiveness-check': 'error',
     },
   }

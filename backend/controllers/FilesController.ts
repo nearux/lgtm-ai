@@ -14,7 +14,7 @@ export class FilesController extends Controller {
   @Response<ErrorResponse>(400, 'Path is not a directory')
   @Response<ErrorResponse>(403, 'Access to this path is not allowed')
   @Response<ErrorResponse>(404, 'Directory not found')
-  public async browse(@Query() path?: string): Promise<BrowseResponse> {
+  public browse(@Query() path?: string): BrowseResponse {
     return fileSystemService.browse(path);
   }
 }

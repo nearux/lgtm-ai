@@ -1,5 +1,6 @@
 import type WebSocket from 'ws';
 import { ClaudeSessionManager } from '../services/claude/ClaudeSessionManager.js';
+import { toUtf8 } from '../utils/wsRawData.js';
 import {
   buildSystemPrompt,
   buildUserPrompt,
@@ -19,9 +20,11 @@ export function handleClaudeWebSocket(ws: WebSocket): void {
   const manager = new ClaudeSessionManager(ws);
 
   ws.on('message', (rawData) => {
+    const text = toUtf8(rawData);
+
     let msg: WsClientMessage;
     try {
-      msg = JSON.parse(rawData.toString()) as WsClientMessage;
+      msg = JSON.parse(text) as WsClientMessage;
     } catch {
       ws.send(
         JSON.stringify({ type: 'error', message: 'Invalid JSON message' })

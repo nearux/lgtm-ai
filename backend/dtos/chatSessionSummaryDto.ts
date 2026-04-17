@@ -30,7 +30,7 @@ export class ChatSessionSummaryDto implements ChatSessionSummary {
     this.lastUsedAt = data.lastUsedAt;
   }
 
-  static fromModel(model: ChatSession): ChatSessionSummaryDto {
+  static fromModel(this: void, model: ChatSession): ChatSessionSummaryDto {
     return new ChatSessionSummaryDto({
       id: model.id,
       projectId: model.project_id,
