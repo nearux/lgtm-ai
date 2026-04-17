@@ -67,7 +67,7 @@ describe('ClaudeSessionManager', () => {
     const proc = processInstances[0];
     expect(proc).toBeDefined();
 
-    proc!.emit('init', 'claude-session-1');
+    proc.emit('init', 'claude-session-1');
     await Promise.resolve();
 
     expect(mockCreateChatSessionFromExecution).toHaveBeenCalledWith(
@@ -98,7 +98,7 @@ describe('ClaudeSessionManager', () => {
       },
       commandMeta: { command: 'validate', customPrompt: undefined },
     });
-    processInstances[0]!.emit('init', 'claude-session-meta');
+    processInstances[0].emit('init', 'claude-session-meta');
     await Promise.resolve();
     expect(mockCreateChatSessionFromExecution).toHaveBeenCalledWith(
       expect.objectContaining({ projectId: 'p' }),
@@ -127,7 +127,7 @@ describe('ClaudeSessionManager', () => {
     const proc = processInstances[0];
     expect(proc).toBeDefined();
 
-    proc!.emit('done', 0, 'ok', 'claude-session-2');
+    proc.emit('done', 0, 'ok', 'claude-session-2');
     await Promise.resolve();
 
     expect(mockCreateChatSessionFromExecution).not.toHaveBeenCalled();
@@ -162,7 +162,7 @@ describe('ClaudeSessionManager', () => {
 
     const proc = processInstances[0];
     expect(proc).toBeDefined();
-    expect(proc!.systemPrompt).toBe('You are a code review assistant.');
+    expect(proc.systemPrompt).toBe('You are a code review assistant.');
   });
 
   it('leaves systemPrompt undefined when not provided', () => {
@@ -174,7 +174,7 @@ describe('ClaudeSessionManager', () => {
     });
 
     const proc = processInstances[0];
-    expect(proc!.systemPrompt).toBeUndefined();
+    expect(proc.systemPrompt).toBeUndefined();
   });
 
   it('forwards init events from the claude process to websocket', () => {
@@ -190,7 +190,7 @@ describe('ClaudeSessionManager', () => {
     const proc = processInstances[0];
     expect(proc).toBeDefined();
 
-    proc!.emit('init', 'claude-session-2');
+    proc.emit('init', 'claude-session-2');
 
     expect(ws.send).toHaveBeenCalledWith(
       JSON.stringify({

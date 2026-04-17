@@ -15,19 +15,19 @@ describe('ghUtils', () => {
 
     it('throws BAD_REQUEST for missing slash', () => {
       expect(() => validateRepoOwnerName('noslash')).toThrow(
-        expect.objectContaining({ statusCode: 400 })
+        expect.objectContaining({ statusCode: 400 }) as Error
       );
     });
 
     it('throws BAD_REQUEST for spaces', () => {
       expect(() => validateRepoOwnerName('bad repo name!')).toThrow(
-        expect.objectContaining({ statusCode: 400 })
+        expect.objectContaining({ statusCode: 400 }) as Error
       );
     });
 
     it('throws BAD_REQUEST for empty string', () => {
       expect(() => validateRepoOwnerName('')).toThrow(
-        expect.objectContaining({ statusCode: 400 })
+        expect.objectContaining({ statusCode: 400 }) as Error
       );
     });
   });
