@@ -21,14 +21,17 @@
   "lint-staged": {
     "backend/**/*.ts": [
       "pnpm --filter @lgtmai/backend exec eslint --fix",
+      "prettier --write",
       "pnpm --filter @lgtmai/backend exec vitest related --run"
     ],
     "frontend/**/*.{ts,tsx}": [
       "pnpm --filter frontend exec eslint --fix",
+      "prettier --write",
       "pnpm --filter frontend exec vitest related --run"
     ],
     "cli/**/*.ts": [
-      "pnpm --filter @lgtmai/cli exec eslint --fix"
+      "pnpm --filter @lgtmai/cli exec eslint --fix",
+      "prettier --write"
     ]
   },
   "keywords": [
