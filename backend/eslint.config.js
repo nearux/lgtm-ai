@@ -8,8 +8,14 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default [
   { ignores: ['dist'] },
-  js.configs.recommended,
-  ...tseslint.configs.recommended,
+    {
+    files: ['**/*.ts'],
+    ...js.configs.recommended,
+  },
+  ...tseslint.configs.recommended.map((config) => ({
+    files: ['**/*.ts'],
+    ...config,
+  })),
   {
     files: ['**/*.ts'],
     languageOptions: {
