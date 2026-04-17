@@ -16,6 +16,7 @@ export default defineConfig(
       ecmaVersion: 2022,
       globals: globals.node,
       parserOptions: {
+        projectService: true,
         tsconfigRootDir: __dirname,
       },
     },
@@ -24,6 +25,9 @@ export default defineConfig(
         'error',
         { argsIgnorePattern: '^_' },
       ],
+      '@typescript-eslint/no-floating-promises': 'error',
+      '@typescript-eslint/no-misused-promises': 'error',
+      '@typescript-eslint/switch-exhaustiveness-check': 'error',
     },
   }
 );
