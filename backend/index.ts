@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+// Side-effect import: evaluates container bindings at startup
 import './container.js';
 import { createServer } from 'node:http';
 import { WebSocketServer } from 'ws';
