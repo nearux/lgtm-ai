@@ -2,6 +2,7 @@
   "entryFile": "index.ts",
   "noImplicitAdditionalProperties": "throw-on-extras",
   "controllerPathGlobs": ["controllers/**/*Controller.ts"],
+  "iocModule": "./ioc",
   "spec": {
     "outputDirectory": "public",
     "specVersion": 3,
