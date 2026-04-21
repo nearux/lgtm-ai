@@ -1,7 +1,7 @@
 // backend/modules/projects/project.repository.ts
 import type { Prisma, PrismaClient, Project } from '@prisma/client';
 import { inject, injectable } from 'inversify';
-import { PRISMA_CLIENT } from '../../container.js';
+import { PRISMA_CLIENT } from '../../container-tokens.js';
 
 @injectable()
 export class ProjectRepository {

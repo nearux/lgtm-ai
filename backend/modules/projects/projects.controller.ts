@@ -1,3 +1,4 @@
+// backend/modules/projects/projects.controller.ts
 import {
   Controller,
   Route,
@@ -14,22 +15,14 @@ import {
 } from '@tsoa/runtime';
 import { z } from 'zod';
 import HttpStatus from 'http-status';
-import { AppError } from '../errors/AppError.js';
-
-const uuidSchema = z.uuid();
-
-function parseUUID(id: string): string {
-  if (!uuidSchema.safeParse(id).success) {
-    throw new AppError('Invalid project id format', HttpStatus.BAD_REQUEST);
-  }
-  return id;
-}
-import * as projectsService from '../services/projects.js';
-import * as prListService from '../services/prList.js';
-import * as prDetailService from '../services/prDetail.js';
-import * as checkoutService from '../services/checkoutPRBranch.js';
-import * as chatSessionsService from '../services/chatSessions.js';
-import * as gitService from '../services/git.js';
+import { inject, injectable } from 'inversify';
+import { AppError } from '../../errors/AppError.js';
+import { ProjectsService } from './projects.service.js';
+import { PRListService } from './pr-list.service.js';
+import { PRDetailService } from './pr-detail.service.js';
+import { CheckoutService } from './checkout-pr-branch.service.js';
+import { ChatSessionsService } from './chat-sessions.service.js';
+import { GitService } from './git.service.js';
 import type {
   Project,
   ProjectDetail,
@@ -40,7 +33,7 @@ import type {
   CommitMessageResponse,
   CommitAndPushBody,
   CommitAndPushResponse,
-} from '../types/projects.js';
+} from '../../types/projects.js';
 import type {
   PRListItem,
   PaginatedPRList,
@@ -48,12 +41,12 @@ import type {
   PRState,
   CheckoutPRBranchBody,
   CheckoutPRBranchResult,
-} from '../types/pullRequests.js';
+} from '../../types/pullRequests.js';
 import type {
   ChatSessionHistoryResponse,
   ChatSessionScopeType,
   ChatSessionSummary,
-} from '../types/chatSessions.js';
+} from '../../types/chatSessions.js';
 
 export type {
   Project,
@@ -71,15 +64,37 @@ export type {
   CommitAndPushResponse,
 };
 
+const uuidSchema = z.uuid();
+
+function parseUUID(id: string): string {
+  if (!uuidSchema.safeParse(id).success) {
+    throw new AppError('Invalid project id format', HttpStatus.BAD_REQUEST);
+  }
+  return id;
+}
+
+@injectable()
 @Route('api/projects')
 @Tags('Projects')
 export class ProjectsController extends Controller {
+  constructor(
+    @inject(ProjectsService) private readonly projectsService: ProjectsService,
+    @inject(PRListService) private readonly prListService: PRListService,
+    @inject(PRDetailService) private readonly prDetailService: PRDetailService,
+    @inject(CheckoutService) private readonly checkoutService: CheckoutService,
+    @inject(ChatSessionsService)
+    private readonly chatSessionsService: ChatSessionsService,
+    @inject(GitService) private readonly gitService: GitService
+  ) {
+    super();
+  }
+
   /**
    * Get all projects
    */
   @Get('/')
   public async listProjects(): Promise<Project[]> {
-    return projectsService.findAll();
+    return this.projectsService.findAll();
   }
 
   /**
@@ -89,7 +104,7 @@ export class ProjectsController extends Controller {
   @Get('{id}')
   @Response<ErrorResponse>(HttpStatus.NOT_FOUND, 'Project not found')
   public async getProject(@Path() id: string): Promise<ProjectDetail> {
-    return projectsService.findById(parseUUID(id));
+    return this.projectsService.findById(parseUUID(id));
   }
 
   /**
@@ -106,7 +121,7 @@ export class ProjectsController extends Controller {
     @Body() body: CreateProjectBody
   ): Promise<Project> {
     this.setStatus(HttpStatus.CREATED);
-    return projectsService.create(body);
+    return this.projectsService.create(body);
   }
 
   /**
@@ -124,7 +139,7 @@ export class ProjectsController extends Controller {
     @Path() id: string,
     @Body() body: UpdateProjectBody
   ): Promise<Project> {
-    return projectsService.update(parseUUID(id), body);
+    return this.projectsService.update(parseUUID(id), body);
   }
 
   /**
@@ -136,7 +151,7 @@ export class ProjectsController extends Controller {
   @Response<ErrorResponse>(HttpStatus.NOT_FOUND, 'Project not found')
   public async deleteProject(@Path() id: string): Promise<void> {
     this.setStatus(HttpStatus.NO_CONTENT);
-    await projectsService.remove(parseUUID(id));
+    await this.projectsService.remove(parseUUID(id));
   }
 
   /**
@@ -166,11 +181,11 @@ export class ProjectsController extends Controller {
     @Query() state?: PRState,
     @Query() origin?: string
   ): Promise<PaginatedPRList> {
-    const repoOwnerName = await projectsService.resolveGitHubRepo(
+    const repoOwnerName = await this.projectsService.resolveGitHubRepo(
       parseUUID(projectId),
       origin ?? 'origin'
     );
-    return prListService.fetchPRList(repoOwnerName, {
+    return this.prListService.fetchPRList(repoOwnerName, {
       page,
       limit,
       state,
@@ -203,11 +218,11 @@ export class ProjectsController extends Controller {
     @Path() prNumber: number,
     @Query() origin?: string
   ): Promise<PRDetail> {
-    const repoOwnerName = await projectsService.resolveGitHubRepo(
+    const repoOwnerName = await this.projectsService.resolveGitHubRepo(
       parseUUID(projectId),
       origin ?? 'origin'
     );
-    return prDetailService.fetchPRDetail(repoOwnerName, prNumber);
+    return this.prDetailService.fetchPRDetail(repoOwnerName, prNumber);
   }
 
   /**
@@ -227,7 +242,7 @@ export class ProjectsController extends Controller {
     @Query() scopeTargetId?: string
   ): Promise<ChatSessionSummary[]> {
     const parsedProjectId = parseUUID(projectId);
-    await projectsService.findById(parsedProjectId);
+    await this.projectsService.findById(parsedProjectId);
 
     if ((scopeType && !scopeTargetId) || (!scopeType && scopeTargetId)) {
       throw new AppError(
@@ -236,10 +251,14 @@ export class ProjectsController extends Controller {
       );
     }
 
-    return chatSessionsService.listChatSessions(parsedProjectId, prNumber, {
-      scopeType,
-      scopeTargetId,
-    });
+    return this.chatSessionsService.listChatSessions(
+      parsedProjectId,
+      prNumber,
+      {
+        scopeType,
+        scopeTargetId,
+      }
+    );
   }
 
   /**
@@ -258,7 +277,7 @@ export class ProjectsController extends Controller {
     @Path() prNumber: number,
     @Path() sessionId: string
   ): Promise<ChatSessionHistoryResponse> {
-    return chatSessionsService.getChatSessionHistory(
+    return this.chatSessionsService.getChatSessionHistory(
       parseUUID(projectId),
       prNumber,
       sessionId
@@ -293,18 +312,16 @@ export class ProjectsController extends Controller {
     @Body() body?: CheckoutPRBranchBody
   ): Promise<CheckoutPRBranchResult> {
     const normalizedProjectId = parseUUID(projectId);
-    const project = await projectsService.findById(normalizedProjectId);
-    const repoOwnerName = await projectsService.resolveGitHubRepo(
+    const project = await this.projectsService.findById(normalizedProjectId);
+    const repoOwnerName = await this.projectsService.resolveGitHubRepo(
       normalizedProjectId,
       body?.origin ?? 'origin'
     );
-    return checkoutService.checkoutPRBranch(
+    return this.checkoutService.checkoutPRBranch(
       repoOwnerName,
       prNumber,
       project.working_dir,
-      {
-        force: body?.force,
-      }
+      { force: body?.force }
     );
   }
 
@@ -322,8 +339,8 @@ export class ProjectsController extends Controller {
     @Path() projectId: string,
     @Body() body: GenerateCommitMessageBody
   ): Promise<CommitMessageResponse> {
-    const project = await projectsService.findById(parseUUID(projectId));
-    const message = await gitService.generateCommitMessage(
+    const project = await this.projectsService.findById(parseUUID(projectId));
+    const message = await this.gitService.generateCommitMessage(
       project.working_dir,
       body.prContext
     );
@@ -344,8 +361,8 @@ export class ProjectsController extends Controller {
     @Path() projectId: string,
     @Body() body: CommitAndPushBody
   ): Promise<CommitAndPushResponse> {
-    const project = await projectsService.findById(parseUUID(projectId));
-    return gitService.commitAndPush(
+    const project = await this.projectsService.findById(parseUUID(projectId));
+    return this.gitService.commitAndPush(
       project.working_dir,
       body.commitMessage,
       body.push ?? true
