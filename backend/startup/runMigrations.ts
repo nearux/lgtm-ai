@@ -4,7 +4,7 @@ import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
-import { resolveDbPath } from '../utils/dbPath.js';
+import { resolveDbPath } from '../database/dbPath.js';
 
 type ExecFileAsync = (
   file: string,

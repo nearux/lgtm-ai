@@ -65,7 +65,7 @@ beforeAll(async () => {
   prisma = testDb.prisma;
   cleanupDb = testDb.cleanup;
 
-  vi.doMock('../../prismaClient.js', () => ({ default: prisma }));
+  vi.doMock('../../database/prismaClient.js', () => ({ default: prisma }));
   vi.doMock('../../modules/claude/claude-session-history.service.js', () => {
     class ClaudeSessionHistoryService {
       getClaudeSessionHistory = mockGetClaudeSessionHistory;
