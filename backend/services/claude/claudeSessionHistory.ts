@@ -5,7 +5,7 @@ import HttpStatus from 'http-status';
 import { filter, flatMap, map, pipe } from 'remeda';
 import { AppError } from '../../errors/AppError.js';
 import type { ChatSessionHistoryEntry } from '../../types/chatSessions.js';
-import { expandContentBlocks } from './contentBlockExpander.js';
+import { expandContentBlocks } from '../../modules/claude/content-block-expander.util.js';
 
 interface ClaudeTranscriptHistory {
   claudeSessionId: string;
