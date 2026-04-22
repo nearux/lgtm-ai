@@ -58,7 +58,6 @@ const Box = ({
       {loading ? (
         <div className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1 text-xs text-gray-500">
           <Loader2 className="h-3 w-3 animate-spin" />
-          <span>Running…</span>
         </div>
       ) : (
         <pre
