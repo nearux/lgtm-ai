@@ -23,7 +23,7 @@ class MockClaudeProcess extends EventEmitter {
   }
 }
 
-vi.mock('./ClaudeProcess.js', () => ({
+vi.mock('../../modules/claude/claude-process.js', () => ({
   ClaudeProcess: MockClaudeProcess,
 }));
 

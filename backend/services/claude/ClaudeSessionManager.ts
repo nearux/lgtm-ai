@@ -1,6 +1,6 @@
 import type WebSocket from 'ws';
-import { ClaudeProcess } from './ClaudeProcess.js';
-import { WebSocketSender } from './WebSocketSender.js';
+import { ClaudeProcess } from '../../modules/claude/claude-process.js';
+import { WebSocketSender } from '../../modules/claude/web-socket-sender.js';
 import type { ClaudeExecuteOptions } from '../../types/claude.js';
 import type { ClaudeChatContext } from '../../types/chatSessions.js';
 import {
