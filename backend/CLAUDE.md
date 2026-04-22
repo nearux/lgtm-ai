@@ -16,7 +16,7 @@ Flat structure — no `src/` directory. Nest-style domain modules under `modules
 - `prisma/` — schema and migrations
 - `container.ts` / `container-tokens.ts` / `ioc.ts` — DI wiring (see below)
 
-Legacy not yet migrated (Phase 3):
+Not yet migrated to `modules/`:
 
 - `controllers/ClaudeWSController.ts` — WebSocket controller, not a tsoa REST controller
 - `services/claude/` — Claude Code execution/session management
@@ -33,9 +33,9 @@ Inversify. Classes declare dependencies with `@injectable()` and `@inject(...)`;
 
 ## tsoa
 
-Controllers use decorators (`@Route`, `@Get`, `@Post`, etc.) and extend `Controller` from `@tsoa/runtime`.
-
 **IMPORTANT**: Always import from `@tsoa/runtime`, never from `tsoa`. The `tsoa` package is build-time only and excluded from the esbuild bundle.
+
+Controllers use decorators (`@Route`, `@Get`, `@Post`, etc.) and extend `Controller` from `@tsoa/runtime`.
 
 Build pipeline: `tsoa routes` → esbuild. In dev, `tsoa spec` also runs to generate `swagger.json` (swagger is not served in production). Routes are auto-generated — run `tsoa routes` before building. `controllerPathGlobs` is `modules/**/*.controller.ts`.
 
@@ -49,8 +49,8 @@ SQLite via Prisma + libsql adapter. Schema: `prisma/schema.prisma`.
 
 ## Conventions
 
-- Order methods by caller → callee (top-down readability); public methods above private. When a caller invokes multiple callees, place the callees in the same order they are invoked.
-- Prefer declarative, functional programming style using remeda for data transformation logic.
+- Order methods by caller → callee (top-down readability). When a caller invokes multiple callees, place the callees in the same order they are invoked.
+- For data transformation (map/filter/groupBy chains, collection shaping), prefer remeda over hand-rolled loops or lodash.
 
 ## Error Handling
 
@@ -66,4 +66,4 @@ Messages from server: `text`, `tool_message`, `tool_result`, `done`, `error`, `a
 
 Vitest. Unit tests: `.test.ts` (co-located under `modules/<domain>/`). Integration tests: `.int.test.ts` (use `createTestDatabase()` from `test/prismaTestDb.ts` for isolated DB instances).
 
-- When adding tests, always review at the end to ensure there are no excessive or duplicate test cases.
+- Avoid duplicate coverage: if two tests exercise the same branch of the same function with only cosmetic differences, keep the clearer one.
