@@ -1,6 +1,6 @@
-import { type ReactNode } from 'react';
 import { motion } from 'motion/react';
 import { ChevronDown, ChevronRight, type LucideIcon } from 'lucide-react';
+import type { ReactNode } from 'react';
 
 export type ToolStepStatus = 'running' | 'success' | 'error' | 'warning';
 export type ChainPosition = 'start' | 'middle' | 'end' | 'single';
@@ -65,32 +65,32 @@ export const ToolStep = ({
       </div>
 
       <div className="min-w-0 flex-1 pb-1">
-        <div
-          className={`flex items-center gap-2 text-sm ${
-            expandable ? 'cursor-pointer hover:text-gray-900' : 'cursor-default'
-          }`}
-          onClick={expandable?.onToggle}
-          role={expandable ? 'button' : undefined}
-          tabIndex={expandable ? 0 : undefined}
-          onKeyDown={(e) => {
-            if (expandable && (e.key === 'Enter' || e.key === ' ')) {
-              e.preventDefault();
-              expandable.onToggle();
-            }
-          }}
-        >
-          {expandable &&
-            (expandable.isExpanded ? (
+        {expandable ? (
+          <button
+            type="button"
+            onClick={expandable.onToggle}
+            className="flex w-full cursor-pointer items-center gap-2 text-left text-sm hover:text-gray-900"
+          >
+            {expandable.isExpanded ? (
               <ChevronDown className="h-3.5 w-3.5 flex-none text-gray-400" />
             ) : (
               <ChevronRight className="h-3.5 w-3.5 flex-none text-gray-400" />
-            ))}
-          <Icon className="h-4 w-4 flex-none text-gray-500" />
-          <span className="font-semibold text-gray-800">{toolName}</span>
-          <span className="min-w-0 flex-1 truncate text-gray-600">
-            {summary}
-          </span>
-        </div>
+            )}
+            <Icon className="h-4 w-4 flex-none text-gray-500" />
+            <span className="font-semibold text-gray-800">{toolName}</span>
+            <span className="min-w-0 flex-1 truncate text-gray-600">
+              {summary}
+            </span>
+          </button>
+        ) : (
+          <div className="flex items-center gap-2 text-sm">
+            <Icon className="h-4 w-4 flex-none text-gray-500" />
+            <span className="font-semibold text-gray-800">{toolName}</span>
+            <span className="min-w-0 flex-1 truncate text-gray-600">
+              {summary}
+            </span>
+          </div>
+        )}
         {body && <div className="mt-2 space-y-1.5">{body}</div>}
         {expandable?.isExpanded && (
           <div className="mt-2 space-y-1.5">{expandable.expandedBody}</div>
