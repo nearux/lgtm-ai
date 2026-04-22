@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useState, useRef } from 'react';
 import type {
   WsServerMessage,
   ClaudeExecuteOptions,
@@ -16,6 +16,7 @@ import { useWebSocketApprovals } from './useWebSocketApprovals';
 
 export interface UseClaudeWebSocketReturn {
   status: ConnectionStatus;
+  isStreaming: boolean;
   messages: ClaudeMessage[];
   fileChanges: FileChangesData | null;
   pendingApproval: ApprovalRequest | null;
@@ -29,6 +30,7 @@ export interface UseClaudeWebSocketReturn {
     chatContext?: ClaudeChatContext
   ) => string;
   abort: (requestId: string) => void;
+  stop: () => void;
   respondToApproval: (
     requestId: string,
     approvalRequestId: string,
@@ -67,6 +69,9 @@ export function useClaudeWebSocket(): UseClaudeWebSocketReturn {
   } = useWebSocketApprovals(send);
 
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [activeRequestId, setActiveRequestId] = useState<string | null>(null);
+  const activeRequestIdRef = useRef<string | null>(null);
+  const abortedRequestIdRef = useRef<string | null>(null);
 
   // Wire up message handler
   useEffect(() => {
@@ -74,6 +79,9 @@ export function useClaudeWebSocket(): UseClaudeWebSocketReturn {
       const data = JSON.parse(event.data) as WsServerMessage;
 
       switch (data.type) {
+        case 'init':
+          setSessionId(data.sessionId);
+          break;
         case 'text':
           addMessage({ type: 'text', content: data.chunk });
           break;
@@ -97,12 +105,32 @@ export function useClaudeWebSocket(): UseClaudeWebSocketReturn {
           appendStderrChunk(data.chunk);
           break;
         case 'error':
+          if (
+            data.requestId &&
+            data.requestId === abortedRequestIdRef.current
+          ) {
+            abortedRequestIdRef.current = null;
+            break;
+          }
+          if (data.requestId && data.requestId !== activeRequestIdRef.current) {
+            break;
+          }
+          activeRequestIdRef.current = null;
+          setActiveRequestId(null);
           addMessage({ type: 'error', content: data.message });
           break;
         case 'done':
           if (data.sessionId) {
             setSessionId(data.sessionId);
           }
+          if (data.requestId === abortedRequestIdRef.current) {
+            abortedRequestIdRef.current = null;
+            addMessage({ type: 'aborted', content: '' });
+            break;
+          }
+          if (data.requestId !== activeRequestIdRef.current) break;
+          activeRequestIdRef.current = null;
+          setActiveRequestId(null);
           addMessage({ type: 'done', content: '' });
           break;
         case 'approval_request':
@@ -171,6 +199,8 @@ export function useClaudeWebSocket(): UseClaudeWebSocketReturn {
         });
       }
 
+      activeRequestIdRef.current = requestId;
+      setActiveRequestId(requestId);
       return requestId;
     },
     [addMessage, send]
@@ -183,8 +213,18 @@ export function useClaudeWebSocket(): UseClaudeWebSocketReturn {
     [send]
   );
 
+  const stop = useCallback(() => {
+    const requestId = activeRequestIdRef.current;
+    if (!requestId) return;
+    send({ type: 'abort', requestId });
+    abortedRequestIdRef.current = requestId;
+    activeRequestIdRef.current = null;
+    setActiveRequestId(null);
+  }, [send]);
+
   return {
     status,
+    isStreaming: activeRequestId !== null,
     messages,
     fileChanges,
     pendingApproval,
@@ -193,6 +233,7 @@ export function useClaudeWebSocket(): UseClaudeWebSocketReturn {
     disconnect,
     execute,
     abort,
+    stop,
     respondToApproval,
     respondToPlanApproval,
     clearMessages,
