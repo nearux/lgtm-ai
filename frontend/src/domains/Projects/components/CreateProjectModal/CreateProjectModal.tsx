@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Folder } from 'lucide-react';
@@ -22,6 +22,7 @@ export const CreateProjectModal = ({ isOpen, close }: Props) => {
     description: '',
   });
   const [showBrowser, setShowBrowser] = useState(false);
+  const autoFilledNameRef = useRef<string | null>(null);
 
   const { mutate, isPending } = useMutation({
     ...postCreateProjectMutationOptions(),
@@ -40,6 +41,7 @@ export const CreateProjectModal = ({ isOpen, close }: Props) => {
   const handleClose = () => {
     if (isPending) return;
     setForm({ name: '', working_dir: '', description: '' });
+    autoFilledNameRef.current = null;
     setShowBrowser(false);
     close();
   };
@@ -54,7 +56,16 @@ export const CreateProjectModal = ({ isOpen, close }: Props) => {
   };
 
   const handleFolderSelect = (path: string) => {
-    setForm((prev) => ({ ...prev, working_dir: path }));
+    const folderName = path.split('/').filter(Boolean).pop() ?? '';
+    setForm((prev) => {
+      const shouldAutoFill =
+        !prev.name || prev.name === autoFilledNameRef.current;
+      if (shouldAutoFill) {
+        autoFilledNameRef.current = folderName;
+        return { ...prev, working_dir: path, name: folderName };
+      }
+      return { ...prev, working_dir: path };
+    });
     setShowBrowser(false);
   };
 
@@ -83,14 +94,6 @@ export const CreateProjectModal = ({ isOpen, close }: Props) => {
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="Add New Project">
       <form onSubmit={handleSubmit} className="space-y-4">
-        <Input
-          label="Project Name"
-          value={form.name}
-          onChange={handleChange('name')}
-          placeholder="LGTM AI"
-          required
-          disabled={isPending}
-        />
         <div>
           <label className="mb-1.5 block text-sm font-medium text-gray-700">
             Working Directory
@@ -117,6 +120,14 @@ export const CreateProjectModal = ({ isOpen, close }: Props) => {
             Select a local Git repository folder
           </p>
         </div>
+        <Input
+          label="Project Name"
+          value={form.name}
+          onChange={handleChange('name')}
+          placeholder="LGTM AI"
+          required
+          disabled={isPending}
+        />
         <Input
           label="Description (optional)"
           value={form.description}
