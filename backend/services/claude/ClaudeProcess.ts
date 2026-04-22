@@ -3,7 +3,7 @@ import { EventEmitter } from 'node:events';
 import { randomUUID } from 'node:crypto';
 import { LineBuffer } from '../../modules/claude/line-buffer.util.js';
 import { parseStreamJsonLine } from '../../modules/claude/stream-json-parser.util.js';
-import { ClaudeArgsBuilder } from './ClaudeArgsBuilder.js';
+import { ClaudeArgsBuilder } from '../../modules/claude/claude-args-builder.js';
 import type {
   ClaudeExecuteOptions,
   ClaudeExecutionMode,
