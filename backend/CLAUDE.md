@@ -6,7 +6,7 @@ Express + tsoa + Prisma (SQLite via libsql) with Inversify DI.
 
 Flat structure — no `src/` directory. Nest-style domain modules under `modules/`:
 
-- `modules/<domain>/` — one folder per domain (`auth/`, `files/`, `projects/`). Files follow the convention:
+- `modules/<domain>/` — one folder per domain (`auth/`, `files/`, `projects/`, `claude/`). Files follow the convention:
   - `*.controller.ts` — tsoa route controllers (discovered by `controllerPathGlobs`)
   - `*.service.ts` — business logic as `@injectable()` classes
   - `*.repository.ts` — DB access as `@injectable()` classes
@@ -16,12 +16,7 @@ Flat structure — no `src/` directory. Nest-style domain modules under `modules
 - `prisma/` — schema and migrations
 - `container.ts` / `container-tokens.ts` / `ioc.ts` — DI wiring (see below)
 
-Not yet migrated to `modules/`:
-
-- `controllers/ClaudeWSController.ts` — WebSocket controller, not a tsoa REST controller
-- `services/claude/` — Claude Code execution/session management
-- `services/promptBuilder.ts`, `services/promptTemplates.ts` — prompt assembly
-- `services/chatSessions.ts`, `services/git.ts` — thin shims that delegate to DI-managed services, for consumers not yet migrated
+Domains: `auth/`, `files/`, `projects/`, `claude/`. The `claude` module holds the WebSocket controller (`claude-ws.controller.ts`) and Claude Code process management; unlike REST modules, its controller is resolved manually in `backend/index.ts` since tsoa does not handle WebSocket routes.
 
 ## Dependency Injection
 
@@ -58,7 +53,7 @@ Use `AppError` (with `statusCode`) for HTTP errors. The error middleware also ca
 
 ## WebSocket
 
-`/api/claude/execute` streams Claude Code execution using the `ws` library. Wired by `controllers/ClaudeWSController.ts` (not a tsoa controller — hand-registered in `index.ts`).
+`/api/claude/execute` streams Claude Code execution using the `ws` library. Wired by `modules/claude/claude-ws.controller.ts` (not a tsoa controller — resolved from the Inversify container and hand-registered in `index.ts`).
 Messages from client: `execute`, `followUp`, `abort`, `approval_response`, `plan_approval_response`.
 Messages from server: `text`, `tool_message`, `tool_result`, `done`, `error`, `approval_request`, `file_changes`, etc.
 
