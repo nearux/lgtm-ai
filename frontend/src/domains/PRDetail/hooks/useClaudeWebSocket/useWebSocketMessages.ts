@@ -19,6 +19,28 @@ export function useWebSocketMessages() {
     []
   );
 
+  const appendStderrChunk = useCallback((chunk: string) => {
+    setMessages((prev) => {
+      for (let i = prev.length - 1; i >= 0; i--) {
+        const msg = prev[i];
+        if (msg.type === 'tool' && msg.toolName === 'Bash') {
+          const hasResult = prev.some(
+            (m) => m.type === 'tool_result' && m.toolId === msg.toolId
+          );
+          if (!hasResult) {
+            const next = [...prev];
+            next[i] = {
+              ...msg,
+              stderrChunks: [...(msg.stderrChunks ?? []), chunk],
+            };
+            return next;
+          }
+        }
+      }
+      return prev;
+    });
+  }, []);
+
   const clearMessages = useCallback(() => {
     setMessages([]);
     setFileChanges(null);
@@ -40,6 +62,7 @@ export function useWebSocketMessages() {
     fileChanges,
     setFileChanges,
     addMessage,
+    appendStderrChunk,
     clearMessages,
     addUserMessage,
     loadHistoryMessages,
