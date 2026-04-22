@@ -50,6 +50,7 @@ export class ClaudeProcess extends EventEmitter<ClaudeStreamEvents> {
   private readonly lineBuffer = new LineBuffer();
   private errored = false;
   private resultReceived = false;
+  private aborted = false;
 
   private static readonly HOOKS_BY_MODE: Record<
     string,
@@ -205,6 +206,7 @@ export class ClaudeProcess extends EventEmitter<ClaudeStreamEvents> {
   }
 
   abort(): void {
+    this.aborted = true;
     this.childProcess?.kill();
   }
 
@@ -233,9 +235,14 @@ export class ClaudeProcess extends EventEmitter<ClaudeStreamEvents> {
     const isAbnormalExit = code !== 0 && code !== null;
 
     if (this.resultReceived) {
-      if (isAbnormalExit) {
+      if (isAbnormalExit && !this.aborted) {
         this.emit('error', `Process exited with code ${code} after completion`);
       }
+      return;
+    }
+
+    if (this.aborted) {
+      this.emit('done', exitCode, '', undefined);
       return;
     }
 
