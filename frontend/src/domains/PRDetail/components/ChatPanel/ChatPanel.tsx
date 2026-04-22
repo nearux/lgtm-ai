@@ -48,13 +48,12 @@ export const ChatPanel = ({
 }: Props) => {
   const { title, prContext, onExecuteAction, onResumeSession, onSendFollowUp } =
     state;
-  const { messages, status, sessionId, fileChanges } = ws;
+  const { messages, status, sessionId, fileChanges, isStreaming, stop } = ws;
   const [expandedTools, setExpandedTools] = useState<Set<string>>(new Set());
   const { containerRef, handleScroll } = useAutoScroll(messages);
 
   const lastMessage = messages[messages.length - 1];
-  const isWaitingForResponse =
-    status === 'connected' && lastMessage?.type === 'user';
+  const isWaitingForResponse = isStreaming && lastMessage?.type === 'user';
 
   const showActionSelector =
     mode === 'action-selection' && messages.length === 0 && onExecuteAction;
@@ -174,7 +173,9 @@ export const ChatPanel = ({
         onSendFollowUp && (
           <FollowUpInput
             sessionId={state.claudeSessionId || sessionId}
+            isStreaming={isStreaming}
             onSendFollowUp={onSendFollowUp}
+            onStop={stop}
           />
         )}
     </div>

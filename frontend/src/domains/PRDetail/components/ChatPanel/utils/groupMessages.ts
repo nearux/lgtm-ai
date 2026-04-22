@@ -22,6 +22,9 @@ export type GroupedItem =
       input: string;
       result?: string;
       isError?: boolean;
+      stderrChunks?: string[];
+      isRunning: boolean;
+      chainPosition: 'start' | 'middle' | 'end' | 'single';
     };
 
 export const groupMessages = (
@@ -63,6 +66,9 @@ export const groupMessages = (
         toolId: msg.toolId,
         toolName: msg.toolName || 'Unknown',
         input: msg.content,
+        stderrChunks: msg.stderrChunks,
+        isRunning: false,
+        chainPosition: 'single',
       };
       toolMap.set(msg.toolId, toolItem);
       result.push(toolItem);
@@ -81,10 +87,38 @@ export const groupMessages = (
         chunks: [{ id: msg.id, content: `Error: ${msg.content}` }],
         isStreaming: false,
       });
+    } else if (msg.type === 'aborted') {
+      flushText(false);
+      result.push({
+        kind: 'text',
+        id: msg.id,
+        content: 'Stopped by user',
+        chunks: [{ id: msg.id, content: 'Stopped by user' }],
+        isStreaming: false,
+      });
     }
   }
 
-  // The last text block is still streaming only if we're connected
   flushText(isConnected);
+
+  // Second pass: assign chainPosition and isRunning for tool items.
+  for (let i = 0; i < result.length; i++) {
+    const item = result[i];
+    if (item.kind !== 'tool') continue;
+    const prev = result[i - 1];
+    const next = result[i + 1];
+    const hasPrev = prev?.kind === 'tool';
+    const hasNext = next?.kind === 'tool';
+    item.chainPosition =
+      hasPrev && hasNext
+        ? 'middle'
+        : hasPrev
+          ? 'end'
+          : hasNext
+            ? 'start'
+            : 'single';
+    item.isRunning = item.result === undefined && isConnected;
+  }
+
   return result;
 };
