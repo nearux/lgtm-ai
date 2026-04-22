@@ -48,7 +48,7 @@ export const ChatPanel = ({
 }: Props) => {
   const { title, prContext, onExecuteAction, onResumeSession, onSendFollowUp } =
     state;
-  const { messages, status, sessionId, fileChanges } = ws;
+  const { messages, status, sessionId, fileChanges, isStreaming, stop } = ws;
   const [expandedTools, setExpandedTools] = useState<Set<string>>(new Set());
   const { containerRef, handleScroll } = useAutoScroll(messages);
 
@@ -174,7 +174,9 @@ export const ChatPanel = ({
         onSendFollowUp && (
           <FollowUpInput
             sessionId={state.claudeSessionId || sessionId}
+            isStreaming={isStreaming}
             onSendFollowUp={onSendFollowUp}
+            onStop={stop}
           />
         )}
     </div>
