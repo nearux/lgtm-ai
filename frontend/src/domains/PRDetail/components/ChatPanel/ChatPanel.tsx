@@ -53,8 +53,7 @@ export const ChatPanel = ({
   const { containerRef, handleScroll } = useAutoScroll(messages);
 
   const lastMessage = messages[messages.length - 1];
-  const isWaitingForResponse =
-    status === 'connected' && lastMessage?.type === 'user';
+  const isWaitingForResponse = isStreaming && lastMessage?.type === 'user';
 
   const showActionSelector =
     mode === 'action-selection' && messages.length === 0 && onExecuteAction;
