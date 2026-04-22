@@ -66,9 +66,12 @@ beforeAll(async () => {
   cleanupDb = testDb.cleanup;
 
   vi.doMock('../../prismaClient.js', () => ({ default: prisma }));
-  vi.doMock('../../services/claude/claudeSessionHistory.js', () => ({
-    getClaudeSessionHistory: mockGetClaudeSessionHistory,
-  }));
+  vi.doMock('../../modules/claude/claude-session-history.service.js', () => {
+    class ClaudeSessionHistoryService {
+      getClaudeSessionHistory = mockGetClaudeSessionHistory;
+    }
+    return { ClaudeSessionHistoryService };
+  });
 
   ({ createApp } = await import('../../app.js'));
   const app = await createApp({ enableSwagger: false });
