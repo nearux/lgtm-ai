@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { GitHubRepoDto } from './gitHubRepoDto.js';
+import { GitHubRepoDto } from './github-repo.dto.js';
 
 describe('GitHubRepoDto.fromRemoteUrl', () => {
   describe('SSH format', () => {

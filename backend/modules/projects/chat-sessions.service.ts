@@ -3,8 +3,8 @@ import { randomUUID } from 'node:crypto';
 import { inject, injectable } from 'inversify';
 import { AppError } from '../../errors/AppError.js';
 import { ClaudeSessionHistoryService } from '../claude/claude-session-history.service.js';
-import { ChatSessionHistoryResponseDto } from './dto/chatSessionHistoryResponseDto.js';
-import { ChatSessionSummaryDto } from './dto/chatSessionSummaryDto.js';
+import { ChatSessionHistoryResponseDto } from './dto/chat-session-history-response.dto.js';
+import { ChatSessionSummaryDto } from './dto/chat-session-summary.dto.js';
 import { ChatSessionRepository } from './chat-session.repository.js';
 import { ProjectRepository } from './project.repository.js';
 import type {

@@ -6,7 +6,7 @@ import type {
   GhPRDetail,
   GhReviewInlineComment,
 } from '../../types/pullRequests.js';
-import { PRDetailDto } from './dto/prDetailDto.js';
+import { PRDetailDto } from './dto/pr-detail.dto.js';
 import { validateRepoOwnerName, mapGhError } from './gh.util.js';
 
 const execFileAsync = promisify(execFile);

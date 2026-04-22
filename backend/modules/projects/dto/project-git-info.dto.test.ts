@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ProjectGitRemoteDto } from './projectGitInfoDto.js';
+import { ProjectGitRemoteDto } from './project-git-info.dto.js';
 
 describe('ProjectGitRemoteDto.fromGitRemoteList', () => {
   it('should parse standard git remote output', () => {

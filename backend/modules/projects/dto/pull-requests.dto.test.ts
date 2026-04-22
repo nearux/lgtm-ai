@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { PRListItemDto } from './pullRequestsDto.js';
+import { PRListItemDto } from './pull-requests.dto.js';
 import type { GraphQLPRNode } from '../../../types/pullRequests.js';
 
 describe('PRListItemDto.fromGraphQL', () => {
