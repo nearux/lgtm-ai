@@ -114,6 +114,18 @@ describe('groupMessages — isRunning', () => {
     const toolItem = result.find((i) => i.kind === 'tool')!;
     expect(toolItem.isRunning).toBe(false);
   });
+
+  it('distinguishes running vs completed tools in the same list', () => {
+    const result = groupMessages(
+      [tool('1', 't1'), toolResult('2', 't1'), tool('3', 't2')],
+      true
+    );
+    const tools = result.filter((i) => i.kind === 'tool');
+    expect(tools[0].isRunning).toBe(false);
+    expect(tools[0].result).toBe('ok');
+    expect(tools[1].isRunning).toBe(true);
+    expect(tools[1].result).toBeUndefined();
+  });
 });
 
 describe('groupMessages — stderrChunks', () => {
