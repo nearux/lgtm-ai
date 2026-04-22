@@ -54,7 +54,7 @@ const Box = ({
         {label}
       </div>
       <pre
-        className={`min-w-0 flex-1 overflow-auto px-2 py-1 font-mono text-xs whitespace-pre-wrap ${
+        className={`min-w-0 flex-1 overflow-auto px-2 py-1 font-mono text-xs whitespace-pre ${
           muted ? 'text-gray-500' : 'text-gray-800'
         } ${maxHeight}`}
       >
@@ -83,11 +83,15 @@ export const BashStep = ({
   );
 
   const outContent = isRunning ? (stderrChunks ?? []).join('') : (result ?? '');
-  const outMaxHeight = isExpanded ? 'max-h-none' : 'max-h-48';
+  const outMaxHeight = isExpanded ? 'max-h-none' : 'max-h-24';
 
   const body = (
     <>
-      <Box label="IN" content={command} maxHeight="max-h-24" />
+      <Box
+        label="IN"
+        content={command}
+        maxHeight={isExpanded ? 'max-h-none' : 'max-h-16'}
+      />
       <Box
         label="OUT"
         content={outContent}
