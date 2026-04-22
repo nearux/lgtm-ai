@@ -144,3 +144,24 @@ describe('groupMessages — stderrChunks', () => {
     expect(toolItem.stderrChunks).toBeUndefined();
   });
 });
+
+const aborted = (id: string): ClaudeMessage => ({
+  id,
+  type: 'aborted',
+  content: '',
+  timestamp: new Date(),
+});
+
+describe('groupMessages — aborted', () => {
+  it('renders an aborted message as a terminal text line', () => {
+    const result = groupMessages([text('1', 'hello'), aborted('2')], false);
+    expect(result).toHaveLength(2);
+    expect(result[0]).toMatchObject({ kind: 'text', content: 'hello' });
+    expect(result[1]).toMatchObject({
+      kind: 'text',
+      id: '2',
+      content: 'Stopped by user',
+      isStreaming: false,
+    });
+  });
+});

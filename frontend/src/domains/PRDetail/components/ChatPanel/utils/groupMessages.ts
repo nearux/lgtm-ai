@@ -87,6 +87,15 @@ export const groupMessages = (
         chunks: [{ id: msg.id, content: `Error: ${msg.content}` }],
         isStreaming: false,
       });
+    } else if (msg.type === 'aborted') {
+      flushText(false);
+      result.push({
+        kind: 'text',
+        id: msg.id,
+        content: 'Stopped by user',
+        chunks: [{ id: msg.id, content: 'Stopped by user' }],
+        isStreaming: false,
+      });
     }
   }
 

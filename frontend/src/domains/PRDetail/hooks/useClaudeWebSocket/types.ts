@@ -33,7 +33,15 @@ export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
 
 export interface ClaudeMessage {
   id: string;
-  type: 'text' | 'tool' | 'tool_result' | 'error' | 'stderr' | 'done' | 'user';
+  type:
+    | 'text'
+    | 'tool'
+    | 'tool_result'
+    | 'error'
+    | 'stderr'
+    | 'done'
+    | 'user'
+    | 'aborted';
   content: string;
   toolName?: string;
   toolId?: string;
