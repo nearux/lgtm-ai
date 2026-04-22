@@ -1,4 +1,3 @@
-// backend/modules/projects/chat-sessions.service.ts
 import HttpStatus from 'http-status';
 import { randomUUID } from 'node:crypto';
 import { inject, injectable } from 'inversify';

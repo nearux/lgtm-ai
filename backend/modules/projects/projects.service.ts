@@ -1,4 +1,3 @@
-// backend/modules/projects/projects.service.ts
 import HttpStatus from 'http-status';
 import { existsSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';

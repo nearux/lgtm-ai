@@ -1,4 +1,3 @@
-// backend/modules/projects/projects.module.ts
 import { ContainerModule } from 'inversify';
 import { ProjectRepository } from './project.repository.js';
 import { ChatSessionRepository } from './chat-session.repository.js';

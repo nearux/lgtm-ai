@@ -1,4 +1,3 @@
-// backend/container.ts
 import 'reflect-metadata';
 import { Container } from 'inversify';
 import prisma from './prismaClient.js';

@@ -1,4 +1,3 @@
-// backend/modules/projects/pr-detail.service.ts
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { injectable } from 'inversify';

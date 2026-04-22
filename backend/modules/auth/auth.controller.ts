@@ -1,4 +1,3 @@
-// backend/modules/auth/auth.controller.ts
 import {
   Controller,
   Route,

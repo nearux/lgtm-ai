@@ -1,4 +1,3 @@
-// backend/modules/auth/auth.service.test.ts
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mockExecFileAsync = vi.hoisted(() => vi.fn());

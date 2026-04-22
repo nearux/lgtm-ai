@@ -1,4 +1,3 @@
-// backend/modules/projects/projects.controller.ts
 import {
   Controller,
   Route,

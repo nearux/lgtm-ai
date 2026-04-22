@@ -1,4 +1,3 @@
-// backend/services/git.ts
 // Compatibility shim for services/claude/ClaudeSessionManager.ts, which is not
 // yet migrated to the DI container and calls `getFileChanges` as a free
 // function. Delegates to the DI-managed GitService. Remove this file once

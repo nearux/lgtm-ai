@@ -1,4 +1,3 @@
-// backend/modules/auth/auth.module.ts
 import { ContainerModule } from 'inversify';
 import { AuthService } from './auth.service.js';
 import { AuthController } from './auth.controller.js';

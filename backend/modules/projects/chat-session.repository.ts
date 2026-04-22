@@ -1,4 +1,3 @@
-// backend/modules/projects/chat-session.repository.ts
 import type { ChatSession, Prisma, PrismaClient } from '@prisma/client';
 import { inject, injectable } from 'inversify';
 import { PRISMA_CLIENT } from '../../container-tokens.js';

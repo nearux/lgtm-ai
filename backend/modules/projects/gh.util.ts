@@ -1,4 +1,3 @@
-// backend/modules/projects/gh.util.ts
 import HttpStatus from 'http-status';
 import { AppError } from '../../errors/AppError.js';
 

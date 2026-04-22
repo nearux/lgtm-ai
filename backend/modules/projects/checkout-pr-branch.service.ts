@@ -1,4 +1,3 @@
-// backend/modules/projects/checkout-pr-branch.service.ts
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import HttpStatus from 'http-status';

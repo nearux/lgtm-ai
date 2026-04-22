@@ -1,4 +1,3 @@
-// backend/modules/files/file-system.service.ts
 import { statSync, existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';

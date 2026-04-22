@@ -1,4 +1,3 @@
-// backend/services/chatSessions.ts
 // Compatibility shim for code not yet migrated (ClaudeSessionManager, etc.).
 // Delegates to the DI-managed ChatSessionsService. Remove this file once all
 // consumers are migrated to inject ChatSessionsService directly.

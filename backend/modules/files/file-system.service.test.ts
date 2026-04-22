@@ -1,4 +1,3 @@
-// backend/modules/files/file-system.service.test.ts
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Dirent, Stats } from 'node:fs';
 import { AppError } from '../../errors/AppError.js';

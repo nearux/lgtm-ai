@@ -1,4 +1,3 @@
-// backend/modules/files/files.controller.ts
 import { Controller, Route, Get, Query, Response, Tags } from '@tsoa/runtime';
 import { inject, injectable } from 'inversify';
 import { FileSystemService } from './file-system.service.js';
