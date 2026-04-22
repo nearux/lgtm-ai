@@ -1,7 +1,7 @@
 {
   "entryFile": "index.ts",
   "noImplicitAdditionalProperties": "throw-on-extras",
-  "controllerPathGlobs": ["controllers/**/*Controller.ts"],
+  "controllerPathGlobs": ["modules/**/*.controller.ts"],
   "spec": {
     "outputDirectory": "public",
     "specVersion": 3,
@@ -17,6 +17,7 @@
   "routes": {
     "routesDir": ".",
     "middleware": "express",
-    "esm": true
+    "esm": true,
+    "iocModule": "./ioc"
   }
 }

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Dirent, Stats } from 'node:fs';
-import { AppError } from '../errors/AppError.js';
+import { AppError } from '../../errors/AppError.js';
 
 vi.mock('node:fs', () => ({
   existsSync: vi.fn(),
@@ -13,7 +13,7 @@ vi.mock('node:os', () => ({
 }));
 
 import * as fs from 'node:fs';
-import { browse } from './fileSystem.js';
+import { FileSystemService } from './file-system.service.js';
 
 function makeStats({ isDirectory }: { isDirectory: boolean }): Stats {
   return { isDirectory: () => isDirectory } as unknown as Stats;
@@ -40,17 +40,20 @@ function makeDirent({
   } as unknown as Dirent<Buffer>;
 }
 
-beforeEach(() => {
-  vi.clearAllMocks();
-});
+describe('FileSystemService.browse', () => {
+  let service: FileSystemService;
 
-describe('fileSystemService.browse', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    service = new FileSystemService();
+  });
+
   it('should default to home directory when no path is given', () => {
     vi.mocked(fs.existsSync).mockReturnValue(true);
     vi.mocked(fs.statSync).mockReturnValue(makeStats({ isDirectory: true }));
     vi.mocked(fs.readdirSync).mockReturnValue([]);
 
-    const result = browse();
+    const result = service.browse();
 
     expect(result.path).toBe('/home/user');
   });
@@ -58,16 +61,18 @@ describe('fileSystemService.browse', () => {
   it('should throw 404 when path does not exist', () => {
     vi.mocked(fs.existsSync).mockReturnValue(false);
 
-    expect(() => browse('/nonexistent')).toThrow(AppError);
-    expect(() => browse('/nonexistent')).toThrowError('Directory not found');
+    expect(() => service.browse('/nonexistent')).toThrow(AppError);
+    expect(() => service.browse('/nonexistent')).toThrowError(
+      'Directory not found'
+    );
   });
 
   it('should throw 400 when path is a file, not a directory', () => {
     vi.mocked(fs.existsSync).mockReturnValue(true);
     vi.mocked(fs.statSync).mockReturnValue(makeStats({ isDirectory: false }));
 
-    expect(() => browse('/some/file.txt')).toThrow(AppError);
-    expect(() => browse('/some/file.txt')).toThrowError(
+    expect(() => service.browse('/some/file.txt')).toThrow(AppError);
+    expect(() => service.browse('/some/file.txt')).toThrowError(
       'Path is not a directory'
     );
   });
@@ -76,8 +81,8 @@ describe('fileSystemService.browse', () => {
     vi.mocked(fs.existsSync).mockReturnValue(true);
     vi.mocked(fs.statSync).mockReturnValue(makeStats({ isDirectory: true }));
 
-    expect(() => browse('/etc')).toThrow(AppError);
-    expect(() => browse('/etc')).toThrowError(
+    expect(() => service.browse('/etc')).toThrow(AppError);
+    expect(() => service.browse('/etc')).toThrowError(
       'Access to this path is not allowed'
     );
   });
@@ -86,8 +91,8 @@ describe('fileSystemService.browse', () => {
     vi.mocked(fs.existsSync).mockReturnValue(true);
     vi.mocked(fs.statSync).mockReturnValue(makeStats({ isDirectory: true }));
 
-    expect(() => browse('/etc/nginx')).toThrow(AppError);
-    expect(() => browse('/etc/nginx')).toThrowError(
+    expect(() => service.browse('/etc/nginx')).toThrow(AppError);
+    expect(() => service.browse('/etc/nginx')).toThrowError(
       'Access to this path is not allowed'
     );
   });
@@ -99,8 +104,10 @@ describe('fileSystemService.browse', () => {
       throw new Error('permission denied');
     });
 
-    expect(() => browse('/home/user')).toThrow(AppError);
-    expect(() => browse('/home/user')).toThrowError('Failed to read directory');
+    expect(() => service.browse('/home/user')).toThrow(AppError);
+    expect(() => service.browse('/home/user')).toThrowError(
+      'Failed to read directory'
+    );
   });
 
   it('should return path, parent, and directory entries', () => {
@@ -113,7 +120,7 @@ describe('fileSystemService.browse', () => {
       makeDirent({ name: 'file.txt', isDir: false }),
     ] as ReturnType<typeof fs.readdirSync>);
 
-    const result = browse('/home/user');
+    const result = service.browse('/home/user');
 
     expect(result).toEqual({
       path: '/home/user',

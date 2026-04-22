@@ -6,11 +6,14 @@ vi.mock('util', () => ({
   promisify: () => mockExecAsync,
 }));
 
-const { checkoutPRBranch } = await import('./checkoutPRBranch.js');
+const { CheckoutService } = await import('./checkout-pr-branch.service.js');
 
-describe('checkoutPRBranch', () => {
+describe('CheckoutService.checkoutPRBranch', () => {
+  let service: InstanceType<typeof CheckoutService>;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    service = new CheckoutService();
   });
 
   it('should checkout PR branch when working tree is clean', async () => {
@@ -22,7 +25,7 @@ describe('checkoutPRBranch', () => {
         stderr: '',
       }); // git branch --show-current
 
-    const result = await checkoutPRBranch('owner/repo', 23, '/repo', {
+    const result = await service.checkoutPRBranch('owner/repo', 23, '/repo', {
       force: false,
     });
 
@@ -59,7 +62,7 @@ describe('checkoutPRBranch', () => {
     }); // git status (dirty)
 
     await expect(
-      checkoutPRBranch('owner/repo', 23, '/repo', { force: false })
+      service.checkoutPRBranch('owner/repo', 23, '/repo', { force: false })
     ).rejects.toMatchObject({
       message:
         'Cannot checkout PR branch because local changes exist. Retry with force=true to auto-stash.',
@@ -85,7 +88,7 @@ describe('checkoutPRBranch', () => {
         stderr: '',
       }); // git branch --show-current
 
-    const result = await checkoutPRBranch('owner/repo', 23, '/repo', {
+    const result = await service.checkoutPRBranch('owner/repo', 23, '/repo', {
       force: true,
     });
 
@@ -121,7 +124,7 @@ describe('checkoutPRBranch', () => {
       .mockRejectedValueOnce(new Error('stash failed')); // git stash push
 
     await expect(
-      checkoutPRBranch('owner/repo', 23, '/repo', { force: true })
+      service.checkoutPRBranch('owner/repo', 23, '/repo', { force: true })
     ).rejects.toMatchObject({
       message: 'Failed to stash local changes before checkout',
       statusCode: 500,
@@ -134,7 +137,7 @@ describe('checkoutPRBranch', () => {
       .mockRejectedValueOnce(new Error('could not resolve to a PullRequest')); // gh pr checkout
 
     await expect(
-      checkoutPRBranch('owner/repo', 999, '/repo', { force: false })
+      service.checkoutPRBranch('owner/repo', 999, '/repo', { force: false })
     ).rejects.toMatchObject({
       message: 'Pull request not found',
       statusCode: 404,
@@ -149,7 +152,7 @@ describe('checkoutPRBranch', () => {
       ); // gh pr checkout
 
     await expect(
-      checkoutPRBranch('owner/repo', 23, '/repo', { force: false })
+      service.checkoutPRBranch('owner/repo', 23, '/repo', { force: false })
     ).rejects.toMatchObject({
       message:
         'GitHub CLI is not authenticated. Please check your account in the header.',
@@ -163,7 +166,7 @@ describe('checkoutPRBranch', () => {
       .mockRejectedValueOnce(new Error('unexpected error')); // gh pr checkout
 
     await expect(
-      checkoutPRBranch('owner/repo', 23, '/repo', { force: false })
+      service.checkoutPRBranch('owner/repo', 23, '/repo', { force: false })
     ).rejects.toMatchObject({
       message: 'Failed to checkout PR branch',
       statusCode: 500,
@@ -172,7 +175,7 @@ describe('checkoutPRBranch', () => {
 
   it('should throw BAD_REQUEST for invalid repo name', async () => {
     await expect(
-      checkoutPRBranch('bad repo!', 23, '/repo', { force: false })
+      service.checkoutPRBranch('bad repo!', 23, '/repo', { force: false })
     ).rejects.toMatchObject({
       message: 'Invalid repository name',
       statusCode: 400,

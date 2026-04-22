@@ -6,11 +6,14 @@ vi.mock('node:util', () => ({
   promisify: () => mockExecFileAsync,
 }));
 
-const { getStatus, switchAccount } = await import('./auth.js');
+const { AuthService } = await import('./auth.service.js');
 
-describe('auth service', () => {
+describe('AuthService', () => {
+  let service: InstanceType<typeof AuthService>;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    service = new AuthService();
   });
 
   describe('getStatus', () => {
@@ -35,7 +38,7 @@ describe('auth service', () => {
         stderr: singleAccountOutput,
       });
 
-      const result = await getStatus();
+      const result = await service.getStatus();
 
       expect(result).toEqual({
         activeAccount: 'octocat',
@@ -49,7 +52,7 @@ describe('auth service', () => {
         stderr: multiAccountOutput,
       });
 
-      const result = await getStatus();
+      const result = await service.getStatus();
 
       expect(result).toEqual({
         activeAccount: 'octocat',
@@ -66,7 +69,7 @@ describe('auth service', () => {
         stderr: '',
       });
 
-      const result = await getStatus();
+      const result = await service.getStatus();
 
       expect(result).toEqual({
         activeAccount: 'octocat',
@@ -79,7 +82,7 @@ describe('auth service', () => {
         stderr: singleAccountOutput,
       });
 
-      const result = await getStatus();
+      const result = await service.getStatus();
 
       expect(result).toEqual({
         activeAccount: 'octocat',
@@ -90,7 +93,7 @@ describe('auth service', () => {
     it('should throw SERVICE_UNAVAILABLE when gh CLI is not available', async () => {
       mockExecFileAsync.mockRejectedValue(new Error('ENOENT'));
 
-      await expect(getStatus()).rejects.toMatchObject({
+      await expect(service.getStatus()).rejects.toMatchObject({
         message: 'GitHub CLI is not available',
         statusCode: 503,
       });
@@ -102,7 +105,7 @@ describe('auth service', () => {
         stderr: 'some unrecognized output',
       });
 
-      await expect(getStatus()).rejects.toMatchObject({
+      await expect(service.getStatus()).rejects.toMatchObject({
         message:
           'No GitHub accounts found. Run "gh auth login" in your terminal.',
         statusCode: 503,
@@ -124,7 +127,7 @@ describe('auth service', () => {
         stderr: noActiveOutput,
       });
 
-      const result = await getStatus();
+      const result = await service.getStatus();
 
       expect(result.activeAccount).toBe('octocat');
     });
@@ -139,10 +142,10 @@ describe('auth service', () => {
 
     it('should switch account and return new status', async () => {
       mockExecFileAsync
-        .mockResolvedValueOnce({ stdout: '', stderr: '' }) // switch command
-        .mockResolvedValueOnce({ stdout: '', stderr: statusAfterSwitch }); // getStatus call
+        .mockResolvedValueOnce({ stdout: '', stderr: '' })
+        .mockResolvedValueOnce({ stdout: '', stderr: statusAfterSwitch });
 
-      const result = await switchAccount('monalisa');
+      const result = await service.switchAccount('monalisa');
 
       expect(mockExecFileAsync).toHaveBeenNthCalledWith(1, 'gh', [
         'auth',
@@ -159,7 +162,7 @@ describe('auth service', () => {
     it.each(['', '-invalid', 'user--name', 'a'.repeat(40)])(
       'should reject invalid username: %s',
       async (name) => {
-        await expect(switchAccount(name)).rejects.toMatchObject({
+        await expect(service.switchAccount(name)).rejects.toMatchObject({
           message: 'Invalid GitHub username',
           statusCode: 400,
         });
@@ -171,7 +174,7 @@ describe('auth service', () => {
         new Error('account "unknown" not found')
       );
 
-      const result = switchAccount('unknown');
+      const result = service.switchAccount('unknown');
       await expect(result).rejects.toThrow(
         'Failed to switch GitHub account to "unknown"'
       );

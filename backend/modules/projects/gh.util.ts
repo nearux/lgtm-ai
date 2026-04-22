@@ -1,7 +1,6 @@
 import HttpStatus from 'http-status';
-import { AppError } from '../errors/AppError.js';
+import { AppError } from '../../errors/AppError.js';
 
-// Validates "owner/repo" format (e.g. "octocat/hello-world")
 const REPO_NAME_RE = /^[\w.-]+\/[\w.-]+$/;
 
 export function validateRepoOwnerName(repoOwnerName: string): void {
@@ -42,7 +41,6 @@ export function mapGhError(error: unknown, context: GhErrorContext): AppError {
     );
   }
 
-  // context === 'checkout'
   if (msg.includes('could not resolve')) {
     return new AppError('Pull request not found', HttpStatus.NOT_FOUND, error);
   }

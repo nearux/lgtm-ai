@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 
 const { validateRepoOwnerName, mapGhError, getErrorMessage } =
-  await import('./ghUtils.js');
+  await import('./gh.util.js');
 
-describe('ghUtils', () => {
+describe('gh.util', () => {
   describe('validateRepoOwnerName', () => {
     it('accepts valid owner/repo format', () => {
       expect(() => validateRepoOwnerName('octocat/hello-world')).not.toThrow();

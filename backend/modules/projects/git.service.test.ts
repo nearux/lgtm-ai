@@ -6,8 +6,7 @@ vi.mock('node:util', () => ({
   promisify: () => mockExecFileAsync,
 }));
 
-const { getFileChanges, generateCommitMessage, commitAndPush } =
-  await import('./git.js');
+const { GitService } = await import('./git.service.js');
 
 /** Build a mock that resolves differently per call based on git args. */
 function mockGitCommands(commands: Record<string, string | Error>): void {
@@ -19,9 +18,12 @@ function mockGitCommands(commands: Record<string, string | Error>): void {
   });
 }
 
-describe('git service', () => {
+describe('GitService', () => {
+  let service: InstanceType<typeof GitService>;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    service = new GitService();
   });
 
   describe('getFileChanges', () => {
@@ -33,7 +35,7 @@ describe('git service', () => {
         diff: '',
       });
 
-      const result = await getFileChanges('/workspace');
+      const result = await service.getFileChanges('/workspace');
 
       expect(result.files).toEqual([]);
       expect(result.summary).toEqual({
@@ -59,7 +61,7 @@ index abc1234..def5678 100644
         diff: diffOutput,
       });
 
-      const result = await getFileChanges('/workspace');
+      const result = await service.getFileChanges('/workspace');
 
       expect(result.files).toHaveLength(1);
       expect(result.files[0]).toEqual({
@@ -90,7 +92,7 @@ new file mode 100644
 `,
       });
 
-      const result = await getFileChanges('/workspace');
+      const result = await service.getFileChanges('/workspace');
 
       expect(result.files[0].status).toBe('added');
       expect(result.files[0].additions).toBe(5);
@@ -104,7 +106,7 @@ new file mode 100644
         diff: '',
       });
 
-      const result = await getFileChanges('/workspace');
+      const result = await service.getFileChanges('/workspace');
 
       expect(result.files[0].status).toBe('deleted');
       expect(result.files[0].deletions).toBe(15);
@@ -118,7 +120,7 @@ new file mode 100644
         diff: '',
       });
 
-      const result = await getFileChanges('/workspace');
+      const result = await service.getFileChanges('/workspace');
 
       expect(result.files).toHaveLength(3);
       expect(result.summary).toEqual({
@@ -136,7 +138,7 @@ new file mode 100644
         diff: '',
       });
 
-      const result = await getFileChanges('/workspace');
+      const result = await service.getFileChanges('/workspace');
 
       expect(result.files[0].additions).toBe(0);
       expect(result.files[0].deletions).toBe(0);
@@ -155,7 +157,7 @@ new file mode 100644
         return Promise.resolve({ stdout: '', stderr: '' });
       });
 
-      const result = await generateCommitMessage('/workspace');
+      const result = await service.generateCommitMessage('/workspace');
 
       expect(result).toBe('fix: update logic');
     });
@@ -178,7 +180,7 @@ new file mode 100644
         return Promise.resolve({ stdout: '', stderr: '' });
       });
 
-      await generateCommitMessage('/workspace', {
+      await service.generateCommitMessage('/workspace', {
         title: 'PR title',
         body: 'PR body',
         reviewComment: 'Fix this issue',
@@ -198,7 +200,7 @@ new file mode 100644
         return Promise.resolve({ stdout: '', stderr: '' });
       });
 
-      await expect(generateCommitMessage('/workspace')).rejects.toThrow(
+      await expect(service.generateCommitMessage('/workspace')).rejects.toThrow(
         'No changes to generate a commit message for'
       );
     });
@@ -213,7 +215,7 @@ new file mode 100644
         return Promise.resolve({ stdout: '', stderr: '' });
       });
 
-      await expect(generateCommitMessage('/workspace')).rejects.toThrow(
+      await expect(service.generateCommitMessage('/workspace')).rejects.toThrow(
         'Failed to generate commit message: CLI not found'
       );
     });
@@ -231,7 +233,7 @@ new file mode 100644
         return Promise.resolve({ stdout: '', stderr: '' });
       });
 
-      const result = await commitAndPush('/workspace', 'fix: test');
+      const result = await service.commitAndPush('/workspace', 'fix: test');
 
       expect(result).toEqual({ success: true, commitHash: 'abc1234' });
       expect(calls).toEqual([
@@ -253,7 +255,11 @@ new file mode 100644
         return Promise.resolve({ stdout: '', stderr: '' });
       });
 
-      const result = await commitAndPush('/workspace', 'fix: test', false);
+      const result = await service.commitAndPush(
+        '/workspace',
+        'fix: test',
+        false
+      );
 
       expect(result).toEqual({ success: true, commitHash: 'abc1234' });
       expect(calls).toEqual([
@@ -266,7 +272,7 @@ new file mode 100644
     it('should return error when git add fails', async () => {
       mockExecFileAsync.mockRejectedValue(new Error('add failed'));
 
-      const result = await commitAndPush('/workspace', 'fix: test');
+      const result = await service.commitAndPush('/workspace', 'fix: test');
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('git add:');
@@ -279,7 +285,7 @@ new file mode 100644
         return Promise.resolve({ stdout: '', stderr: '' });
       });
 
-      const result = await commitAndPush('/workspace', 'fix: test');
+      const result = await service.commitAndPush('/workspace', 'fix: test');
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('git commit:');
@@ -292,7 +298,7 @@ new file mode 100644
         return Promise.resolve({ stdout: '', stderr: '' });
       });
 
-      const result = await commitAndPush('/workspace', 'fix: test');
+      const result = await service.commitAndPush('/workspace', 'fix: test');
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('git push:');
@@ -305,7 +311,7 @@ new file mode 100644
         return Promise.resolve({ stdout: '', stderr: '' });
       });
 
-      const result = await commitAndPush('/workspace', 'fix: test');
+      const result = await service.commitAndPush('/workspace', 'fix: test');
 
       expect(result).toEqual({ success: true });
     });

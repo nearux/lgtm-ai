@@ -1,3 +1,4 @@
+import 'reflect-metadata';
 import { createServer } from 'node:http';
 import { WebSocketServer } from 'ws';
 import { handleClaudeWebSocket } from './controllers/ClaudeWSController.js';

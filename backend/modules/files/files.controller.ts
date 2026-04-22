@@ -1,11 +1,20 @@
 import { Controller, Route, Get, Query, Response, Tags } from '@tsoa/runtime';
-import * as fileSystemService from '../services/fileSystem.js';
-import type { BrowseResponse } from '../types/fileSystem.js';
-import type { ErrorResponse } from '../types/projects.js';
+import { inject, injectable } from 'inversify';
+import { FileSystemService } from './file-system.service.js';
+import type { BrowseResponse } from '../../types/fileSystem.js';
+import type { ErrorResponse } from '../../types/projects.js';
 
+@injectable()
 @Route('api/fs')
 @Tags('File System')
 export class FilesController extends Controller {
+  constructor(
+    @inject(FileSystemService)
+    private readonly fileSystemService: FileSystemService
+  ) {
+    super();
+  }
+
   /**
    * Browse subdirectories of a local path.
    * Defaults to the home directory when no path is provided.
@@ -15,6 +24,6 @@ export class FilesController extends Controller {
   @Response<ErrorResponse>(403, 'Access to this path is not allowed')
   @Response<ErrorResponse>(404, 'Directory not found')
   public browse(@Query() path?: string): BrowseResponse {
-    return fileSystemService.browse(path);
+    return this.fileSystemService.browse(path);
   }
 }
