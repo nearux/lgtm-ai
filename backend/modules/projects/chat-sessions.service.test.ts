@@ -9,13 +9,13 @@ import {
   vi,
 } from 'vitest';
 import type { Prisma, PrismaClient } from '@prisma/client';
-import { clearDatabase, createTestDatabase } from '../test/prismaTestDb.js';
+import { clearDatabase, createTestDatabase } from '../../test/prismaTestDb.js';
 
 const mockGetClaudeSessionHistory = vi.fn();
 
 let prisma: PrismaClient;
 let cleanupDb: (() => Promise<void>) | null = null;
-let chatSessionsService: typeof import('./chatSessions.js');
+let service: import('./chat-sessions.service.js').ChatSessionsService;
 
 async function seedProject(
   overrides: Partial<Prisma.ProjectUncheckedCreateInput> = {}
@@ -64,12 +64,18 @@ beforeAll(async () => {
   prisma = testDb.prisma;
   cleanupDb = testDb.cleanup;
 
-  vi.doMock('../prismaClient.js', () => ({ default: prisma }));
-  vi.doMock('./claude/claudeSessionHistory.js', () => ({
+  vi.doMock('../../services/claude/claudeSessionHistory.js', () => ({
     getClaudeSessionHistory: mockGetClaudeSessionHistory,
   }));
 
-  chatSessionsService = await import('./chatSessions.js');
+  const { ChatSessionsService } = await import('./chat-sessions.service.js');
+  const { ChatSessionRepository } =
+    await import('./chat-session.repository.js');
+  const { ProjectRepository } = await import('./project.repository.js');
+
+  const chatSessionRepository = new ChatSessionRepository(prisma);
+  const projectRepository = new ProjectRepository(prisma);
+  service = new ChatSessionsService(chatSessionRepository, projectRepository);
 });
 
 afterAll(async () => {
@@ -83,9 +89,9 @@ beforeEach(async () => {
   await clearDatabase(prisma);
 });
 
-describe('chatSessions service', () => {
+describe('ChatSessionsService', () => {
   it('creates a chat session and persists it in sqlite', async () => {
-    const result = await chatSessionsService.createChatSessionFromExecution(
+    const result = await service.createChatSessionFromExecution(
       {
         projectId: 'project-1',
         prNumber: 45,
@@ -109,7 +115,7 @@ describe('chatSessions service', () => {
   });
 
   it('persists commandMeta fields when provided to createChatSessionFromExecution', async () => {
-    const result = await chatSessionsService.createChatSessionFromExecution(
+    const result = await service.createChatSessionFromExecution(
       {
         projectId: 'project-1',
         prNumber: 45,
@@ -149,7 +155,7 @@ describe('chatSessions service', () => {
       claude_session_id: 'claude-new',
     });
 
-    const result = await chatSessionsService.listChatSessions('project-1', 45);
+    const result = await service.listChatSessions('project-1', 45);
 
     expect(result.map((item) => item.id)).toEqual([second.id, first.id]);
   });
@@ -170,7 +176,7 @@ describe('chatSessions service', () => {
       claude_session_id: 'claude-comment',
     });
 
-    const result = await chatSessionsService.listChatSessions('project-1', 45, {
+    const result = await service.listChatSessions('project-1', 45, {
       scopeType: 'REVIEW',
       scopeTargetId: 'review-123',
     });
@@ -190,7 +196,7 @@ describe('chatSessions service', () => {
       last_used_at: oldTime,
     });
 
-    await chatSessionsService.markChatSessionAsUsed('claude-to-update');
+    await service.markChatSessionAsUsed('claude-to-update');
 
     const updated = await prisma.chatSession.findUnique({
       where: { claude_session_id: 'claude-to-update' },
@@ -203,7 +209,7 @@ describe('chatSessions service', () => {
 
   it('throws not found when session does not exist', async () => {
     await expect(
-      chatSessionsService.getChatSession('project-1', 45, 'missing-session')
+      service.getChatSession('project-1', 45, 'missing-session')
     ).rejects.toMatchObject({
       message: 'Chat session not found',
       statusCode: 404,
@@ -218,7 +224,7 @@ describe('chatSessions service', () => {
     });
 
     await expect(
-      chatSessionsService.getChatSession('project-1', 45, session.id)
+      service.getChatSession('project-1', 45, session.id)
     ).rejects.toMatchObject({
       message: 'Chat session not found',
       statusCode: 404,
@@ -248,7 +254,7 @@ describe('chatSessions service', () => {
       ],
     });
 
-    const result = await chatSessionsService.getChatSessionHistory(
+    const result = await service.getChatSessionHistory(
       project.id,
       45,
       session.id
@@ -279,7 +285,7 @@ describe('chatSessions service', () => {
     });
 
     await expect(
-      chatSessionsService.getChatSessionHistory('project-1', 45, session.id)
+      service.getChatSessionHistory('project-1', 45, session.id)
     ).rejects.toMatchObject({
       message: 'Project not found',
       statusCode: 404,

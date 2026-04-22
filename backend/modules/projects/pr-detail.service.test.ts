@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { PRDetail } from '../types/pullRequests.js';
+import type { PRDetail } from '../../types/pullRequests.js';
 
 const mockExecAsync = vi.hoisted(() => vi.fn());
 
@@ -7,11 +7,15 @@ vi.mock('util', () => ({
   promisify: () => mockExecAsync,
 }));
 
-const { fetchPRDetail, buildReviewIdMap } = await import('./prDetail.js');
+const { PRDetailService, buildReviewIdMap } =
+  await import('./pr-detail.service.js');
 
-describe('fetchPRDetail', () => {
+describe('PRDetailService.fetchPRDetail', () => {
+  let service: InstanceType<typeof PRDetailService>;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    service = new PRDetailService();
   });
 
   const mockPRDetailData: PRDetail = {
@@ -87,7 +91,7 @@ describe('fetchPRDetail', () => {
       })
       .mockResolvedValueOnce({ stdout: JSON.stringify([]), stderr: '' });
 
-    const result = await fetchPRDetail('owner/repo', 1);
+    const result = await service.fetchPRDetail('owner/repo', 1);
 
     expect(result).toEqual(mockPRDetailData);
     expect(mockExecAsync).toHaveBeenCalledWith('gh', [
@@ -106,7 +110,9 @@ describe('fetchPRDetail', () => {
       new Error('could not resolve to a PullRequest')
     );
 
-    await expect(fetchPRDetail('owner/repo', 999)).rejects.toMatchObject({
+    await expect(
+      service.fetchPRDetail('owner/repo', 999)
+    ).rejects.toMatchObject({
       message:
         'Cannot access this repository. Try switching your GitHub account in the header.',
       statusCode: 403,
@@ -118,7 +124,7 @@ describe('fetchPRDetail', () => {
       new Error('authentication required: gh auth login')
     );
 
-    await expect(fetchPRDetail('owner/repo', 1)).rejects.toMatchObject({
+    await expect(service.fetchPRDetail('owner/repo', 1)).rejects.toMatchObject({
       message:
         'GitHub CLI is not authenticated. Please check your account in the header.',
       statusCode: 503,
@@ -128,7 +134,7 @@ describe('fetchPRDetail', () => {
   it('should throw INTERNAL_SERVER_ERROR for general failures', async () => {
     mockExecAsync.mockRejectedValue(new Error('Network error'));
 
-    await expect(fetchPRDetail('owner/repo', 1)).rejects.toMatchObject({
+    await expect(service.fetchPRDetail('owner/repo', 1)).rejects.toMatchObject({
       message: 'Failed to fetch PR data from GitHub',
       statusCode: 500,
     });
@@ -137,7 +143,7 @@ describe('fetchPRDetail', () => {
   it('should throw INTERNAL_SERVER_ERROR for non-Error exceptions', async () => {
     mockExecAsync.mockRejectedValue('Unknown error');
 
-    await expect(fetchPRDetail('owner/repo', 1)).rejects.toMatchObject({
+    await expect(service.fetchPRDetail('owner/repo', 1)).rejects.toMatchObject({
       message: 'Failed to fetch PR data from GitHub',
       statusCode: 500,
     });
@@ -158,7 +164,7 @@ describe('fetchPRDetail', () => {
       })
       .mockResolvedValueOnce({ stdout: JSON.stringify([]), stderr: '' });
 
-    const result = await fetchPRDetail('owner/repo', 1);
+    const result = await service.fetchPRDetail('owner/repo', 1);
 
     expect(result.comments).toEqual([]);
     expect(result.reviews).toEqual([]);
@@ -212,7 +218,7 @@ describe('fetchPRDetail', () => {
       return Promise.resolve({ stdout: JSON.stringify([]), stderr: '' });
     });
 
-    const result = await fetchPRDetail('owner/repo', 1);
+    const result = await service.fetchPRDetail('owner/repo', 1);
 
     expect(result.author.id).toBe('author1');
     expect(result.author.name).toBe('author1');
@@ -278,7 +284,7 @@ describe('fetchPRDetail', () => {
       });
     });
 
-    const result = await fetchPRDetail('owner/repo', 1);
+    const result = await service.fetchPRDetail('owner/repo', 1);
 
     expect(result.reviews[0].inlineComments).toHaveLength(1);
     expect(result.reviews[0].inlineComments[0].body).toBe(
@@ -356,7 +362,7 @@ describe('fetchPRDetail', () => {
       });
     });
 
-    const result = await fetchPRDetail('owner/repo', 1);
+    const result = await service.fetchPRDetail('owner/repo', 1);
 
     expect(result.reviews[0].inlineComments).toHaveLength(2);
     expect(result.reviews[0].inlineComments[0].body).toBe('Page 1 comment');
@@ -421,7 +427,7 @@ describe('fetchPRDetail', () => {
       return Promise.resolve({ stdout: JSON.stringify([]), stderr: '' });
     });
 
-    await fetchPRDetail('owner/repo', 1);
+    await service.fetchPRDetail('owner/repo', 1);
 
     const commentsCalls = calls.filter((args) =>
       args.join(' ').includes('/comments')
@@ -518,7 +524,7 @@ describe('fetchPRDetail', () => {
       });
     });
 
-    const result = await fetchPRDetail('owner/repo', 1);
+    const result = await service.fetchPRDetail('owner/repo', 1);
 
     expect(result.reviews[0].inlineComments).toHaveLength(2);
     expect(result.reviews[0].inlineComments[0].body).toBe(
@@ -583,7 +589,7 @@ describe('fetchPRDetail', () => {
       });
     });
 
-    const result = await fetchPRDetail('owner/repo', 1);
+    const result = await service.fetchPRDetail('owner/repo', 1);
 
     const reviewsListCalls = calls.filter(
       (args) =>
@@ -678,7 +684,7 @@ describe('fetchPRDetail', () => {
       });
     });
 
-    const result = await fetchPRDetail('owner/repo', 1);
+    const result = await service.fetchPRDetail('owner/repo', 1);
 
     // 2 issue + 2 inline + 1 non-empty review body = 5
     expect(result.totalCommentsCount).toBe(5);

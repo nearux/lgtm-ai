@@ -8,8 +8,6 @@ import { filesModule } from './modules/files/files.module.js';
 import { projectsModule } from './modules/projects/projects.module.js';
 import { PRISMA_CLIENT } from './container-tokens.js';
 
-export { PRISMA_CLIENT };
-
 export const container = new Container({ defaultScope: 'Singleton' });
 
 container.bind<PrismaClient>(PRISMA_CLIENT).toConstantValue(prisma);

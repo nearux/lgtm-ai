@@ -9,14 +9,14 @@ import {
   vi,
 } from 'vitest';
 import type { Prisma, PrismaClient } from '@prisma/client';
-import { clearDatabase, createTestDatabase } from '../test/prismaTestDb.js';
+import { clearDatabase, createTestDatabase } from '../../test/prismaTestDb.js';
 
 const mockExistsSync = vi.fn();
 const mockExecFileAsync = vi.fn();
 
 let prisma: PrismaClient;
 let cleanupDb: (() => Promise<void>) | null = null;
-let projectsService: typeof import('./projects.js');
+let service: import('./projects.service.js').ProjectsService;
 
 async function seedProject(
   overrides: Partial<Prisma.ProjectUncheckedCreateInput> = {}
@@ -43,13 +43,16 @@ beforeAll(async () => {
   prisma = testDb.prisma;
   cleanupDb = testDb.cleanup;
 
-  vi.doMock('../prismaClient.js', () => ({ default: prisma }));
   vi.doMock('node:fs', () => ({ existsSync: mockExistsSync }));
   vi.doMock('node:util', () => ({
     promisify: () => mockExecFileAsync,
   }));
 
-  projectsService = await import('./projects.js');
+  const { ProjectsService } = await import('./projects.service.js');
+  const { ProjectRepository } = await import('./project.repository.js');
+
+  const projectRepository = new ProjectRepository(prisma);
+  service = new ProjectsService(projectRepository);
 });
 
 afterAll(async () => {
@@ -63,11 +66,11 @@ beforeEach(async () => {
   await clearDatabase(prisma);
 });
 
-describe('projects service', () => {
+describe('ProjectsService', () => {
   it('creates project with trimmed fields and persists it in sqlite', async () => {
     mockExistsSync.mockReturnValue(true);
 
-    const result = await projectsService.create({
+    const result = await service.create({
       name: '  LGTM AI  ',
       description: '  Code review helper  ',
       working_dir: '  /tmp/project  ',
@@ -88,7 +91,7 @@ describe('projects service', () => {
     mockExistsSync.mockReturnValue(false);
 
     await expect(
-      projectsService.create({
+      service.create({
         name: 'LGTM AI',
         description: 'desc',
         working_dir: '/tmp/missing',
@@ -114,7 +117,7 @@ describe('projects service', () => {
       updated_at: newer,
     });
 
-    const result = await projectsService.findAll();
+    const result = await service.findAll();
 
     expect(result.map((project) => project.id)).toEqual([second.id, first.id]);
   });
@@ -146,7 +149,7 @@ describe('projects service', () => {
       return Promise.resolve({ stdout: '' });
     });
 
-    const result = await projectsService.findById(project.id);
+    const result = await service.findById(project.id);
 
     // All 4 git calls must still be made
     expect(mockExecFileAsync).toHaveBeenCalledTimes(4);
@@ -165,9 +168,7 @@ describe('projects service', () => {
   });
 
   it('throws not found when project does not exist', async () => {
-    await expect(
-      projectsService.findById('missing-project')
-    ).rejects.toMatchObject({
+    await expect(service.findById('missing-project')).rejects.toMatchObject({
       message: 'Project not found',
       statusCode: 404,
     });
@@ -181,7 +182,7 @@ describe('projects service', () => {
     });
     mockExistsSync.mockReturnValue(true);
 
-    const result = await projectsService.update(project.id, {
+    const result = await service.update(project.id, {
       name: '  New Name  ',
       description: '   ',
       working_dir: '  /tmp/next  ',
@@ -204,7 +205,7 @@ describe('projects service', () => {
     mockExistsSync.mockReturnValue(false);
 
     await expect(
-      projectsService.update(project.id, { working_dir: '/tmp/missing' })
+      service.update(project.id, { working_dir: '/tmp/missing' })
     ).rejects.toMatchObject({
       message: 'working_dir does not exist on the filesystem',
       statusCode: 422,
@@ -214,7 +215,7 @@ describe('projects service', () => {
   it('removes existing project from sqlite', async () => {
     const project = await seedProject({ id: 'project-1' });
 
-    await projectsService.remove(project.id);
+    await service.remove(project.id);
 
     const persisted = await prisma.project.findUnique({
       where: { id: project.id },
@@ -232,7 +233,7 @@ describe('projects service', () => {
       stdout: 'https://github.com/org/repo.git\n',
     });
 
-    const result = await projectsService.resolveGitHubRepo(project.id, 'team');
+    const result = await service.resolveGitHubRepo(project.id, 'team');
 
     expect(result).toBe('org/repo');
     // Must make exactly one git call — no full getGitInfo traversal
@@ -251,7 +252,7 @@ describe('projects service', () => {
     });
 
     await expect(
-      projectsService.resolveGitHubRepo(project.id, '--upload-pack=malicious')
+      service.resolveGitHubRepo(project.id, '--upload-pack=malicious')
     ).rejects.toMatchObject({
       message: 'Invalid remote name',
       statusCode: 400,
@@ -268,7 +269,7 @@ describe('projects service', () => {
     });
 
     await expect(
-      projectsService.resolveGitHubRepo(project.id, 'origin; rm -rf /')
+      service.resolveGitHubRepo(project.id, 'origin; rm -rf /')
     ).rejects.toMatchObject({
       message: 'Invalid remote name',
       statusCode: 400,
