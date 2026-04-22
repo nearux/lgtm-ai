@@ -1,7 +1,7 @@
 import type WebSocket from 'ws';
 import { inject, injectable } from 'inversify';
 import { ClaudeSessionManager } from './claude-session-manager.js';
-import { toUtf8 } from '../../utils/wsRawData.js';
+import { toUtf8 } from './wsRawData.js';
 import {
   buildSystemPrompt,
   buildUserPrompt,
