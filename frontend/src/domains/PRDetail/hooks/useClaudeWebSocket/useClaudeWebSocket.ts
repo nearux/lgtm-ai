@@ -54,6 +54,7 @@ export function useClaudeWebSocket(): UseClaudeWebSocketReturn {
     fileChanges,
     setFileChanges,
     addMessage,
+    appendStderrChunk,
     clearMessages,
     addUserMessage,
     loadHistoryMessages,
@@ -93,7 +94,7 @@ export function useClaudeWebSocket(): UseClaudeWebSocketReturn {
           });
           break;
         case 'stderr':
-          addMessage({ type: 'stderr', content: data.chunk });
+          appendStderrChunk(data.chunk);
           break;
         case 'error':
           addMessage({ type: 'error', content: data.message });
@@ -129,7 +130,13 @@ export function useClaudeWebSocket(): UseClaudeWebSocketReturn {
           break;
       }
     });
-  }, [addMessage, setApproval, setFileChanges, setOnMessage]);
+  }, [
+    addMessage,
+    appendStderrChunk,
+    setApproval,
+    setFileChanges,
+    setOnMessage,
+  ]);
 
   const execute = useCallback(
     (
