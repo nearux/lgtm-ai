@@ -7,8 +7,11 @@ import { filesModule } from './modules/files/files.module.js';
 import { projectsModule } from './modules/projects/projects.module.js';
 import { PRISMA_CLIENT } from './container-tokens.js';
 
-export const container = new Container({ defaultScope: 'Singleton' });
+export function createContainer(): Container {
+  const container = new Container({ defaultScope: 'Singleton' });
+  container.bind<PrismaClient>(PRISMA_CLIENT).toConstantValue(prisma);
+  container.load(authModule, filesModule, projectsModule);
+  return container;
+}
 
-container.bind<PrismaClient>(PRISMA_CLIENT).toConstantValue(prisma);
-
-container.load(authModule, filesModule, projectsModule);
+export const container = createContainer();
