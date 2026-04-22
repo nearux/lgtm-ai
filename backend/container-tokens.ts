@@ -1,6 +1,5 @@
 // backend/container-tokens.ts
-// Shared DI tokens. Lives outside container.ts to avoid circular imports
-// (repositories/services import this; container.ts imports modules that
-// depend on repositories/services).
-
+// DI tokens kept in their own file so modules (repositories, services) can
+// import them without pulling in the full container graph — this breaks the
+// otherwise-inevitable cycle: container → module → repository → container.
 export const PRISMA_CLIENT = Symbol.for('PrismaClient');
