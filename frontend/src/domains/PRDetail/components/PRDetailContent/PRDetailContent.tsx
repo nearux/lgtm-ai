@@ -63,14 +63,7 @@ export const PRDetailContent = ({ projectId, prNumber, origin, ws }: Props) => {
 
   return (
     <>
-      <PRHeader
-        projectId={projectId}
-        projectName={project.name}
-        prNumber={prNumber}
-        pr={pr}
-        origin={origin}
-        githubBaseUrl={githubBaseUrl}
-      />
+      <PRHeader pr={pr} githubBaseUrl={githubBaseUrl} />
 
       {linkedBody && (
         <PRDescription body={linkedBody} onAskClaude={openPRChat} />
