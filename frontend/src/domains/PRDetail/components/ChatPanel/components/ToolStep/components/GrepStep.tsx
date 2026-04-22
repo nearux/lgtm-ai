@@ -44,15 +44,19 @@ export const GrepStep = ({
       chainPosition={chainPosition}
       toolName="Grep"
       summary={summary}
-      expandable={{
-        isExpanded,
-        onToggle,
-        expandedBody: (
-          <pre className="max-h-64 overflow-auto rounded bg-gray-100 p-2 font-mono text-xs whitespace-pre-wrap text-gray-800">
-            {result ?? ''}
-          </pre>
-        ),
-      }}
+      expandable={
+        result !== undefined
+          ? {
+              isExpanded,
+              onToggle,
+              expandedBody: (
+                <pre className="max-h-64 overflow-auto rounded bg-gray-100 p-2 font-mono text-xs whitespace-pre-wrap text-gray-800">
+                  {result}
+                </pre>
+              ),
+            }
+          : undefined
+      }
     />
   );
 };
