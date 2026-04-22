@@ -83,6 +83,9 @@ export function useClaudeWebSocket(): UseClaudeWebSocketReturn {
       const data = JSON.parse(event.data) as WsServerMessage;
 
       switch (data.type) {
+        case 'init':
+          setSessionId(data.sessionId);
+          break;
         case 'text':
           addMessage({ type: 'text', content: data.chunk });
           break;
