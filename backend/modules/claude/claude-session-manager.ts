@@ -1,13 +1,10 @@
 import type WebSocket from 'ws';
-import { ClaudeProcess } from '../../modules/claude/claude-process.js';
-import { WebSocketSender } from '../../modules/claude/web-socket-sender.js';
+import { ClaudeProcess } from './claude-process.js';
+import { WebSocketSender } from './web-socket-sender.js';
 import type { ClaudeExecuteOptions } from '../../types/claude.js';
 import type { ClaudeChatContext } from '../../types/chatSessions.js';
-import {
-  createChatSessionFromExecution,
-  markChatSessionAsUsed,
-} from '../chatSessions.js';
-import { getFileChanges } from '../git.js';
+import { ChatSessionsService } from '../projects/chat-sessions.service.js';
+import { GitService } from '../projects/git.service.js';
 
 export interface ExecuteParams {
   requestId: string;
@@ -23,7 +20,11 @@ export class ClaudeSessionManager {
   private processes = new Map<string, ClaudeProcess>();
   private sender: WebSocketSender;
 
-  constructor(ws: WebSocket) {
+  constructor(
+    ws: WebSocket,
+    private readonly chatSessionsService: ChatSessionsService,
+    private readonly gitService: GitService
+  ) {
     this.sender = new WebSocketSender(ws);
   }
 
@@ -61,12 +62,14 @@ export class ClaudeSessionManager {
     this.processes.set(requestId, proc);
 
     if (options.sessionId) {
-      void markChatSessionAsUsed(options.sessionId).catch((error) => {
-        console.error(
-          '[ClaudeSessionManager] Failed to mark chat session as used:',
-          error
-        );
-      });
+      void this.chatSessionsService
+        .markChatSessionAsUsed(options.sessionId)
+        .catch((error) => {
+          console.error(
+            '[ClaudeSessionManager] Failed to mark chat session as used:',
+            error
+          );
+        });
     }
 
     this.attachEventForwarding(proc, requestId, workingDir, {
@@ -178,16 +181,14 @@ export class ClaudeSessionManager {
     );
     proc.on('init', (sessionId) => {
       if (!options.sessionId && chatContext) {
-        void createChatSessionFromExecution(
-          chatContext,
-          sessionId,
-          commandMeta
-        ).catch((error) => {
-          console.error(
-            '[ClaudeSessionManager] Failed to persist chat session:',
-            error
-          );
-        });
+        void this.chatSessionsService
+          .createChatSessionFromExecution(chatContext, sessionId, commandMeta)
+          .catch((error) => {
+            console.error(
+              '[ClaudeSessionManager] Failed to persist chat session:',
+              error
+            );
+          });
       }
       sender.send({ type: 'init', requestId, sessionId });
     });
@@ -196,7 +197,8 @@ export class ClaudeSessionManager {
       this.processes.delete(requestId);
 
       if (commandMeta?.command === 'fix') {
-        getFileChanges(workingDir)
+        this.gitService
+          .getFileChanges(workingDir)
           .then((changes) => {
             sender.send({ type: 'file_changes', requestId, changes });
           })
