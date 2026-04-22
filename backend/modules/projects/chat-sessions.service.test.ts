@@ -10,12 +10,17 @@ import {
 } from 'vitest';
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { clearDatabase, createTestDatabase } from '../../test/prismaTestDb.js';
+import { ChatSessionsService } from './chat-sessions.service.js';
+import { ChatSessionRepository } from './chat-session.repository.js';
+import { ProjectRepository } from './project.repository.js';
+import { ClaudeSessionHistoryService } from '../claude/claude-session-history.service.js';
 
-const mockGetClaudeSessionHistory = vi.fn();
+vi.mock('../claude/claude-session-history.service.js');
 
 let prisma: PrismaClient;
 let cleanupDb: (() => Promise<void>) | null = null;
-let service: import('./chat-sessions.service.js').ChatSessionsService;
+let service: ChatSessionsService;
+let claudeSessionHistoryService: ClaudeSessionHistoryService;
 
 async function seedProject(
   overrides: Partial<Prisma.ProjectUncheckedCreateInput> = {}
@@ -58,24 +63,18 @@ async function seedChatSession(
 }
 
 beforeAll(async () => {
-  vi.resetModules();
-
   const testDb = await createTestDatabase();
   prisma = testDb.prisma;
   cleanupDb = testDb.cleanup;
 
-  vi.doMock('../../services/claude/claudeSessionHistory.js', () => ({
-    getClaudeSessionHistory: mockGetClaudeSessionHistory,
-  }));
-
-  const { ChatSessionsService } = await import('./chat-sessions.service.js');
-  const { ChatSessionRepository } =
-    await import('./chat-session.repository.js');
-  const { ProjectRepository } = await import('./project.repository.js');
-
   const chatSessionRepository = new ChatSessionRepository(prisma);
   const projectRepository = new ProjectRepository(prisma);
-  service = new ChatSessionsService(chatSessionRepository, projectRepository);
+  claudeSessionHistoryService = new ClaudeSessionHistoryService();
+  service = new ChatSessionsService(
+    chatSessionRepository,
+    projectRepository,
+    claudeSessionHistoryService
+  );
 });
 
 afterAll(async () => {
@@ -242,12 +241,14 @@ describe('ChatSessionsService', () => {
       claude_session_id: 'claude-session-1',
     });
     const now = new Date('2026-03-11T00:00:00.000Z').toISOString();
+    const mockedService = vi.mocked(claudeSessionHistoryService);
 
-    mockGetClaudeSessionHistory.mockResolvedValue({
+    mockedService.getClaudeSessionHistory.mockResolvedValue({
       claudeSessionId: 'claude-session-1',
       entries: [
         {
           role: 'assistant',
+          messageType: 'text',
           content: 'Looks valid',
           timestamp: now,
         },
@@ -260,7 +261,8 @@ describe('ChatSessionsService', () => {
       session.id
     );
 
-    expect(mockGetClaudeSessionHistory).toHaveBeenCalledWith({
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(mockedService.getClaudeSessionHistory).toHaveBeenCalledWith({
       claudeSessionId: 'claude-session-1',
       workingDir: '/tmp/project',
     });
@@ -270,6 +272,7 @@ describe('ChatSessionsService', () => {
       entries: [
         {
           role: 'assistant',
+          messageType: 'text',
           content: 'Looks valid',
           timestamp: now,
         },

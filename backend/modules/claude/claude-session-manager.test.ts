@@ -1,9 +1,11 @@
+/* eslint-disable @typescript-eslint/unbound-method */
 import { EventEmitter } from 'node:events';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ClaudeSessionManager } from './claude-session-manager.js';
+import type { ChatSessionsService } from '../projects/chat-sessions.service.js';
+import type { GitService } from '../projects/git.service.js';
 
-const mockCreateChatSessionFromExecution = vi.hoisted(() => vi.fn());
-const mockMarkChatSessionAsUsed = vi.hoisted(() => vi.fn());
-const processInstances = vi.hoisted(() => [] as MockClaudeProcess[]);
+const processInstances: MockClaudeProcess[] = [];
 
 class MockClaudeProcess extends EventEmitter {
   sendInitialize = vi.fn();
@@ -23,16 +25,34 @@ class MockClaudeProcess extends EventEmitter {
   }
 }
 
-vi.mock('./ClaudeProcess.js', () => ({
-  ClaudeProcess: MockClaudeProcess,
+vi.mock('./claude-process.js', () => ({
+  ClaudeProcess: class extends EventEmitter {
+    sendInitialize = vi.fn();
+    sendPermissionMode = vi.fn();
+    sendPrompt = vi.fn();
+    sendApprovalResponse = vi.fn();
+    sendPlanApprovalResponse = vi.fn();
+    abort = vi.fn();
+
+    constructor(
+      public readonly workingDir: string,
+      public readonly options: Record<string, unknown> = {},
+      public readonly systemPrompt?: string
+    ) {
+      super();
+      processInstances.push(this as unknown as MockClaudeProcess);
+    }
+  },
 }));
 
-vi.mock('../chatSessions.js', () => ({
-  createChatSessionFromExecution: mockCreateChatSessionFromExecution,
-  markChatSessionAsUsed: mockMarkChatSessionAsUsed,
-}));
+const chatSessionsService = {
+  createChatSessionFromExecution: vi.fn(),
+  markChatSessionAsUsed: vi.fn(),
+} as unknown as ChatSessionsService;
 
-const { ClaudeSessionManager } = await import('./ClaudeSessionManager.js');
+const gitService = {
+  getFileChanges: vi.fn(),
+} as unknown as GitService;
 
 describe('ClaudeSessionManager', () => {
   const ws = {
@@ -43,12 +63,23 @@ describe('ClaudeSessionManager', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     processInstances.length = 0;
-    mockCreateChatSessionFromExecution.mockResolvedValue(undefined);
-    mockMarkChatSessionAsUsed.mockResolvedValue(undefined);
+    vi.mocked(
+      chatSessionsService.createChatSessionFromExecution
+    ).mockResolvedValue(undefined as never);
+    vi.mocked(chatSessionsService.markChatSessionAsUsed).mockResolvedValue(
+      undefined
+    );
+    vi.mocked(gitService.getFileChanges).mockResolvedValue({
+      files: [],
+    } as never);
   });
 
   it('persists a chat session when a new claude execution initializes with session id', async () => {
-    const manager = new ClaudeSessionManager(ws as never);
+    const manager = new ClaudeSessionManager(
+      ws as never,
+      chatSessionsService,
+      gitService
+    );
 
     manager.execute({
       requestId: 'request-1',
@@ -70,7 +101,9 @@ describe('ClaudeSessionManager', () => {
     proc.emit('init', 'claude-session-1');
     await Promise.resolve();
 
-    expect(mockCreateChatSessionFromExecution).toHaveBeenCalledWith(
+    expect(
+      chatSessionsService.createChatSessionFromExecution
+    ).toHaveBeenCalledWith(
       {
         projectId: 'project-1',
         prNumber: 45,
@@ -84,7 +117,11 @@ describe('ClaudeSessionManager', () => {
   });
 
   it('passes commandMeta to createChatSessionFromExecution when provided', async () => {
-    const manager = new ClaudeSessionManager(ws as never);
+    const manager = new ClaudeSessionManager(
+      ws as never,
+      chatSessionsService,
+      gitService
+    );
     manager.execute({
       requestId: 'request-meta',
       prompt: 'some prompt',
@@ -100,7 +137,10 @@ describe('ClaudeSessionManager', () => {
     });
     processInstances[0].emit('init', 'claude-session-meta');
     await Promise.resolve();
-    expect(mockCreateChatSessionFromExecution).toHaveBeenCalledWith(
+
+    expect(
+      chatSessionsService.createChatSessionFromExecution
+    ).toHaveBeenCalledWith(
       expect.objectContaining({ projectId: 'p' }),
       'claude-session-meta',
       { command: 'validate', customPrompt: undefined }
@@ -108,7 +148,11 @@ describe('ClaudeSessionManager', () => {
   });
 
   it('does not persist a new chat session on done without init', async () => {
-    const manager = new ClaudeSessionManager(ws as never);
+    const manager = new ClaudeSessionManager(
+      ws as never,
+      chatSessionsService,
+      gitService
+    );
 
     manager.execute({
       requestId: 'request-4',
@@ -130,11 +174,17 @@ describe('ClaudeSessionManager', () => {
     proc.emit('done', 0, 'ok', 'claude-session-2');
     await Promise.resolve();
 
-    expect(mockCreateChatSessionFromExecution).not.toHaveBeenCalled();
+    expect(
+      chatSessionsService.createChatSessionFromExecution
+    ).not.toHaveBeenCalled();
   });
 
   it('touches an existing chat session when resuming with a claude session id', () => {
-    const manager = new ClaudeSessionManager(ws as never);
+    const manager = new ClaudeSessionManager(
+      ws as never,
+      chatSessionsService,
+      gitService
+    );
 
     manager.execute({
       requestId: 'request-2',
@@ -146,12 +196,20 @@ describe('ClaudeSessionManager', () => {
       },
     });
 
-    expect(mockMarkChatSessionAsUsed).toHaveBeenCalledWith('claude-session-1');
-    expect(mockCreateChatSessionFromExecution).not.toHaveBeenCalled();
+    expect(chatSessionsService.markChatSessionAsUsed).toHaveBeenCalledWith(
+      'claude-session-1'
+    );
+    expect(
+      chatSessionsService.createChatSessionFromExecution
+    ).not.toHaveBeenCalled();
   });
 
   it('passes systemPrompt to ClaudeProcess when provided', () => {
-    const manager = new ClaudeSessionManager(ws as never);
+    const manager = new ClaudeSessionManager(
+      ws as never,
+      chatSessionsService,
+      gitService
+    );
     manager.execute({
       requestId: 'request-sp',
       prompt: 'some prompt',
@@ -166,7 +224,11 @@ describe('ClaudeSessionManager', () => {
   });
 
   it('leaves systemPrompt undefined when not provided', () => {
-    const manager = new ClaudeSessionManager(ws as never);
+    const manager = new ClaudeSessionManager(
+      ws as never,
+      chatSessionsService,
+      gitService
+    );
     manager.execute({
       requestId: 'request-no-sp',
       prompt: 'prompt',
@@ -178,7 +240,11 @@ describe('ClaudeSessionManager', () => {
   });
 
   it('forwards init events from the claude process to websocket', () => {
-    const manager = new ClaudeSessionManager(ws as never);
+    const manager = new ClaudeSessionManager(
+      ws as never,
+      chatSessionsService,
+      gitService
+    );
 
     manager.execute({
       requestId: 'request-3',

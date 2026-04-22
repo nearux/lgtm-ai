@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { expandContentBlocks } from './contentBlockExpander.js';
+import { expandContentBlocks } from './content-block-expander.util.js';
 
 const ctx = { role: 'assistant', timestamp: '2026-04-15T00:00:00.000Z' };
 const userCtx = { role: 'user', timestamp: '2026-04-15T00:00:00.000Z' };

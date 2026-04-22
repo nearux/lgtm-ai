@@ -5,9 +5,9 @@ import type {
   ReviewCommandContext,
   CommentCommandContext,
   PRCommandContext,
-} from '../types/claude.js';
-import { AppError } from '../errors/AppError.js';
-import * as templates from './promptTemplates.js';
+} from '../../types/claude.js';
+import { AppError } from '../../errors/AppError.js';
+import * as templates from './prompt-templates.util.js';
 
 export function buildSystemPrompt(context: CommandContext): string {
   return templates.systemPrompt(

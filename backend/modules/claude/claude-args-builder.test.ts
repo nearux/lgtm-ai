@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ClaudeArgsBuilder } from './ClaudeArgsBuilder.js';
+import { ClaudeArgsBuilder } from './claude-args-builder.js';
 
 describe('ClaudeArgsBuilder', () => {
   it('includes default flags on build', () => {

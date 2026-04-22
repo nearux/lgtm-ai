@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { LineBuffer } from './lineBuffer.js';
+import { LineBuffer } from './line-buffer.js';
 
 describe('LineBuffer', () => {
   let buf: LineBuffer;

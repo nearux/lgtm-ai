@@ -2,7 +2,7 @@ import HttpStatus from 'http-status';
 import { randomUUID } from 'node:crypto';
 import { inject, injectable } from 'inversify';
 import { AppError } from '../../errors/AppError.js';
-import { getClaudeSessionHistory } from '../../services/claude/claudeSessionHistory.js';
+import { ClaudeSessionHistoryService } from '../claude/claude-session-history.service.js';
 import { ChatSessionHistoryResponseDto } from '../../dtos/chatSessionHistoryResponseDto.js';
 import { ChatSessionSummaryDto } from '../../dtos/chatSessionSummaryDto.js';
 import { ChatSessionRepository } from './chat-session.repository.js';
@@ -20,7 +20,9 @@ export class ChatSessionsService {
     @inject(ChatSessionRepository)
     private readonly chatSessionRepository: ChatSessionRepository,
     @inject(ProjectRepository)
-    private readonly projectRepository: ProjectRepository
+    private readonly projectRepository: ProjectRepository,
+    @inject(ClaudeSessionHistoryService)
+    private readonly claudeSessionHistoryService: ClaudeSessionHistoryService
   ) {}
 
   async createChatSessionFromExecution(
@@ -99,12 +101,13 @@ export class ChatSessionsService {
     }
 
     const session = await this.getChatSession(projectId, prNumber, sessionId);
-    const history = await getClaudeSessionHistory({
-      claudeSessionId: session.claudeSessionId,
-      workingDir: workingDirectory,
-      command: session.command,
-      customPrompt: session.customPrompt,
-    });
+    const history =
+      await this.claudeSessionHistoryService.getClaudeSessionHistory({
+        claudeSessionId: session.claudeSessionId,
+        workingDir: workingDirectory,
+        command: session.command,
+        customPrompt: session.customPrompt,
+      });
 
     return ChatSessionHistoryResponseDto.of(
       session.id,

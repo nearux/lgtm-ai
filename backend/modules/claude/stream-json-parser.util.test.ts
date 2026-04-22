@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseStreamJsonLine } from './streamJsonParser.js';
+import { parseStreamJsonLine } from './stream-json-parser.util.js';
 
 describe('parseStreamJsonLine', () => {
   describe('empty / whitespace input', () => {

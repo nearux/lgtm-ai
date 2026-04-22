@@ -1,22 +1,16 @@
-import { mkdtemp, mkdir, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import {
-  getClaudeSessionHistory,
-  replaceFirstUserMessage,
-} from './claudeSessionHistory.js';
+import { ClaudeSessionHistoryService } from './claude-session-history.service.js';
 
 describe('claudeSessionHistory', () => {
+  const service = new ClaudeSessionHistoryService();
   const tempDirs: string[] = [];
 
   afterEach(async () => {
     await Promise.all(
-      tempDirs.map(async (dir) => {
-        await import('node:fs/promises').then(({ rm }) =>
-          rm(dir, { recursive: true, force: true })
-        );
-      })
+      tempDirs.map((dir) => rm(dir, { recursive: true, force: true }))
     );
     tempDirs.length = 0;
   });
@@ -52,7 +46,7 @@ describe('claudeSessionHistory', () => {
       ].join('\n')
     );
 
-    const result = await getClaudeSessionHistory({
+    const result = await service.getClaudeSessionHistory({
       claudeSessionId: 'session-1',
       workingDir: projectDir,
       transcriptsRoot: rootDir,
@@ -82,7 +76,7 @@ describe('claudeSessionHistory', () => {
     tempDirs.push(rootDir);
 
     await expect(
-      getClaudeSessionHistory({
+      service.getClaudeSessionHistory({
         claudeSessionId: 'missing-session',
         workingDir: '/tmp/project',
         transcriptsRoot: rootDir,
@@ -121,7 +115,7 @@ describe('claudeSessionHistory', () => {
       ].join('\n')
     );
 
-    const result = await getClaudeSessionHistory({
+    const result = await service.getClaudeSessionHistory({
       claudeSessionId: 'session-cmd',
       workingDir: projectDir,
       transcriptsRoot: rootDir,
@@ -157,7 +151,7 @@ describe('claudeSessionHistory', () => {
       ].join('\n')
     );
 
-    const result = await getClaudeSessionHistory({
+    const result = await service.getClaudeSessionHistory({
       claudeSessionId: 'session-2',
       workingDir: projectDir,
       transcriptsRoot: rootDir,
@@ -175,7 +169,8 @@ describe('claudeSessionHistory', () => {
 });
 
 describe('replaceFirstUserMessage', () => {
-  const baseEntries: Parameters<typeof replaceFirstUserMessage>[0] = [
+  const service = new ClaudeSessionHistoryService();
+  const baseEntries: Parameters<typeof service.replaceFirstUserMessage>[0] = [
     {
       role: 'user',
       messageType: 'user',
@@ -191,7 +186,7 @@ describe('replaceFirstUserMessage', () => {
   ];
 
   it('returns entries unchanged when no command is provided', () => {
-    const result = replaceFirstUserMessage(baseEntries);
+    const result = service.replaceFirstUserMessage(baseEntries);
     expect(result).toEqual(baseEntries);
   });
 
@@ -203,7 +198,7 @@ describe('replaceFirstUserMessage', () => {
   ])(
     'replaces the first user message for command %s',
     (command, customPrompt, expectedContent) => {
-      const result = replaceFirstUserMessage(
+      const result = service.replaceFirstUserMessage(
         baseEntries,
         command,
         customPrompt
@@ -215,17 +210,20 @@ describe('replaceFirstUserMessage', () => {
   );
 
   it('falls back to original content when command is custom and no customPrompt', () => {
-    const result = replaceFirstUserMessage(baseEntries, 'custom');
+    const result = service.replaceFirstUserMessage(baseEntries, 'custom');
     expect(result[0].content).toBe('some long generated prompt');
   });
 
   it('falls back to original content for unknown command', () => {
-    const result = replaceFirstUserMessage(baseEntries, 'unknown-command');
+    const result = service.replaceFirstUserMessage(
+      baseEntries,
+      'unknown-command'
+    );
     expect(result[0].content).toBe('some long generated prompt');
   });
 
   it('returns empty array unchanged', () => {
-    const result = replaceFirstUserMessage([], 'validate');
+    const result = service.replaceFirstUserMessage([], 'validate');
     expect(result).toEqual([]);
   });
 });

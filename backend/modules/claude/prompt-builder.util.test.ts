@@ -3,8 +3,12 @@ import {
   buildSystemPrompt,
   buildUserPrompt,
   buildBatchUserPrompt,
-} from './promptBuilder.js';
-import type { CommandContext, PRMeta, ClaudeCommand } from '../types/claude.js';
+} from './prompt-builder.util.js';
+import type {
+  CommandContext,
+  PRMeta,
+  ClaudeCommand,
+} from '../../types/claude.js';
 
 const prMeta: PRMeta = {
   number: 42,

@@ -1,7 +1,8 @@
 import 'reflect-metadata';
 import { createServer } from 'node:http';
 import { WebSocketServer } from 'ws';
-import { handleClaudeWebSocket } from './controllers/ClaudeWSController.js';
+import { container } from './container.js';
+import { ClaudeWSController } from './modules/claude/claude-ws.controller.js';
 import { createApp } from './app.js';
 import { runStartupMigrations } from './startup/runMigrations.js';
 
@@ -17,7 +18,8 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 const claudeWss = new WebSocketServer({ noServer: true });
-claudeWss.on('connection', handleClaudeWebSocket);
+const claudeWsController = container.get(ClaudeWSController);
+claudeWss.on('connection', (ws) => claudeWsController.handleConnection(ws));
 
 httpServer.on('upgrade', (req, socket, head) => {
   if (req.url === '/api/claude/execute') {
