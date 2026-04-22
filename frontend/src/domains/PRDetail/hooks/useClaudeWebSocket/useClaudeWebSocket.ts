@@ -70,12 +70,8 @@ export function useClaudeWebSocket(): UseClaudeWebSocketReturn {
 
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [activeRequestId, setActiveRequestId] = useState<string | null>(null);
-  const abortPendingRef = useRef(false);
   const activeRequestIdRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    activeRequestIdRef.current = activeRequestId;
-  }, [activeRequestId]);
+  const abortedRequestIdRef = useRef<string | null>(null);
 
   // Wire up message handler
   useEffect(() => {
@@ -109,7 +105,17 @@ export function useClaudeWebSocket(): UseClaudeWebSocketReturn {
           appendStderrChunk(data.chunk);
           break;
         case 'error':
-          abortPendingRef.current = false;
+          if (
+            data.requestId &&
+            data.requestId === abortedRequestIdRef.current
+          ) {
+            abortedRequestIdRef.current = null;
+            break;
+          }
+          if (data.requestId && data.requestId !== activeRequestIdRef.current) {
+            break;
+          }
+          activeRequestIdRef.current = null;
           setActiveRequestId(null);
           addMessage({ type: 'error', content: data.message });
           break;
@@ -117,13 +123,15 @@ export function useClaudeWebSocket(): UseClaudeWebSocketReturn {
           if (data.sessionId) {
             setSessionId(data.sessionId);
           }
-          setActiveRequestId(null);
-          if (abortPendingRef.current) {
-            abortPendingRef.current = false;
+          if (data.requestId === abortedRequestIdRef.current) {
+            abortedRequestIdRef.current = null;
             addMessage({ type: 'aborted', content: '' });
-          } else {
-            addMessage({ type: 'done', content: '' });
+            break;
           }
+          if (data.requestId !== activeRequestIdRef.current) break;
+          activeRequestIdRef.current = null;
+          setActiveRequestId(null);
+          addMessage({ type: 'done', content: '' });
           break;
         case 'approval_request':
           setApproval({
@@ -191,6 +199,7 @@ export function useClaudeWebSocket(): UseClaudeWebSocketReturn {
         });
       }
 
+      activeRequestIdRef.current = requestId;
       setActiveRequestId(requestId);
       return requestId;
     },
@@ -208,7 +217,8 @@ export function useClaudeWebSocket(): UseClaudeWebSocketReturn {
     const requestId = activeRequestIdRef.current;
     if (!requestId) return;
     send({ type: 'abort', requestId });
-    abortPendingRef.current = true;
+    abortedRequestIdRef.current = requestId;
+    activeRequestIdRef.current = null;
     setActiveRequestId(null);
   }, [send]);
 
