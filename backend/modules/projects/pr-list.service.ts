@@ -9,7 +9,7 @@ import type {
   GraphQLCursorResponse,
   GraphQLPRNode,
 } from '../../types/pullRequests.js';
-import { PRListItemDto } from '../../dtos/pullRequestsDto.js';
+import { PRListItemDto } from './dto/pullRequestsDto.js';
 import { validateRepoOwnerName, mapGhError } from './gh.util.js';
 
 const execFileAsync = promisify(execFile);

@@ -4,7 +4,7 @@ import os from 'node:os';
 import HttpStatus from 'http-status';
 import { injectable } from 'inversify';
 import { AppError } from '../../errors/AppError.js';
-import { DirectoryParser } from './directoryParser.js';
+import { DirectoryParser } from './directory-parser.util.js';
 import type { BrowseResponse } from '../../types/fileSystem.js';
 
 const BLOCKED_PATHS = [

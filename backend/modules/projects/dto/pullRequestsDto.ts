@@ -1,5 +1,5 @@
 import { isString } from 'remeda';
-import type { PRListItem, GraphQLPRNode } from '../types/pullRequests.js';
+import type { PRListItem, GraphQLPRNode } from '../../../types/pullRequests.js';
 
 export class PRListItemDto implements PRListItem {
   number: number;

@@ -4,8 +4,8 @@ import { randomUUID } from 'node:crypto';
 import { filter, map, pipe } from 'remeda';
 import { inject, injectable } from 'inversify';
 import { AppError } from '../../errors/AppError.js';
-import { ProjectGitRemoteDto } from '../../dtos/projectGitInfoDto.js';
-import { GitHubRepoDto } from '../../dtos/gitHubRepoDto.js';
+import { ProjectGitRemoteDto } from './dto/projectGitInfoDto.js';
+import { GitHubRepoDto } from './dto/gitHubRepoDto.js';
 import { ProjectRepository } from './project.repository.js';
 import { git } from './git.util.js';
 import type {

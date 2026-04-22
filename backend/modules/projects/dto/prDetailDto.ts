@@ -7,7 +7,7 @@ import type {
   GhPRComment,
   GhPRReview,
   GhReviewInlineComment,
-} from '../types/pullRequests.js';
+} from '../../../types/pullRequests.js';
 import { GhAuthorDto } from './ghAuthorDto.js';
 import { GhInlineCommentDto } from './ghInlineCommentDto.js';
 import { countNonEmptyReviewBodies } from './commentCounts.js';

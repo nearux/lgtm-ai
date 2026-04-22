@@ -1,5 +1,5 @@
 import type { ChatSession } from '@prisma/client';
-import type { ChatSessionSummary } from '../types/chatSessions.js';
+import type { ChatSessionSummary } from '../../../types/chatSessions.js';
 
 export class ChatSessionSummaryDto implements ChatSessionSummary {
   id: string;
