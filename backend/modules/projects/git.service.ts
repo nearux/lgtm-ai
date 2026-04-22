@@ -164,12 +164,6 @@ export class GitService {
     }
   }
 
-  private parseStatus(code: string): FileChangeStatus {
-    if (code === 'A' || code === '?' || code === '??') return 'added';
-    if (code === 'D') return 'deleted';
-    return 'modified';
-  }
-
   private toNumstatEntry(
     line: string
   ): [string, { additions: number; deletions: number }] {
@@ -181,6 +175,21 @@ export class GitService {
         deletions: del === '-' ? 0 : Number(del),
       },
     ];
+  }
+
+  private parsePerFileDiffs(diffOutput: string): Map<string, string> {
+    const result = new Map<string, string>();
+    if (!diffOutput.trim()) return result;
+
+    const parts = diffOutput.split(/^(?=diff --git )/m);
+    for (const part of parts) {
+      if (!part.trim()) continue;
+      const headerMatch = part.match(/^diff --git a\/.+ b\/(.+)$/m);
+      if (headerMatch) {
+        result.set(headerMatch[1], part);
+      }
+    }
+    return result;
   }
 
   private toFileChange(
@@ -199,19 +208,10 @@ export class GitService {
     };
   }
 
-  private parsePerFileDiffs(diffOutput: string): Map<string, string> {
-    const result = new Map<string, string>();
-    if (!diffOutput.trim()) return result;
-
-    const parts = diffOutput.split(/^(?=diff --git )/m);
-    for (const part of parts) {
-      if (!part.trim()) continue;
-      const headerMatch = part.match(/^diff --git a\/.+ b\/(.+)$/m);
-      if (headerMatch) {
-        result.set(headerMatch[1], part);
-      }
-    }
-    return result;
+  private parseStatus(code: string): FileChangeStatus {
+    if (code === 'A' || code === '?' || code === '??') return 'added';
+    if (code === 'D') return 'deleted';
+    return 'modified';
   }
 
   private cleanCommitMessage(raw: string): string {
