@@ -1,4 +1,4 @@
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { AsyncBoundary, Select, Spinner, Tabs } from '@/shared/components';
 import { usePRListParams } from './hooks/usePRListParams';
 import { useQuery } from '@tanstack/react-query';
@@ -31,13 +31,6 @@ export const PRListPage = () => {
   return (
     <div className="mx-auto max-w-6xl p-8">
       <header className="mb-8">
-        <div className="mb-4 flex items-center gap-2 text-sm text-gray-500">
-          <Link to="/" className="hover:text-indigo-500">
-            Projects
-          </Link>
-          <span>/</span>
-          <span className="text-gray-900">{project?.name}</span>
-        </div>
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold text-gray-900">Pull Requests</h1>
           <div className="flex items-center gap-3">
