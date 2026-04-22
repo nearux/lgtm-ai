@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, Copy, Terminal } from 'lucide-react';
+import { Check, Copy, Loader2, Terminal } from 'lucide-react';
 import { ToolStep, type ChainPosition, type ToolStepStatus } from '../ToolStep';
 
 interface Props {
@@ -42,26 +42,35 @@ const Box = ({
   content,
   maxHeight,
   muted,
+  loading,
 }: {
   label: string;
   content: string;
   maxHeight: string;
   muted?: boolean;
+  loading?: boolean;
 }) => (
   <div className="group relative overflow-hidden rounded bg-gray-100">
     <div className="flex items-start">
       <div className="flex-none px-2 py-1 text-[10px] font-semibold tracking-wide text-gray-400">
         {label}
       </div>
-      <pre
-        className={`min-w-0 flex-1 overflow-auto px-2 py-1 font-mono text-xs whitespace-pre ${
-          muted ? 'text-gray-500' : 'text-gray-800'
-        } ${maxHeight}`}
-      >
-        {content}
-      </pre>
+      {loading ? (
+        <div className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1 text-xs text-gray-500">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          <span>Running…</span>
+        </div>
+      ) : (
+        <pre
+          className={`min-w-0 flex-1 overflow-auto px-2 py-1 font-mono text-xs whitespace-pre ${
+            muted ? 'text-gray-500' : 'text-gray-800'
+          } ${maxHeight}`}
+        >
+          {content}
+        </pre>
+      )}
     </div>
-    <CopyButton text={content} />
+    {!loading && <CopyButton text={content} />}
   </div>
 );
 
@@ -97,6 +106,7 @@ export const BashStep = ({
         content={outContent}
         maxHeight={outMaxHeight}
         muted={isRunning}
+        loading={isRunning && !outContent}
       />
     </>
   );
