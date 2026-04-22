@@ -23,7 +23,7 @@ export function useWebSocketMessages() {
     setMessages((prev) => {
       for (let i = prev.length - 1; i >= 0; i--) {
         const msg = prev[i];
-        if (msg.type === 'tool') {
+        if (msg.type === 'tool' && msg.toolName === 'Bash') {
           const hasResult = prev.some(
             (m) => m.type === 'tool_result' && m.toolId === msg.toolId
           );
