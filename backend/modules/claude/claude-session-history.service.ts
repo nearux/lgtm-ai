@@ -105,7 +105,13 @@ export class ClaudeSessionHistoryService {
       raw.split('\n'),
       map((line) => line.trim()),
       filter((line) => line.length > 0),
-      map((line) => JSON.parse(line) as TranscriptLine),
+      flatMap((line) => {
+        try {
+          return [JSON.parse(line) as TranscriptLine];
+        } catch {
+          return [];
+        }
+      }),
       filter(
         (line): line is TranscriptLine & { type: string } =>
           line.type === 'user' || line.type === 'assistant'
