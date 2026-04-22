@@ -38,6 +38,7 @@ export interface ClaudeMessage {
   toolName?: string;
   toolId?: string;
   isError?: boolean;
+  stderrChunks?: string[];
   timestamp: Date;
 }
 
