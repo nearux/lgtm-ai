@@ -3,7 +3,7 @@
  *
  * Each template is a function that accepts pre-built sections (reviewComment, etc.)
  * and returns the final prompt string. This keeps prompt text separate from
- * the assembly logic in promptBuilder.ts.
+ * the assembly logic in prompt-builder.util.ts.
  */
 
 export interface SystemPromptParams {

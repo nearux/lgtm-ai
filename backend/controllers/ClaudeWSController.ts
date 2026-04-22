@@ -5,7 +5,7 @@ import {
   buildSystemPrompt,
   buildUserPrompt,
   buildBatchUserPrompt,
-} from '../services/promptBuilder.js';
+} from '../modules/claude/prompt-builder.util.js';
 import type {
   WsClientMessage,
   WsCommandExecuteMessage,
