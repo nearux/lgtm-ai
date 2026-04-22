@@ -18,14 +18,6 @@ import type {
 
 const REMOTE_NAME_RE = /^[\w.-]+$/;
 
-function withFallback<T>(label: string, fallback: T) {
-  return (promise: Promise<T>): Promise<T> =>
-    promise.catch((error) => {
-      console.error(`[getGitInfo] ${label}:`, error);
-      return fallback;
-    });
-}
-
 @injectable()
 export class ProjectsService {
   constructor(
@@ -122,7 +114,7 @@ export class ProjectsService {
 
   private async getGitInfo(workingDir: string): Promise<ProjectGitInfo> {
     const [remoteUrl, remotes, currentBranch, branches] = await Promise.all([
-      withFallback(
+      this.withFallback(
         'Failed to resolve origin remote URL',
         null as string | null
       )(
@@ -130,7 +122,7 @@ export class ProjectsService {
           out.trim()
         )
       ),
-      withFallback(
+      this.withFallback(
         'Failed to list git remotes',
         [] as Array<{ name: string; url: string }>
       )(
@@ -138,7 +130,7 @@ export class ProjectsService {
           ProjectGitRemoteDto.fromGitRemoteList(raw)
         )
       ),
-      withFallback(
+      this.withFallback(
         'Failed to get current branch',
         null as string | null
       )(
@@ -146,7 +138,7 @@ export class ProjectsService {
           (out) => out.trim() || null
         )
       ),
-      withFallback(
+      this.withFallback(
         'Failed to list branches',
         [] as string[]
       )(
@@ -161,5 +153,13 @@ export class ProjectsService {
     ]);
 
     return { remoteUrl, currentBranch, branches, remotes };
+  }
+
+  private withFallback<T>(label: string, fallback: T) {
+    return (promise: Promise<T>): Promise<T> =>
+      promise.catch((error) => {
+        console.error(`[getGitInfo] ${label}:`, error);
+        return fallback;
+      });
   }
 }

@@ -18,13 +18,6 @@ const BLOCKED_PATHS = [
   '/boot',
 ];
 
-function isBlocked(absPath: string): boolean {
-  return BLOCKED_PATHS.some(
-    (blocked) =>
-      absPath === blocked || absPath.startsWith(path.join(blocked, path.sep))
-  );
-}
-
 @injectable()
 export class FileSystemService {
   browse(rawPath?: string): BrowseResponse {
@@ -39,7 +32,7 @@ export class FileSystemService {
       throw new AppError('Path is not a directory', HttpStatus.BAD_REQUEST);
     }
 
-    if (isBlocked(targetPath)) {
+    if (this.isBlocked(targetPath)) {
       throw new AppError(
         'Access to this path is not allowed',
         HttpStatus.FORBIDDEN
@@ -57,5 +50,12 @@ export class FileSystemService {
     }
 
     return new DirectoryParser(targetPath, dirents).parse();
+  }
+
+  private isBlocked(absPath: string): boolean {
+    return BLOCKED_PATHS.some(
+      (blocked) =>
+        absPath === blocked || absPath.startsWith(path.join(blocked, path.sep))
+    );
   }
 }

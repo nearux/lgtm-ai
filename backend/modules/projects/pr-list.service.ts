@@ -27,27 +27,6 @@ const GRAPHQL_PR_STATES: Record<PRState, string[]> = {
   all: ['OPEN', 'CLOSED', 'MERGED'],
 };
 
-function normalizePositiveInt(
-  value: number | undefined,
-  fallback: number
-): number {
-  if (typeof value !== 'number' || !Number.isFinite(value)) {
-    return fallback;
-  }
-  return clamp(Math.trunc(value), { min: 1 });
-}
-
-function normalizePRState(state: string | undefined): PRState {
-  if (state && VALID_PR_STATES.includes(state as PRState)) {
-    return state as PRState;
-  }
-  return 'open';
-}
-
-function statesArgs(state: PRState): string[] {
-  return GRAPHQL_PR_STATES[state].flatMap((s) => ['-f', `states[]=${s}`]);
-}
-
 @injectable()
 export class PRListService {
   async fetchPRList(
@@ -56,11 +35,14 @@ export class PRListService {
   ): Promise<PaginatedPRList> {
     validateRepoOwnerName(repoOwnerName);
 
-    const page = normalizePositiveInt(options.page, DEFAULT_PAGE);
-    const limit = clamp(normalizePositiveInt(options.limit, DEFAULT_LIMIT), {
-      max: MAX_LIMIT,
-    });
-    const state = normalizePRState(options.state);
+    const page = this.normalizePositiveInt(options.page, DEFAULT_PAGE);
+    const limit = clamp(
+      this.normalizePositiveInt(options.limit, DEFAULT_LIMIT),
+      {
+        max: MAX_LIMIT,
+      }
+    );
+    const state = this.normalizePRState(options.state);
 
     let totalCount: number;
     let nodes: GraphQLPRNode[];
@@ -133,7 +115,7 @@ export class PRListService {
       `name=${name}`,
       '-F',
       `skip=${hop}`,
-      ...statesArgs(state),
+      ...this.statesArgs(state),
       ...(after ? ['-f', `after=${after}`] : []),
     ]);
     const result = JSON.parse(stdout) as GraphQLCursorResponse;
@@ -190,7 +172,7 @@ export class PRListService {
       `name=${name}`,
       '-F',
       `limit=${limit}`,
-      ...statesArgs(state),
+      ...this.statesArgs(state),
       ...(cursor ? ['-f', `after=${cursor}`] : []),
     ]);
     const result = JSON.parse(stdout) as GraphQLPRListResponse;
@@ -201,5 +183,26 @@ export class PRListService {
     }
 
     return result.data.repository.pullRequests;
+  }
+
+  private normalizePositiveInt(
+    value: number | undefined,
+    fallback: number
+  ): number {
+    if (typeof value !== 'number' || !Number.isFinite(value)) {
+      return fallback;
+    }
+    return clamp(Math.trunc(value), { min: 1 });
+  }
+
+  private normalizePRState(state: string | undefined): PRState {
+    if (state && VALID_PR_STATES.includes(state as PRState)) {
+      return state as PRState;
+    }
+    return 'open';
+  }
+
+  private statesArgs(state: PRState): string[] {
+    return GRAPHQL_PR_STATES[state].flatMap((s) => ['-f', `states[]=${s}`]);
   }
 }

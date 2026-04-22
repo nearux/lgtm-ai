@@ -65,13 +65,6 @@ export type {
 
 const uuidSchema = z.uuid();
 
-function parseUUID(id: string): string {
-  if (!uuidSchema.safeParse(id).success) {
-    throw new AppError('Invalid project id format', HttpStatus.BAD_REQUEST);
-  }
-  return id;
-}
-
 @injectable()
 @Route('api/projects')
 @Tags('Projects')
@@ -103,7 +96,7 @@ export class ProjectsController extends Controller {
   @Get('{id}')
   @Response<ErrorResponse>(HttpStatus.NOT_FOUND, 'Project not found')
   public async getProject(@Path() id: string): Promise<ProjectDetail> {
-    return this.projectsService.findById(parseUUID(id));
+    return this.projectsService.findById(this.parseUUID(id));
   }
 
   /**
@@ -138,7 +131,7 @@ export class ProjectsController extends Controller {
     @Path() id: string,
     @Body() body: UpdateProjectBody
   ): Promise<Project> {
-    return this.projectsService.update(parseUUID(id), body);
+    return this.projectsService.update(this.parseUUID(id), body);
   }
 
   /**
@@ -150,7 +143,7 @@ export class ProjectsController extends Controller {
   @Response<ErrorResponse>(HttpStatus.NOT_FOUND, 'Project not found')
   public async deleteProject(@Path() id: string): Promise<void> {
     this.setStatus(HttpStatus.NO_CONTENT);
-    await this.projectsService.remove(parseUUID(id));
+    await this.projectsService.remove(this.parseUUID(id));
   }
 
   /**
@@ -181,7 +174,7 @@ export class ProjectsController extends Controller {
     @Query() origin?: string
   ): Promise<PaginatedPRList> {
     const repoOwnerName = await this.projectsService.resolveGitHubRepo(
-      parseUUID(projectId),
+      this.parseUUID(projectId),
       origin ?? 'origin'
     );
     return this.prListService.fetchPRList(repoOwnerName, {
@@ -218,7 +211,7 @@ export class ProjectsController extends Controller {
     @Query() origin?: string
   ): Promise<PRDetail> {
     const repoOwnerName = await this.projectsService.resolveGitHubRepo(
-      parseUUID(projectId),
+      this.parseUUID(projectId),
       origin ?? 'origin'
     );
     return this.prDetailService.fetchPRDetail(repoOwnerName, prNumber);
@@ -240,7 +233,7 @@ export class ProjectsController extends Controller {
     @Query() scopeType?: ChatSessionScopeType,
     @Query() scopeTargetId?: string
   ): Promise<ChatSessionSummary[]> {
-    const parsedProjectId = parseUUID(projectId);
+    const parsedProjectId = this.parseUUID(projectId);
     await this.projectsService.findById(parsedProjectId);
 
     if ((scopeType && !scopeTargetId) || (!scopeType && scopeTargetId)) {
@@ -277,7 +270,7 @@ export class ProjectsController extends Controller {
     @Path() sessionId: string
   ): Promise<ChatSessionHistoryResponse> {
     return this.chatSessionsService.getChatSessionHistory(
-      parseUUID(projectId),
+      this.parseUUID(projectId),
       prNumber,
       sessionId
     );
@@ -310,7 +303,7 @@ export class ProjectsController extends Controller {
     @Path() prNumber: number,
     @Body() body?: CheckoutPRBranchBody
   ): Promise<CheckoutPRBranchResult> {
-    const normalizedProjectId = parseUUID(projectId);
+    const normalizedProjectId = this.parseUUID(projectId);
     const project = await this.projectsService.findById(normalizedProjectId);
     const repoOwnerName = await this.projectsService.resolveGitHubRepo(
       normalizedProjectId,
@@ -338,7 +331,9 @@ export class ProjectsController extends Controller {
     @Path() projectId: string,
     @Body() body: GenerateCommitMessageBody
   ): Promise<CommitMessageResponse> {
-    const project = await this.projectsService.findById(parseUUID(projectId));
+    const project = await this.projectsService.findById(
+      this.parseUUID(projectId)
+    );
     const message = await this.gitService.generateCommitMessage(
       project.working_dir,
       body.prContext
@@ -360,11 +355,20 @@ export class ProjectsController extends Controller {
     @Path() projectId: string,
     @Body() body: CommitAndPushBody
   ): Promise<CommitAndPushResponse> {
-    const project = await this.projectsService.findById(parseUUID(projectId));
+    const project = await this.projectsService.findById(
+      this.parseUUID(projectId)
+    );
     return this.gitService.commitAndPush(
       project.working_dir,
       body.commitMessage,
       body.push ?? true
     );
+  }
+
+  private parseUUID(id: string): string {
+    if (!uuidSchema.safeParse(id).success) {
+      throw new AppError('Invalid project id format', HttpStatus.BAD_REQUEST);
+    }
+    return id;
   }
 }

@@ -29,71 +29,6 @@ export interface CommitAndPushResult {
   error?: string;
 }
 
-function parseStatus(code: string): FileChangeStatus {
-  if (code === 'A' || code === '?' || code === '??') return 'added';
-  if (code === 'D') return 'deleted';
-  return 'modified';
-}
-
-function toNumstatEntry(
-  line: string
-): [string, { additions: number; deletions: number }] {
-  const [add, del, path] = line.split('\t');
-  return [
-    path,
-    {
-      additions: add === '-' ? 0 : Number(add),
-      deletions: del === '-' ? 0 : Number(del),
-    },
-  ];
-}
-
-function toFileChange(
-  line: string,
-  numstatMap: Map<string, { additions: number; deletions: number }>,
-  fileDiffs: Map<string, string>
-): FileChange {
-  const path = line.slice(3);
-  const stats = numstatMap.get(path) ?? { additions: 0, deletions: 0 };
-  return {
-    path,
-    status: parseStatus(line.slice(0, 2).trim()),
-    additions: stats.additions,
-    deletions: stats.deletions,
-    diff: fileDiffs.get(path) ?? '',
-  };
-}
-
-function parsePerFileDiffs(diffOutput: string): Map<string, string> {
-  const result = new Map<string, string>();
-  if (!diffOutput.trim()) return result;
-
-  const parts = diffOutput.split(/^(?=diff --git )/m);
-  for (const part of parts) {
-    if (!part.trim()) continue;
-    const headerMatch = part.match(/^diff --git a\/.+ b\/(.+)$/m);
-    if (headerMatch) {
-      result.set(headerMatch[1], part);
-    }
-  }
-  return result;
-}
-
-function cleanCommitMessage(raw: string): string {
-  let msg = raw.trim();
-  msg = msg.replace(/^```\w*\n?/, '').replace(/\n?```$/, '');
-  msg = msg.trim();
-
-  if (!CONVENTIONAL_COMMIT_RE.test(msg.split('\n')[0])) {
-    const match = CONVENTIONAL_COMMIT_RE.exec(msg);
-    if (match) {
-      msg = msg.slice(match.index);
-    }
-  }
-
-  return msg.trim();
-}
-
 @injectable()
 export class GitService {
   async getFileChanges(workingDir: string): Promise<FileChangesResult> {
@@ -118,16 +53,16 @@ export class GitService {
       pipe(
         numstatOutput.trim().split('\n'),
         filter((line) => line.length > 0),
-        map(toNumstatEntry)
+        map((line) => this.toNumstatEntry(line))
       )
     );
 
-    const fileDiffs = parsePerFileDiffs(diffOutput);
+    const fileDiffs = this.parsePerFileDiffs(diffOutput);
 
     const files = pipe(
       statusOutput.trimEnd().split('\n'),
       filter((line) => line.length > 0),
-      map((line) => toFileChange(line, numstatMap, fileDiffs))
+      map((line) => this.toFileChange(line, numstatMap, fileDiffs))
     );
 
     const summary: FileChangesSummary = {
@@ -170,7 +105,7 @@ export class GitService {
         { cwd: workingDir, timeout: CLAUDE_TIMEOUT_MS }
       );
 
-      return cleanCommitMessage(stdout);
+      return this.cleanCommitMessage(stdout);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       throw new AppError(
@@ -227,5 +162,70 @@ export class GitService {
       );
       return { success: true };
     }
+  }
+
+  private parseStatus(code: string): FileChangeStatus {
+    if (code === 'A' || code === '?' || code === '??') return 'added';
+    if (code === 'D') return 'deleted';
+    return 'modified';
+  }
+
+  private toNumstatEntry(
+    line: string
+  ): [string, { additions: number; deletions: number }] {
+    const [add, del, path] = line.split('\t');
+    return [
+      path,
+      {
+        additions: add === '-' ? 0 : Number(add),
+        deletions: del === '-' ? 0 : Number(del),
+      },
+    ];
+  }
+
+  private toFileChange(
+    line: string,
+    numstatMap: Map<string, { additions: number; deletions: number }>,
+    fileDiffs: Map<string, string>
+  ): FileChange {
+    const path = line.slice(3);
+    const stats = numstatMap.get(path) ?? { additions: 0, deletions: 0 };
+    return {
+      path,
+      status: this.parseStatus(line.slice(0, 2).trim()),
+      additions: stats.additions,
+      deletions: stats.deletions,
+      diff: fileDiffs.get(path) ?? '',
+    };
+  }
+
+  private parsePerFileDiffs(diffOutput: string): Map<string, string> {
+    const result = new Map<string, string>();
+    if (!diffOutput.trim()) return result;
+
+    const parts = diffOutput.split(/^(?=diff --git )/m);
+    for (const part of parts) {
+      if (!part.trim()) continue;
+      const headerMatch = part.match(/^diff --git a\/.+ b\/(.+)$/m);
+      if (headerMatch) {
+        result.set(headerMatch[1], part);
+      }
+    }
+    return result;
+  }
+
+  private cleanCommitMessage(raw: string): string {
+    let msg = raw.trim();
+    msg = msg.replace(/^```\w*\n?/, '').replace(/\n?```$/, '');
+    msg = msg.trim();
+
+    if (!CONVENTIONAL_COMMIT_RE.test(msg.split('\n')[0])) {
+      const match = CONVENTIONAL_COMMIT_RE.exec(msg);
+      if (match) {
+        msg = msg.slice(match.index);
+      }
+    }
+
+    return msg.trim();
   }
 }
