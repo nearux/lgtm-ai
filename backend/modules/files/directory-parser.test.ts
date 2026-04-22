@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { Dirent } from 'node:fs';
-import { DirectoryParser } from './directoryParser.js';
+import { DirectoryParser } from './directory-parser.js';
 
 function makeDirent({
   name,
