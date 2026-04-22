@@ -18,7 +18,7 @@ export interface ExecuteParams {
 
 export class ClaudeSessionManager {
   private processes = new Map<string, ClaudeProcess>();
-  private sender: WebSocketSender;
+  private readonly sender: WebSocketSender;
 
   constructor(
     ws: WebSocket,
