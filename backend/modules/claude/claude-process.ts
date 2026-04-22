@@ -1,7 +1,7 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { EventEmitter } from 'node:events';
 import { randomUUID } from 'node:crypto';
-import { LineBuffer } from './line-buffer.util.js';
+import { LineBuffer } from './line-buffer.js';
 import { parseStreamJsonLine } from './stream-json-parser.util.js';
 import { ClaudeArgsBuilder } from './claude-args-builder.js';
 import type {
