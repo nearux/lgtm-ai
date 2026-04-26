@@ -75,6 +75,7 @@ describe('ClaudeSessionManager', () => {
   });
 
   it('persists a chat session when a new claude execution initializes with session id', async () => {
+    // given
     const manager = new ClaudeSessionManager(
       ws as never,
       chatSessionsService,
@@ -95,12 +96,13 @@ describe('ClaudeSessionManager', () => {
       },
     });
 
+    // when
     const proc = processInstances[0];
     expect(proc).toBeDefined();
-
     proc.emit('init', 'claude-session-1');
     await Promise.resolve();
 
+    // then
     expect(
       chatSessionsService.createChatSessionFromExecution
     ).toHaveBeenCalledWith(
@@ -117,6 +119,7 @@ describe('ClaudeSessionManager', () => {
   });
 
   it('passes commandMeta to createChatSessionFromExecution when provided', async () => {
+    // given
     const manager = new ClaudeSessionManager(
       ws as never,
       chatSessionsService,
@@ -135,9 +138,12 @@ describe('ClaudeSessionManager', () => {
       },
       commandMeta: { command: 'validate', customPrompt: undefined },
     });
+
+    // when
     processInstances[0].emit('init', 'claude-session-meta');
     await Promise.resolve();
 
+    // then
     expect(
       chatSessionsService.createChatSessionFromExecution
     ).toHaveBeenCalledWith(
@@ -148,6 +154,7 @@ describe('ClaudeSessionManager', () => {
   });
 
   it('does not persist a new chat session on done without init', async () => {
+    // given
     const manager = new ClaudeSessionManager(
       ws as never,
       chatSessionsService,
@@ -168,24 +175,27 @@ describe('ClaudeSessionManager', () => {
       },
     });
 
+    // when
     const proc = processInstances[0];
     expect(proc).toBeDefined();
-
     proc.emit('done', 0, 'ok', 'claude-session-2');
     await Promise.resolve();
 
+    // then
     expect(
       chatSessionsService.createChatSessionFromExecution
     ).not.toHaveBeenCalled();
   });
 
   it('touches an existing chat session when resuming with a claude session id', () => {
+    // given
     const manager = new ClaudeSessionManager(
       ws as never,
       chatSessionsService,
       gitService
     );
 
+    // when
     manager.execute({
       requestId: 'request-2',
       prompt: 'prompt',
@@ -196,6 +206,7 @@ describe('ClaudeSessionManager', () => {
       },
     });
 
+    // then
     expect(chatSessionsService.markChatSessionAsUsed).toHaveBeenCalledWith(
       'claude-session-1'
     );
@@ -205,11 +216,14 @@ describe('ClaudeSessionManager', () => {
   });
 
   it('passes systemPrompt to ClaudeProcess when provided', () => {
+    // given
     const manager = new ClaudeSessionManager(
       ws as never,
       chatSessionsService,
       gitService
     );
+
+    // when
     manager.execute({
       requestId: 'request-sp',
       prompt: 'some prompt',
@@ -218,28 +232,34 @@ describe('ClaudeSessionManager', () => {
       systemPrompt: 'You are a code review assistant.',
     });
 
+    // then
     const proc = processInstances[0];
     expect(proc).toBeDefined();
     expect(proc.systemPrompt).toBe('You are a code review assistant.');
   });
 
   it('leaves systemPrompt undefined when not provided', () => {
+    // given
     const manager = new ClaudeSessionManager(
       ws as never,
       chatSessionsService,
       gitService
     );
+
+    // when
     manager.execute({
       requestId: 'request-no-sp',
       prompt: 'prompt',
       workingDir: '/tmp/project',
     });
 
+    // then
     const proc = processInstances[0];
     expect(proc.systemPrompt).toBeUndefined();
   });
 
   it('forwards init events from the claude process to websocket', () => {
+    // given
     const manager = new ClaudeSessionManager(
       ws as never,
       chatSessionsService,
@@ -253,11 +273,12 @@ describe('ClaudeSessionManager', () => {
       options: { executionMode: 'default' },
     });
 
+    // when
     const proc = processInstances[0];
     expect(proc).toBeDefined();
-
     proc.emit('init', 'claude-session-2');
 
+    // then
     expect(ws.send).toHaveBeenCalledWith(
       JSON.stringify({
         type: 'init',

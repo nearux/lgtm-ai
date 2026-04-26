@@ -61,12 +61,15 @@ describe('IssueDetailService.fetchIssueDetail', () => {
   };
 
   it('returns issue detail with correct shape', async () => {
+    // given
     mockExecAsync.mockResolvedValue({
       stdout: JSON.stringify(mockIssueDetailData),
     });
 
+    // when
     const result = await service.fetchIssueDetail('owner/repo', 42);
 
+    // then
     expect(result.number).toBe(42);
     expect(result.title).toBe('Fix memory leak');
     expect(result.comments).toHaveLength(1);
@@ -79,6 +82,7 @@ describe('IssueDetailService.fetchIssueDetail', () => {
   });
 
   it('returns null milestone when not set', async () => {
+    // given
     const dataWithoutMilestone = {
       data: {
         repository: {
@@ -90,12 +94,15 @@ describe('IssueDetailService.fetchIssueDetail', () => {
       stdout: JSON.stringify(dataWithoutMilestone),
     });
 
+    // when
     const result = await service.fetchIssueDetail('owner/repo', 42);
 
+    // then
     expect(result.milestone).toBeNull();
   });
 
   it('throws on invalid repoOwnerName', async () => {
+    // given / when / then
     await expect(service.fetchIssueDetail('invalid', 1)).rejects.toThrow();
   });
 });

@@ -84,6 +84,7 @@ describe('PRDetailService.fetchPRDetail', () => {
   };
 
   it('should successfully fetch PR detail', async () => {
+    // given
     mockExecAsync
       .mockResolvedValueOnce({
         stdout: JSON.stringify(mockGhPRDetailData),
@@ -91,8 +92,10 @@ describe('PRDetailService.fetchPRDetail', () => {
       })
       .mockResolvedValueOnce({ stdout: JSON.stringify([]), stderr: '' });
 
+    // when
     const result = await service.fetchPRDetail('owner/repo', 1);
 
+    // then
     expect(result).toEqual(mockPRDetailData);
     expect(mockExecAsync).toHaveBeenCalledWith('gh', [
       'pr',
@@ -106,10 +109,12 @@ describe('PRDetailService.fetchPRDetail', () => {
   });
 
   it('should throw FORBIDDEN error when PR could not be resolved', async () => {
+    // given
     mockExecAsync.mockRejectedValue(
       new Error('could not resolve to a PullRequest')
     );
 
+    // when / then
     await expect(
       service.fetchPRDetail('owner/repo', 999)
     ).rejects.toMatchObject({
@@ -120,10 +125,12 @@ describe('PRDetailService.fetchPRDetail', () => {
   });
 
   it('should throw SERVICE_UNAVAILABLE error for authentication failure', async () => {
+    // given
     mockExecAsync.mockRejectedValue(
       new Error('authentication required: gh auth login')
     );
 
+    // when / then
     await expect(service.fetchPRDetail('owner/repo', 1)).rejects.toMatchObject({
       message:
         'GitHub CLI is not authenticated. Please check your account in the header.',
@@ -132,8 +139,10 @@ describe('PRDetailService.fetchPRDetail', () => {
   });
 
   it('should throw INTERNAL_SERVER_ERROR for general failures', async () => {
+    // given
     mockExecAsync.mockRejectedValue(new Error('Network error'));
 
+    // when / then
     await expect(service.fetchPRDetail('owner/repo', 1)).rejects.toMatchObject({
       message: 'Failed to fetch PR data from GitHub',
       statusCode: 500,
@@ -141,8 +150,10 @@ describe('PRDetailService.fetchPRDetail', () => {
   });
 
   it('should throw INTERNAL_SERVER_ERROR for non-Error exceptions', async () => {
+    // given
     mockExecAsync.mockRejectedValue('Unknown error');
 
+    // when / then
     await expect(service.fetchPRDetail('owner/repo', 1)).rejects.toMatchObject({
       message: 'Failed to fetch PR data from GitHub',
       statusCode: 500,
@@ -150,6 +161,7 @@ describe('PRDetailService.fetchPRDetail', () => {
   });
 
   it('should handle PR with empty comments, reviews, and commits', async () => {
+    // given
     const emptyDetailData = {
       ...mockGhPRDetailData,
       comments: [],
@@ -164,14 +176,17 @@ describe('PRDetailService.fetchPRDetail', () => {
       })
       .mockResolvedValueOnce({ stdout: JSON.stringify([]), stderr: '' });
 
+    // when
     const result = await service.fetchPRDetail('owner/repo', 1);
 
+    // then
     expect(result.comments).toEqual([]);
     expect(result.reviews).toEqual([]);
     expect(result.commits).toEqual([]);
   });
 
   it('should map review author login to id and name when id/name are absent', async () => {
+    // given
     const ghOutput = {
       number: 1,
       title: 'Test PR',
@@ -218,8 +233,10 @@ describe('PRDetailService.fetchPRDetail', () => {
       return Promise.resolve({ stdout: JSON.stringify([]), stderr: '' });
     });
 
+    // when
     const result = await service.fetchPRDetail('owner/repo', 1);
 
+    // then
     expect(result.author.id).toBe('author1');
     expect(result.author.name).toBe('author1');
     expect(result.reviews[0].author.id).toBe('reviewer1');
@@ -229,6 +246,7 @@ describe('PRDetailService.fetchPRDetail', () => {
   });
 
   it('should include inline comments in reviews', async () => {
+    // given
     const ghOutput = {
       number: 1,
       title: 'Test PR',
@@ -284,8 +302,10 @@ describe('PRDetailService.fetchPRDetail', () => {
       });
     });
 
+    // when
     const result = await service.fetchPRDetail('owner/repo', 1);
 
+    // then
     expect(result.reviews[0].inlineComments).toHaveLength(1);
     expect(result.reviews[0].inlineComments[0].body).toBe(
       'Nit: rename this variable.'
@@ -298,6 +318,7 @@ describe('PRDetailService.fetchPRDetail', () => {
   });
 
   it('fetches all inline comments across multiple pages via --paginate --slurp', async () => {
+    // given
     const ghOutput = {
       number: 1,
       title: 'Test PR',
@@ -362,14 +383,17 @@ describe('PRDetailService.fetchPRDetail', () => {
       });
     });
 
+    // when
     const result = await service.fetchPRDetail('owner/repo', 1);
 
+    // then
     expect(result.reviews[0].inlineComments).toHaveLength(2);
     expect(result.reviews[0].inlineComments[0].body).toBe('Page 1 comment');
     expect(result.reviews[0].inlineComments[1].body).toBe('Page 2 comment');
   });
 
   it('uses a single pulls/comments call regardless of review count (no N+1)', async () => {
+    // given
     const ghOutput = {
       number: 1,
       title: 'Test PR',
@@ -427,8 +451,10 @@ describe('PRDetailService.fetchPRDetail', () => {
       return Promise.resolve({ stdout: JSON.stringify([]), stderr: '' });
     });
 
+    // when
     await service.fetchPRDetail('owner/repo', 1);
 
+    // then
     const commentsCalls = calls.filter((args) =>
       args.join(' ').includes('/comments')
     );
@@ -439,6 +465,7 @@ describe('PRDetailService.fetchPRDetail', () => {
   });
 
   it('groups inline comments from pulls/comments by pull_request_review_id', async () => {
+    // given
     const ghOutput = {
       number: 1,
       title: 'Test PR',
@@ -524,8 +551,10 @@ describe('PRDetailService.fetchPRDetail', () => {
       });
     });
 
+    // when
     const result = await service.fetchPRDetail('owner/repo', 1);
 
+    // then
     expect(result.reviews[0].inlineComments).toHaveLength(2);
     expect(result.reviews[0].inlineComments[0].body).toBe(
       'Comment on review 1'
@@ -540,6 +569,7 @@ describe('PRDetailService.fetchPRDetail', () => {
   });
 
   it('skips reviews list fetch when all review ids are numeric (no PRR_ node ids)', async () => {
+    // given
     const ghOutput = {
       number: 1,
       title: 'Test PR',
@@ -589,8 +619,10 @@ describe('PRDetailService.fetchPRDetail', () => {
       });
     });
 
+    // when
     const result = await service.fetchPRDetail('owner/repo', 1);
 
+    // then
     const reviewsListCalls = calls.filter(
       (args) =>
         args.join(' ').includes('/reviews') &&
@@ -602,6 +634,7 @@ describe('PRDetailService.fetchPRDetail', () => {
   });
 
   it('totalCommentsCount sums issue comments, inline comments, and non-empty review bodies', async () => {
+    // given
     const ghOutput = {
       number: 1,
       title: 'Test PR',
@@ -684,16 +717,20 @@ describe('PRDetailService.fetchPRDetail', () => {
       });
     });
 
+    // when
     const result = await service.fetchPRDetail('owner/repo', 1);
 
-    // 2 issue + 2 inline + 1 non-empty review body = 5
+    // then: 2 issue + 2 inline + 1 non-empty review body = 5
     expect(result.totalCommentsCount).toBe(5);
   });
 });
 
 describe('buildReviewIdMap', () => {
   it('maps numeric review IDs to themselves', () => {
+    // given / when
     const result = buildReviewIdMap(['111', '222'], new Map());
+
+    // then
     expect(result).toEqual(
       new Map([
         [111, '111'],
@@ -703,6 +740,7 @@ describe('buildReviewIdMap', () => {
   });
 
   it('maps PRR_ node IDs via nodeIdToNumericId', () => {
+    // given / when
     const result = buildReviewIdMap(
       ['PRR_abc', 'PRR_def'],
       new Map([
@@ -710,6 +748,8 @@ describe('buildReviewIdMap', () => {
         ['PRR_def', 20],
       ])
     );
+
+    // then
     expect(result).toEqual(
       new Map([
         [10, 'PRR_abc'],
@@ -719,15 +759,21 @@ describe('buildReviewIdMap', () => {
   });
 
   it('skips IDs that cannot be resolved', () => {
+    // given / when
     const result = buildReviewIdMap(['PRR_missing', '999'], new Map());
+
+    // then
     expect(result).toEqual(new Map([[999, '999']]));
   });
 
   it('handles mixed numeric and PRR_ IDs', () => {
+    // given / when
     const result = buildReviewIdMap(
       ['PRR_abc', '42'],
       new Map([['PRR_abc', 7]])
     );
+
+    // then
     expect(result).toEqual(
       new Map([
         [7, 'PRR_abc'],

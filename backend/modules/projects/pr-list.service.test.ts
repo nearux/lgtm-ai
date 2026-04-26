@@ -107,10 +107,13 @@ describe('PRListService.fetchPRList', () => {
   }
 
   it('should successfully fetch PR list (page 1 — single GraphQL call)', async () => {
+    // given
     mockGraphQLDataResponse(2);
 
+    // when
     const result = await service.fetchPRList('owner/repo');
 
+    // then
     expect(result).toEqual({ items: mockPRListData, lastPage: 1 });
     expect(mockExecAsync).toHaveBeenCalledTimes(1);
     expect(mockExecAsync).toHaveBeenCalledWith('gh', [
@@ -130,11 +133,14 @@ describe('PRListService.fetchPRList', () => {
   });
 
   it('should fetch with cursor for page 2 (two GraphQL calls)', async () => {
+    // given
     mockGraphQLCursorResponse('cursor_abc');
     mockGraphQLDataResponse(150);
 
+    // when
     await service.fetchPRList('owner/repo', { page: 2, limit: 50 });
 
+    // then
     expect(mockExecAsync).toHaveBeenCalledTimes(2);
     expect(mockExecAsync).toHaveBeenNthCalledWith(1, 'gh', [
       'api',
@@ -169,14 +175,15 @@ describe('PRListService.fetchPRList', () => {
   });
 
   it('should hop in chunks of 100 when skip exceeds GitHub GraphQL limit (page=3, limit=100)', async () => {
-    // skip = (3-1) * 100 = 200, must be fetched in 2 hops of 100 each
+    // given: skip = (3-1) * 100 = 200, must be fetched in 2 hops of 100 each
     mockGraphQLCursorResponse('cursor_after_100'); // first hop: first:100, no after
     mockGraphQLCursorResponse('cursor_after_200'); // second hop: first:100, after:cursor_after_100
     mockGraphQLDataResponse(300);
 
+    // when
     await service.fetchPRList('owner/repo', { page: 3, limit: 100 });
 
-    // 2 cursor-resolution calls + 1 data call = 3 total
+    // then: 2 cursor-resolution calls + 1 data call = 3 total
     expect(mockExecAsync).toHaveBeenCalledTimes(3);
 
     // First hop: first:100, no after
@@ -215,26 +222,35 @@ describe('PRListService.fetchPRList', () => {
   });
 
   it('should calculate lastPage from totalCount', async () => {
+    // given
     mockGraphQLDataResponse(250);
 
+    // when
     const result = await service.fetchPRList('owner/repo', { limit: 50 });
 
+    // then
     expect(result.lastPage).toBe(5);
   });
 
   it('should return lastPage 1 when totalCount is 0', async () => {
+    // given
     mockGraphQLDataResponse(0, []);
 
+    // when
     const result = await service.fetchPRList('owner/repo');
 
+    // then
     expect(result).toEqual({ items: [], lastPage: 1 });
   });
 
   it('should pass state=open via GraphQL states filter', async () => {
+    // given
     mockGraphQLDataResponse(2);
 
+    // when
     await service.fetchPRList('owner/repo', { state: 'open' });
 
+    // then
     expect(mockExecAsync).toHaveBeenCalledWith(
       'gh',
       expect.arrayContaining(['-f', 'states[]=OPEN'])
@@ -242,10 +258,13 @@ describe('PRListService.fetchPRList', () => {
   });
 
   it('should pass state=closed via GraphQL states filter', async () => {
+    // given
     mockGraphQLDataResponse(2);
 
+    // when
     await service.fetchPRList('owner/repo', { state: 'closed' });
 
+    // then
     const args = mockExecAsync.mock.calls[0][1] as string[];
     const statesArgs = args.filter(
       (_, i) => args[i - 1] === '-f' && args[i].startsWith('states[]=')
@@ -254,10 +273,13 @@ describe('PRListService.fetchPRList', () => {
   });
 
   it('should pass state=all via GraphQL states filter', async () => {
+    // given
     mockGraphQLDataResponse(2);
 
+    // when
     await service.fetchPRList('owner/repo', { state: 'all' });
 
+    // then
     const args = mockExecAsync.mock.calls[0][1] as string[];
     const statesArgs = args.filter(
       (_, i) => args[i - 1] === '-f' && args[i].startsWith('states[]=')
@@ -270,10 +292,13 @@ describe('PRListService.fetchPRList', () => {
   });
 
   it('should default to state=open for invalid state value', async () => {
+    // given
     mockGraphQLDataResponse(2);
 
+    // when
     await service.fetchPRList('owner/repo', { state: 'invalid' as never });
 
+    // then
     expect(mockExecAsync).toHaveBeenCalledWith(
       'gh',
       expect.arrayContaining(['-f', 'states[]=OPEN'])
@@ -281,10 +306,13 @@ describe('PRListService.fetchPRList', () => {
   });
 
   it('should clamp invalid page and limit values', async () => {
+    // given
     mockGraphQLDataResponse(2);
 
+    // when
     await service.fetchPRList('owner/repo', { page: 0, limit: 250 });
 
+    // then
     expect(mockExecAsync).toHaveBeenCalledTimes(1);
     expect(mockExecAsync).toHaveBeenCalledWith('gh', [
       'api',
@@ -303,10 +331,12 @@ describe('PRListService.fetchPRList', () => {
   });
 
   it('should throw SERVICE_UNAVAILABLE error for authentication failure', async () => {
+    // given
     mockExecAsync.mockRejectedValue(
       new Error('authentication required: gh auth login')
     );
 
+    // when / then
     await expect(service.fetchPRList('owner/repo')).rejects.toMatchObject({
       message:
         'GitHub CLI is not authenticated. Please check your account in the header.',
@@ -315,8 +345,10 @@ describe('PRListService.fetchPRList', () => {
   });
 
   it('should throw FORBIDDEN error for not found', async () => {
+    // given
     mockExecAsync.mockRejectedValue(new Error('Not Found'));
 
+    // when / then
     await expect(service.fetchPRList('owner/repo')).rejects.toMatchObject({
       message:
         'Cannot access this repository. Try switching your GitHub account in the header.',
@@ -325,8 +357,10 @@ describe('PRListService.fetchPRList', () => {
   });
 
   it('should throw INTERNAL_SERVER_ERROR for general failures', async () => {
+    // given
     mockExecAsync.mockRejectedValue(new Error('Network error'));
 
+    // when / then
     await expect(service.fetchPRList('owner/repo')).rejects.toMatchObject({
       message: 'Failed to fetch PR data from GitHub',
       statusCode: 500,
@@ -334,6 +368,7 @@ describe('PRListService.fetchPRList', () => {
   });
 
   it('should throw BAD_REQUEST for invalid repo name', async () => {
+    // given / when / then
     await expect(
       service.fetchPRList('invalid repo name!')
     ).rejects.toMatchObject({
@@ -343,11 +378,13 @@ describe('PRListService.fetchPRList', () => {
   });
 
   it('should throw INTERNAL_SERVER_ERROR when GraphQL response has errors', async () => {
+    // given
     mockExecAsync.mockResolvedValueOnce({
       stdout: JSON.stringify({ errors: [{ message: 'Field does not exist' }] }),
       stderr: '',
     });
 
+    // when / then
     await expect(service.fetchPRList('owner/repo')).rejects.toMatchObject({
       message: 'Failed to fetch PR data from GitHub',
       statusCode: 500,
@@ -355,6 +392,7 @@ describe('PRListService.fetchPRList', () => {
   });
 
   it('should return empty result when page is out of bounds (cursor is null)', async () => {
+    // given
     mockExecAsync.mockResolvedValueOnce({
       stdout: JSON.stringify({
         data: {
@@ -364,11 +402,13 @@ describe('PRListService.fetchPRList', () => {
       stderr: '',
     });
 
+    // when
     const result = await service.fetchPRList('owner/repo', {
       page: 999,
       limit: 10,
     });
 
+    // then
     expect(result).toEqual({ items: [], lastPage: 1 });
     expect(mockExecAsync).toHaveBeenCalledTimes(1);
   });
