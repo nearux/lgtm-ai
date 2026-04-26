@@ -55,6 +55,13 @@ const issueContext: CommandContext = {
   issueMeta,
 };
 
+const issueCommentContext: CommandContext = {
+  type: 'issueComment',
+  author: 'carol',
+  body: 'This needs a null check',
+  issueMeta,
+};
+
 describe('buildSystemPrompt', () => {
   it('includes PR title, branch info, and description', () => {
     const result = buildSystemPrompt(reviewContext);
@@ -101,6 +108,14 @@ describe('buildSystemPrompt', () => {
     };
     const result = buildSystemPrompt(ctx);
     expect(result).toContain('(no description)');
+  });
+
+  it('includes issue title and default branch for issueComment context', () => {
+    const result = buildSystemPrompt(issueCommentContext);
+    expect(result).toContain('acme/app');
+    expect(result).toContain('#7');
+    expect(result).toContain('Fix null pointer in auth middleware');
+    expect(result).toContain('main');
   });
 });
 
@@ -275,6 +290,56 @@ describe('buildUserPrompt', () => {
 
     it('throws on review command for issue context', () => {
       expect(() => buildUserPrompt('review', issueContext)).toThrow(
+        "Command 'review' is not supported for issue context"
+      );
+    });
+  });
+
+  describe('Issue comment-level commands', () => {
+    describe('explain', () => {
+      it('includes gh issue view instruction', () => {
+        const result = buildUserPrompt('explain', issueCommentContext);
+        expect(result).toContain('gh issue view 7 --repo acme/app');
+      });
+    });
+
+    describe('fix', () => {
+      it('includes instruction to not use git', () => {
+        const result = buildUserPrompt('fix', issueCommentContext);
+        expect(result).toContain('Do NOT use git commands');
+      });
+
+      it('includes gh issue view instruction', () => {
+        const result = buildUserPrompt('fix', issueCommentContext);
+        expect(result).toContain('gh issue view 7 --repo acme/app');
+      });
+    });
+
+    describe('custom', () => {
+      it('returns custom prompt as-is', () => {
+        const result = buildUserPrompt(
+          'custom',
+          issueCommentContext,
+          'List affected files'
+        );
+        expect(result).toContain('List affected files');
+      });
+
+      it('throws if customPrompt is missing', () => {
+        expect(() => buildUserPrompt('custom', issueCommentContext)).toThrow(
+          'customPrompt is required'
+        );
+      });
+    });
+
+    it('throws on validate command for issueComment context', () => {
+      expect(() => buildUserPrompt('validate', issueCommentContext)).toThrow(
+        "Command 'validate' is not supported for issue context"
+      );
+    });
+
+    it('throws on review command for issueComment context', () => {
+      expect(() => buildUserPrompt('review', issueCommentContext)).toThrow(
         "Command 'review' is not supported for issue context"
       );
     });

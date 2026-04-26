@@ -2,16 +2,17 @@ import HttpStatus from 'http-status';
 import type {
   CommandContext,
   ClaudeCommand,
-  ReviewCommandContext,
-  CommentCommandContext,
+  PRReviewCommandContext,
+  PRCommentCommandContext,
   PRCommandContext,
   IssueCommandContext,
+  IssueCommentCommandContext,
 } from '../../types/claude.js';
 import { AppError } from '../../errors/AppError.js';
 import * as templates from './prompt-templates.util.js';
 
 export function buildSystemPrompt(context: CommandContext): string {
-  if (context.type === 'issue') {
+  if (context.type === 'issue' || context.type === 'issueComment') {
     return templates.systemPromptForIssue(context.issueMeta);
   }
   return templates.systemPrompt(
@@ -25,7 +26,7 @@ export function buildUserPrompt(
   context: CommandContext,
   customPrompt?: string
 ): string {
-  if (context.type === 'issue') {
+  if (context.type === 'issue' || context.type === 'issueComment') {
     return buildIssueUserPrompt(command, context, customPrompt);
   }
   if (context.type === 'pr') {
@@ -36,7 +37,7 @@ export function buildUserPrompt(
 
 export function buildBatchUserPrompt(
   command: ClaudeCommand,
-  contexts: (ReviewCommandContext | CommentCommandContext)[],
+  contexts: (PRReviewCommandContext | PRCommentCommandContext)[],
   customPrompt?: string
 ): string {
   if (command === 'custom') requireCustomPrompt(customPrompt);
@@ -68,7 +69,7 @@ const issueTemplates: Partial<Record<ClaudeCommand, IssueTemplateFn>> = {
 
 function buildIssueUserPrompt(
   command: ClaudeCommand,
-  context: IssueCommandContext,
+  context: IssueCommandContext | IssueCommentCommandContext,
   customPrompt?: string
 ): string {
   if (command === 'custom') requireCustomPrompt(customPrompt);
@@ -132,7 +133,7 @@ const commentTemplates: Partial<Record<ClaudeCommand, CommentTemplateFn>> = {
 
 function buildReviewCommentUserPrompt(
   command: ClaudeCommand,
-  context: ReviewCommandContext | CommentCommandContext,
+  context: PRReviewCommandContext | PRCommentCommandContext,
   customPrompt?: string
 ): string {
   if (command === 'custom') requireCustomPrompt(customPrompt);

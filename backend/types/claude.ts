@@ -23,17 +23,17 @@ export interface PRMeta {
   repoOwnerName: string;
 }
 
-interface BaseCommandContext {
+interface WithPRMeta {
   prMeta: PRMeta;
 }
 
-export interface ReviewCommandContext extends BaseCommandContext {
+export interface PRReviewCommandContext extends WithPRMeta {
   type: 'review';
   author: string;
   body: string;
 }
 
-export interface CommentCommandContext extends BaseCommandContext {
+export interface PRCommentCommandContext extends WithPRMeta {
   type: 'comment';
   author: string;
   body: string;
@@ -41,7 +41,7 @@ export interface CommentCommandContext extends BaseCommandContext {
   diffHunk?: string;
 }
 
-export interface PRCommandContext extends BaseCommandContext {
+export interface PRCommandContext extends WithPRMeta {
   type: 'pr';
 }
 
@@ -53,16 +53,26 @@ export interface IssueMeta {
   defaultBranch: string;
 }
 
-export interface IssueCommandContext {
-  type: 'issue';
+interface WithIssueMeta {
   issueMeta: IssueMeta;
 }
 
+export interface IssueCommandContext extends WithIssueMeta {
+  type: 'issue';
+}
+
+export interface IssueCommentCommandContext extends WithIssueMeta {
+  type: 'issueComment';
+  author: string;
+  body: string;
+}
+
 export type CommandContext =
-  | ReviewCommandContext
-  | CommentCommandContext
+  | PRReviewCommandContext
+  | PRCommentCommandContext
   | PRCommandContext
-  | IssueCommandContext;
+  | IssueCommandContext
+  | IssueCommentCommandContext;
 
 export type ClaudeCommand =
   | 'validate'
@@ -87,7 +97,7 @@ export interface WsBatchExecuteMessage {
   requestId: string;
   workingDir: string;
   command: ClaudeCommand;
-  contexts: (ReviewCommandContext | CommentCommandContext)[];
+  contexts: (PRReviewCommandContext | PRCommentCommandContext)[];
   customPrompt?: string;
   options?: ClaudeExecuteOptions;
   chatContext?: ClaudeChatContext;
