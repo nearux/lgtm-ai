@@ -9,7 +9,10 @@ Analyze the changes in the current branch, generate a PR title and body in Engli
 </Instruction>
 
 <Steps>
-1. Determine the base branch dynamically from the repo's default branch using `gh repo view --json defaultBranchRef -q .defaultBranchRef.name` (fallback to `main` if unavailable)
+1. Determine the base branch dynamically:
+   - Check if `origin/develop` exists using `git show-ref --verify refs/remotes/origin/develop`
+   - If it exists, use `develop` as `<base>`
+   - Otherwise, fall back to `gh repo view --json defaultBranchRef -q .defaultBranchRef.name` (fallback to `main` if unavailable)
 2. Check current branch status and commit history
 3. Get the diff using `git diff <base>...HEAD` to see all commits since branching from the base
 4. Analyze the changes and generate PR title and body
