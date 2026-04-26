@@ -36,6 +36,46 @@ const makeGraphQLResponse = (prNode: Record<string, unknown>) => ({
   data: { repository: { pullRequest: prNode } },
 });
 
+const makeAuthor = (overrides: Record<string, unknown> = {}) => ({
+  __typename: 'User',
+  id: 'U_0',
+  login: 'user0',
+  name: 'User Zero',
+  avatarUrl: '',
+  ...overrides,
+});
+
+const makeReviewCommentNode = (overrides: Record<string, unknown> = {}) => ({
+  id: 'PRRC_0',
+  replyTo: null,
+  author: makeAuthor(),
+  body: '',
+  path: 'a.ts',
+  diffHunk: '@@ -1 +1 @@',
+  createdAt: '2024-01-01T00:00:00Z',
+  updatedAt: '2024-01-01T00:00:00Z',
+  ...overrides,
+});
+
+const makeReviewNode = (overrides: Record<string, unknown> = {}) => ({
+  id: 'PRR_0',
+  author: makeAuthor(),
+  state: 'COMMENTED',
+  body: '',
+  submittedAt: '2024-01-01T00:00:00Z',
+  comments: { nodes: [] },
+  ...overrides,
+});
+
+const makeIssueCommentNode = (overrides: Record<string, unknown> = {}) => ({
+  id: 'IC_0',
+  author: makeAuthor(),
+  body: '',
+  createdAt: '2024-01-01T00:00:00Z',
+  updatedAt: '2024-01-01T00:00:00Z',
+  ...overrides,
+});
+
 describe('PRDetailService.fetchPRDetail', () => {
   let service: InstanceType<typeof PRDetailService>;
 
@@ -75,42 +115,33 @@ describe('PRDetailService.fetchPRDetail', () => {
 
   it('includes inline comments nested inside reviews', async () => {
     // given
+    const reviewer = makeAuthor({
+      id: 'U_3',
+      login: 'reviewer1',
+      name: 'Reviewer One',
+      avatarUrl: 'https://avatars.githubusercontent.com/u/3',
+    });
     const prNode = makePRNode({
       reviews: {
         nodes: [
-          {
+          makeReviewNode({
             id: 'PRR_1',
-            author: {
-              __typename: 'User',
-              id: 'U_3',
-              login: 'reviewer1',
-              name: 'Reviewer One',
-              avatarUrl: 'https://avatars.githubusercontent.com/u/3',
-            },
-            state: 'COMMENTED',
-            body: '',
+            author: reviewer,
             submittedAt: '2024-01-01T11:00:00Z',
             comments: {
               nodes: [
-                {
+                makeReviewCommentNode({
                   id: 'PRRC_1',
-                  replyTo: null,
-                  author: {
-                    __typename: 'User',
-                    id: 'U_3',
-                    login: 'reviewer1',
-                    name: 'Reviewer One',
-                    avatarUrl: 'https://avatars.githubusercontent.com/u/3',
-                  },
+                  author: reviewer,
                   body: 'Nit: rename this variable.',
                   path: 'src/index.ts',
                   diffHunk: '@@ -1,3 +1,4 @@',
                   createdAt: '2024-01-01T11:00:00Z',
                   updatedAt: '2024-01-01T11:00:00Z',
-                },
+                }),
               ],
             },
-          },
+          }),
         ],
       },
     });
@@ -139,39 +170,20 @@ describe('PRDetailService.fetchPRDetail', () => {
     const prNode = makePRNode({
       reviews: {
         nodes: [
-          {
+          makeReviewNode({
             id: 'PRR_1',
-            author: {
-              __typename: 'User',
-              id: 'U_3',
-              login: 'r1',
-              name: 'R1',
-              avatarUrl: '',
-            },
-            state: 'COMMENTED',
-            body: '',
-            submittedAt: '2024-01-01T11:00:00Z',
             comments: {
               nodes: [
-                {
+                makeReviewCommentNode({
                   id: 'PRRC_2',
                   replyTo: { id: 'PRRC_1' },
-                  author: {
-                    __typename: 'User',
-                    id: 'U_3',
-                    login: 'r1',
-                    name: 'R1',
-                    avatarUrl: '',
-                  },
                   body: 'Reply comment',
-                  path: 'a.ts',
-                  diffHunk: '@@ -1 +1 @@',
                   createdAt: '2024-01-01T12:00:00Z',
                   updatedAt: '2024-01-01T12:00:00Z',
-                },
+                }),
               ],
             },
-          },
+          }),
         ],
       },
     });
@@ -191,99 +203,49 @@ describe('PRDetailService.fetchPRDetail', () => {
     const prNode = makePRNode({
       comments: {
         nodes: [
-          {
+          makeIssueCommentNode({
             id: 'IC_1',
-            author: {
-              __typename: 'User',
-              id: 'U_3',
-              login: 'a',
-              name: 'A',
-              avatarUrl: '',
-            },
             body: 'hi',
             createdAt: '2024-01-01T10:00:00Z',
             updatedAt: '2024-01-01T10:00:00Z',
-          },
-          {
+          }),
+          makeIssueCommentNode({
             id: 'IC_2',
-            author: {
-              __typename: 'User',
-              id: 'U_4',
-              login: 'b',
-              name: 'B',
-              avatarUrl: '',
-            },
             body: 'hello',
             createdAt: '2024-01-01T10:01:00Z',
             updatedAt: '2024-01-01T10:01:00Z',
-          },
+          }),
         ],
       },
       reviews: {
         nodes: [
-          {
+          makeReviewNode({
             id: 'PRR_1',
-            author: {
-              __typename: 'User',
-              id: 'U_5',
-              login: 'r1',
-              name: 'R1',
-              avatarUrl: '',
-            },
-            state: 'COMMENTED',
-            body: '',
             submittedAt: '2024-01-01T11:00:00Z',
             comments: {
               nodes: [
-                {
+                makeReviewCommentNode({
                   id: 'PRRC_1',
-                  replyTo: null,
-                  author: {
-                    __typename: 'User',
-                    id: 'U_5',
-                    login: 'r1',
-                    name: 'R1',
-                    avatarUrl: '',
-                  },
                   body: 'inline 1',
-                  path: 'a.ts',
-                  diffHunk: '@@ -1 +1 @@',
                   createdAt: '2024-01-01T11:00:00Z',
                   updatedAt: '2024-01-01T11:00:00Z',
-                },
-                {
+                }),
+                makeReviewCommentNode({
                   id: 'PRRC_2',
-                  replyTo: null,
-                  author: {
-                    __typename: 'User',
-                    id: 'U_5',
-                    login: 'r1',
-                    name: 'R1',
-                    avatarUrl: '',
-                  },
                   body: 'inline 2',
-                  path: 'a.ts',
                   diffHunk: '@@ -2 +2 @@',
                   createdAt: '2024-01-01T11:01:00Z',
                   updatedAt: '2024-01-01T11:01:00Z',
-                },
+                }),
               ],
             },
-          },
-          {
+          }),
+          makeReviewNode({
             id: 'PRR_2',
-            author: {
-              __typename: 'User',
-              id: 'U_6',
-              login: 'r2',
-              name: 'R2',
-              avatarUrl: '',
-            },
             state: 'APPROVED',
             body: 'LGTM',
             submittedAt: '2024-01-01T12:00:00Z',
-            comments: { nodes: [] },
-          },
+          }),
         ],
       },
     });
@@ -368,32 +330,30 @@ describe('PRDetailService.fetchPRDetail', () => {
   it('maps author login to id and name when id/name are absent', async () => {
     // given
     const prNode = makePRNode({
-      author: {
-        __typename: 'User',
-        login: 'author1',
-        avatarUrl: '',
-      },
+      author: makeAuthor({ login: 'author1', id: undefined, name: undefined }),
       comments: {
         nodes: [
-          {
+          makeIssueCommentNode({
             id: 'IC_1',
-            author: { __typename: 'User', login: 'commenter1', avatarUrl: '' },
+            author: makeAuthor({
+              login: 'commenter1',
+              id: undefined,
+              name: undefined,
+            }),
             body: 'Nice change!',
-            createdAt: '2024-01-01T10:00:00Z',
-            updatedAt: '2024-01-01T10:00:00Z',
-          },
+          }),
         ],
       },
       reviews: {
         nodes: [
-          {
+          makeReviewNode({
             id: 'PRR_1',
-            author: { __typename: 'User', login: 'reviewer1', avatarUrl: '' },
-            state: 'COMMENTED',
-            body: '',
-            submittedAt: '2024-01-01T11:00:00Z',
-            comments: { nodes: [] },
-          },
+            author: makeAuthor({
+              login: 'reviewer1',
+              id: undefined,
+              name: undefined,
+            }),
+          }),
         ],
       },
     });
