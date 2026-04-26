@@ -5,11 +5,15 @@ import type {
   ReviewCommandContext,
   CommentCommandContext,
   PRCommandContext,
+  IssueCommandContext,
 } from '../../types/claude.js';
 import { AppError } from '../../errors/AppError.js';
 import * as templates from './prompt-templates.util.js';
 
 export function buildSystemPrompt(context: CommandContext): string {
+  if (context.type === 'issue') {
+    return templates.systemPromptForIssue(context.issueMeta);
+  }
   return templates.systemPrompt(
     context.prMeta,
     context.type === 'pr' ? 'pr' : 'thread'
@@ -21,6 +25,9 @@ export function buildUserPrompt(
   context: CommandContext,
   customPrompt?: string
 ): string {
+  if (context.type === 'issue') {
+    return buildIssueUserPrompt(command, context, customPrompt);
+  }
   if (context.type === 'pr') {
     return buildPrUserPrompt(command, context, customPrompt);
   }
@@ -43,6 +50,38 @@ export function buildBatchUserPrompt(
   }
   const batchSection = templates.batchReviewCommentSection(contexts);
   return templateFn(batchSection, customPrompt);
+}
+
+// ── Issue-level prompt ──────────────────────────────────────────────
+
+type IssueTemplateFn = (
+  issueNumber: number,
+  repoOwnerName: string,
+  customPrompt?: string
+) => string;
+
+const issueTemplates: Partial<Record<ClaudeCommand, IssueTemplateFn>> = {
+  explain: (n, r) => templates.explainIssuePrompt(n, r),
+  fix: (n, r) => templates.fixIssuePrompt(n, r),
+  custom: (_n, _r, cp) => templates.customIssuePrompt(cp!),
+};
+
+function buildIssueUserPrompt(
+  command: ClaudeCommand,
+  context: IssueCommandContext,
+  customPrompt?: string
+): string {
+  if (command === 'custom') requireCustomPrompt(customPrompt);
+
+  const templateFn = issueTemplates[command];
+  if (!templateFn) {
+    throw new AppError(
+      `Command '${command}' is not supported for issue context`,
+      HttpStatus.BAD_REQUEST
+    );
+  }
+  const { number, repoOwnerName } = context.issueMeta;
+  return templateFn(number, repoOwnerName, customPrompt);
 }
 
 // ── PR-level prompt ─────────────────────────────────────────────────

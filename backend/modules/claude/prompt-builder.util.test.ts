@@ -8,6 +8,7 @@ import type {
   CommandContext,
   PRMeta,
   ClaudeCommand,
+  IssueMeta,
 } from '../../types/claude.js';
 
 const prMeta: PRMeta = {
@@ -41,6 +42,19 @@ const prContext: CommandContext = {
   prMeta,
 };
 
+const issueMeta: IssueMeta = {
+  number: 7,
+  title: 'Fix null pointer in auth middleware',
+  body: 'When token is missing, middleware throws instead of returning 401.',
+  repoOwnerName: 'acme/app',
+  defaultBranch: 'main',
+};
+
+const issueContext: CommandContext = {
+  type: 'issue',
+  issueMeta,
+};
+
 describe('buildSystemPrompt', () => {
   it('includes PR title, branch info, and description', () => {
     const result = buildSystemPrompt(reviewContext);
@@ -69,6 +83,24 @@ describe('buildSystemPrompt', () => {
   it('uses PR-specific system prompt for pr context', () => {
     const result = buildSystemPrompt(prContext);
     expect(result).toContain('overall changes introduced in this pull request');
+  });
+
+  it('includes issue title and default branch for issue context', () => {
+    const result = buildSystemPrompt(issueContext);
+    expect(result).toContain('acme/app');
+    expect(result).toContain('#7');
+    expect(result).toContain('Fix null pointer in auth middleware');
+    expect(result).toContain('main');
+    expect(result).toContain('default branch');
+  });
+
+  it('shows "(no description)" when issueMeta.body is empty for issue context', () => {
+    const ctx: CommandContext = {
+      type: 'issue',
+      issueMeta: { ...issueMeta, body: '' },
+    };
+    const result = buildSystemPrompt(ctx);
+    expect(result).toContain('(no description)');
   });
 });
 
@@ -194,6 +226,56 @@ describe('buildUserPrompt', () => {
     it('throws on validate command for PR context', () => {
       expect(() => buildUserPrompt('validate', prContext)).toThrow(
         "Command 'validate' is not supported for PR-level context"
+      );
+    });
+  });
+
+  describe('Issue-level commands', () => {
+    describe('explain', () => {
+      it('includes gh issue view instruction', () => {
+        const result = buildUserPrompt('explain', issueContext);
+        expect(result).toContain('gh issue view 7 --repo acme/app');
+      });
+    });
+
+    describe('fix', () => {
+      it('includes instruction to not use git', () => {
+        const result = buildUserPrompt('fix', issueContext);
+        expect(result).toContain('Do NOT use git commands');
+      });
+
+      it('includes gh issue view instruction', () => {
+        const result = buildUserPrompt('fix', issueContext);
+        expect(result).toContain('gh issue view 7 --repo acme/app');
+      });
+    });
+
+    describe('custom', () => {
+      it('returns custom prompt as-is', () => {
+        const result = buildUserPrompt(
+          'custom',
+          issueContext,
+          'List affected files'
+        );
+        expect(result).toContain('List affected files');
+      });
+
+      it('throws if customPrompt is missing', () => {
+        expect(() => buildUserPrompt('custom', issueContext)).toThrow(
+          'customPrompt is required'
+        );
+      });
+    });
+
+    it('throws on validate command for issue context', () => {
+      expect(() => buildUserPrompt('validate', issueContext)).toThrow(
+        "Command 'validate' is not supported for issue context"
+      );
+    });
+
+    it('throws on review command for issue context', () => {
+      expect(() => buildUserPrompt('review', issueContext)).toThrow(
+        "Command 'review' is not supported for issue context"
       );
     });
   });
