@@ -26,7 +26,10 @@ export class IssueDetailService {
 
     if (result.errors || !result.data) {
       const message = result.errors?.[0]?.message ?? 'Unknown GraphQL error';
-      throw new Error(`GraphQL query failed: ${message}`);
+      throw new AppError(
+        `GraphQL issue detail query failed for ${owner}/${name}#${issueNumber}: ${message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
     }
 
     const issue = result.data.repository?.issue;
