@@ -124,4 +124,151 @@ describe('IssueListService.fetchIssueList', () => {
   it('throws on invalid repoOwnerName', async () => {
     await expect(service.fetchIssueList('invalid')).rejects.toThrow();
   });
+
+  it('fetches page 2 by resolving cursor first', async () => {
+    const cursorResponse = {
+      data: {
+        repository: {
+          issues: {
+            pageInfo: { endCursor: 'cursor_abc' },
+          },
+        },
+      },
+    };
+
+    mockExecAsync
+      .mockResolvedValueOnce({ stdout: JSON.stringify(cursorResponse) })
+      .mockResolvedValueOnce({ stdout: JSON.stringify(mockResponse) });
+
+    const result = await service.fetchIssueList('owner/repo', {
+      page: 2,
+      limit: 10,
+    });
+
+    expect(mockExecAsync).toHaveBeenCalledTimes(2);
+    const cursorArgs = mockExecAsync.mock.calls[0][1] as string[];
+    expect(cursorArgs).toContain('skip=10');
+
+    const listArgs = mockExecAsync.mock.calls[1][1] as string[];
+    expect(listArgs).toContain('after=cursor_abc');
+
+    expect(result.items).toHaveLength(1);
+  });
+
+  it('returns empty items when cursor hop returns null (page exceeds total)', async () => {
+    const emptyCursorResponse = {
+      data: {
+        repository: {
+          issues: {
+            pageInfo: { endCursor: null },
+          },
+        },
+      },
+    };
+
+    mockExecAsync.mockResolvedValueOnce({
+      stdout: JSON.stringify(emptyCursorResponse),
+    });
+
+    const result = await service.fetchIssueList('owner/repo', {
+      page: 5,
+      limit: 10,
+    });
+
+    expect(result.items).toHaveLength(0);
+    expect(result.lastPage).toBe(1);
+  });
+
+  it('throws when GraphQL response contains errors', async () => {
+    mockExecAsync.mockResolvedValue({
+      stdout: JSON.stringify({
+        errors: [{ message: 'Some GraphQL error' }],
+      }),
+    });
+
+    await expect(service.fetchIssueList('owner/repo')).rejects.toThrow(
+      'Failed to fetch PR data from GitHub'
+    );
+  });
+
+  it('throws when GraphQL response has no repository', async () => {
+    mockExecAsync.mockResolvedValue({
+      stdout: JSON.stringify({
+        data: { repository: null },
+      }),
+    });
+
+    await expect(service.fetchIssueList('owner/repo')).rejects.toThrow(
+      'Cannot access this repository'
+    );
+  });
+
+  it('maps authentication error to AppError with 503', async () => {
+    mockExecAsync.mockRejectedValue(new Error('authentication required'));
+
+    const { AppError } = await import('../../errors/AppError.js');
+    type AppErrorInstance = InstanceType<typeof AppError>;
+
+    try {
+      await service.fetchIssueList('owner/repo');
+    } catch (err) {
+      expect(err).toBeInstanceOf(AppError);
+      expect((err as AppErrorInstance).statusCode).toBe(503);
+    }
+  });
+
+  it('maps not found error to 403 AppError', async () => {
+    mockExecAsync.mockRejectedValue(new Error('not found'));
+
+    const { AppError } = await import('../../errors/AppError.js');
+    type AppErrorInstance = InstanceType<typeof AppError>;
+
+    try {
+      await service.fetchIssueList('owner/repo');
+    } catch (err) {
+      expect(err).toBeInstanceOf(AppError);
+      expect((err as AppErrorInstance).statusCode).toBe(403);
+    }
+  });
+
+  it('defaults to open state when given an invalid state value', async () => {
+    mockExecAsync.mockResolvedValue({ stdout: JSON.stringify(mockResponse) });
+
+    await service.fetchIssueList('owner/repo', {
+      state: 'invalid' as never,
+    });
+
+    const args = mockExecAsync.mock.calls[0][1] as string[];
+    expect(args).toContain('states[]=OPEN');
+  });
+
+  it('handles null author and null body fields in GraphQL node', async () => {
+    const nodeWithNulls = {
+      ...mockIssueNodes[0],
+      body: null,
+      author: null,
+      assignees: { nodes: [] },
+      labels: { nodes: [] },
+      comments: { totalCount: 0 },
+    };
+
+    mockExecAsync.mockResolvedValue({
+      stdout: JSON.stringify({
+        data: {
+          repository: {
+            issues: { totalCount: 1, nodes: [nodeWithNulls] },
+          },
+        },
+      }),
+    });
+
+    const result = await service.fetchIssueList('owner/repo');
+    const item = result.items[0];
+
+    expect(item.body).toBe('');
+    expect(item.author.login).toBe('');
+    expect(item.author.avatarUrl).toBe('');
+    expect(item.assignees).toHaveLength(0);
+    expect(item.labels).toHaveLength(0);
+  });
 });

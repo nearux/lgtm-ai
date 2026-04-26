@@ -41,32 +41,30 @@ export class IssueListService {
     const limit = normalizeLimit(options.limit);
     const state = this.normalizeIssueState(options.state);
 
-    let totalCount: number;
-    let items: IssueListItem[];
-
     try {
-      let cursor: string | null = null;
-      if (page > 1) {
-        const skip = (page - 1) * limit;
-        cursor = await this.resolvePageCursor(repoOwnerName, state, skip);
-        if (cursor === null) {
-          return { items: [], lastPage: 1 };
-        }
+      const cursor =
+        page > 1
+          ? await this.resolvePageCursor(
+              repoOwnerName,
+              state,
+              (page - 1) * limit
+            )
+          : null;
+      if (page > 1 && cursor === null) {
+        return { items: [], lastPage: 1 };
       }
 
-      ({ totalCount, items } = await this.fetchIssueListGraphQL(
+      const { totalCount, items } = await this.fetchIssueListGraphQL(
         repoOwnerName,
         state,
         limit,
         cursor
-      ));
+      );
+      const lastPage = Math.max(1, Math.ceil(totalCount / limit));
+      return { items, lastPage };
     } catch (error) {
       throw mapGhError(error, 'fetch');
     }
-
-    const lastPage = Math.max(1, Math.ceil(totalCount / limit));
-
-    return { items, lastPage };
   }
 
   private async resolvePageCursor(
