@@ -48,7 +48,8 @@ export function usePRChat({
 
       const chatContext: ClaudeChatContext = {
         projectId,
-        prNumber,
+        targetType: 'PR',
+        targetNumber: prNumber,
         scopeType: 'REVIEW',
         scopeTargetId: '',
         title: label,
