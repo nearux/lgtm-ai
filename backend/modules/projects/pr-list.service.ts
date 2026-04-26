@@ -15,6 +15,8 @@ import prListGql from '../../graphql/queries/pr-list.gql';
 import prCursorGql from '../../graphql/queries/pr-cursor.gql';
 import { PRListItemDto } from './dto/pull-requests.dto.js';
 import { validateRepoOwnerName, mapGhError } from './gh.util.js';
+import { AppError } from '../../errors/AppError.js';
+import HttpStatus from 'http-status';
 
 const execFileAsync = promisify(execFile);
 
@@ -42,35 +44,31 @@ export class PRListService {
     const limit = normalizeLimit(options.limit);
     const state = this.normalizePRState(options.state);
 
-    try {
-      if (page > 1) {
-        const cursor = await this.resolvePageCursor(
-          repoOwnerName,
-          state,
-          (page - 1) * limit
-        );
-        if (cursor === null) {
-          return { items: [], lastPage: 1 };
-        }
-        const { totalCount, items } = await this.fetchPRListGraphQL(
-          repoOwnerName,
-          state,
-          limit,
-          cursor
-        );
-        return { items, lastPage: Math.max(1, Math.ceil(totalCount / limit)) };
+    if (page > 1) {
+      const cursor = await this.resolvePageCursor(
+        repoOwnerName,
+        state,
+        (page - 1) * limit
+      );
+      if (cursor === null) {
+        return { items: [], lastPage: 1 };
       }
-
       const { totalCount, items } = await this.fetchPRListGraphQL(
         repoOwnerName,
         state,
         limit,
-        null
+        cursor
       );
       return { items, lastPage: Math.max(1, Math.ceil(totalCount / limit)) };
-    } catch (error) {
-      throw mapGhError(error, 'fetch');
     }
+
+    const { totalCount, items } = await this.fetchPRListGraphQL(
+      repoOwnerName,
+      state,
+      limit,
+      null
+    );
+    return { items, lastPage: Math.max(1, Math.ceil(totalCount / limit)) };
   }
 
   private async resolvePageCursor(
@@ -113,12 +111,17 @@ export class PRListService {
       `skip=${hop}`,
       ...this.buildStatesFilterArgs(state),
       ...(after ? ['-f', `after=${after}`] : []),
-    ]);
+    ]).catch((error) => {
+      throw mapGhError(error, 'fetch');
+    });
     const result = JSON.parse(stdout) as GhGraphQLResponse<PrCursorQuery>;
 
     if (result.errors || !result.data) {
       const message = result.errors?.[0]?.message ?? 'Unknown GraphQL error';
-      throw new Error(`GraphQL query failed: ${message}`);
+      throw new AppError(
+        `GraphQL query failed: ${message}`,
+        HttpStatus.BAD_GATEWAY
+      );
     }
 
     return result.data.repository?.pullRequests.pageInfo.endCursor ?? null;
@@ -145,16 +148,25 @@ export class PRListService {
       `limit=${limit}`,
       ...this.buildStatesFilterArgs(state),
       ...(cursor ? ['-f', `after=${cursor}`] : []),
-    ]);
+    ]).catch((error) => {
+      throw mapGhError(error, 'fetch');
+    });
     const result = JSON.parse(stdout) as GhGraphQLResponse<PrListQuery>;
 
     if (result.errors || !result.data) {
       const message = result.errors?.[0]?.message ?? 'Unknown GraphQL error';
-      throw new Error(`GraphQL query failed: ${message}`);
+      throw new AppError(
+        `GraphQL query failed: ${message}`,
+        HttpStatus.BAD_GATEWAY
+      );
     }
 
     const prs = result.data.repository?.pullRequests;
-    if (!prs) throw new Error('GraphQL query failed: no data');
+    if (!prs)
+      throw new AppError(
+        'GraphQL query failed: no data',
+        HttpStatus.BAD_GATEWAY
+      );
 
     return {
       totalCount: prs.totalCount,

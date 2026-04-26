@@ -15,6 +15,8 @@ import issueListGql from '../../graphql/queries/issue-list.gql';
 import issueCursorGql from '../../graphql/queries/issue-cursor.gql';
 import { IssueListItemDto } from './dto/issue-list.dto.js';
 import { validateRepoOwnerName, mapGhError } from './gh.util.js';
+import { AppError } from '../../errors/AppError.js';
+import HttpStatus from 'http-status';
 
 const execFileAsync = promisify(execFile);
 
@@ -41,30 +43,22 @@ export class IssueListService {
     const limit = normalizeLimit(options.limit);
     const state = this.normalizeIssueState(options.state);
 
-    try {
-      const cursor =
-        page > 1
-          ? await this.resolvePageCursor(
-              repoOwnerName,
-              state,
-              (page - 1) * limit
-            )
-          : null;
-      if (page > 1 && cursor === null) {
-        return { items: [], lastPage: 1 };
-      }
-
-      const { totalCount, items } = await this.fetchIssueListGraphQL(
-        repoOwnerName,
-        state,
-        limit,
-        cursor
-      );
-      const lastPage = Math.max(1, Math.ceil(totalCount / limit));
-      return { items, lastPage };
-    } catch (error) {
-      throw mapGhError(error, 'fetch');
+    const cursor =
+      page > 1
+        ? await this.resolvePageCursor(repoOwnerName, state, (page - 1) * limit)
+        : null;
+    if (page > 1 && cursor === null) {
+      return { items: [], lastPage: 1 };
     }
+
+    const { totalCount, items } = await this.fetchIssueListGraphQL(
+      repoOwnerName,
+      state,
+      limit,
+      cursor
+    );
+    const lastPage = Math.max(1, Math.ceil(totalCount / limit));
+    return { items, lastPage };
   }
 
   private async resolvePageCursor(
@@ -107,13 +101,16 @@ export class IssueListService {
       `skip=${hop}`,
       ...this.buildStatesFilterArgs(state),
       ...(after ? ['-f', `after=${after}`] : []),
-    ]);
+    ]).catch((error) => {
+      throw mapGhError(error, 'fetch');
+    });
     const result = JSON.parse(stdout) as GhGraphQLResponse<IssueCursorQuery>;
 
     if (result.errors || !result.data) {
       const message = result.errors?.[0]?.message ?? 'Unknown GraphQL error';
-      throw new Error(
-        `GraphQL cursor query failed for ${owner}/${name}: ${message}`
+      throw new AppError(
+        `GraphQL cursor query failed for ${owner}/${name}: ${message}`,
+        HttpStatus.BAD_GATEWAY
       );
     }
 
@@ -141,20 +138,24 @@ export class IssueListService {
       `limit=${limit}`,
       ...this.buildStatesFilterArgs(state),
       ...(cursor ? ['-f', `after=${cursor}`] : []),
-    ]);
+    ]).catch((error) => {
+      throw mapGhError(error, 'fetch');
+    });
     const result = JSON.parse(stdout) as GhGraphQLResponse<IssueListQuery>;
 
     if (result.errors || !result.data) {
       const message = result.errors?.[0]?.message ?? 'Unknown GraphQL error';
-      throw new Error(
-        `GraphQL issue list query failed for ${repoOwnerName}: ${message}`
+      throw new AppError(
+        `GraphQL issue list query failed for ${repoOwnerName}: ${message}`,
+        HttpStatus.BAD_GATEWAY
       );
     }
 
     const issues = result.data.repository?.issues;
     if (!issues)
-      throw new Error(
-        `GraphQL query failed: repository ${repoOwnerName} not found or issues inaccessible`
+      throw new AppError(
+        `GraphQL query failed: repository ${repoOwnerName} not found or issues inaccessible`,
+        HttpStatus.BAD_GATEWAY
       );
 
     return {

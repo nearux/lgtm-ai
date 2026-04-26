@@ -377,7 +377,7 @@ describe('PRListService.fetchPRList', () => {
     });
   });
 
-  it('should throw INTERNAL_SERVER_ERROR when GraphQL response has errors', async () => {
+  it('should throw BAD_GATEWAY when GraphQL response has errors', async () => {
     // given
     mockExecAsync.mockResolvedValueOnce({
       stdout: JSON.stringify({ errors: [{ message: 'Field does not exist' }] }),
@@ -386,8 +386,8 @@ describe('PRListService.fetchPRList', () => {
 
     // when / then
     await expect(service.fetchPRList('owner/repo')).rejects.toMatchObject({
-      message: 'Failed to fetch PR data from GitHub',
-      statusCode: 500,
+      message: 'GraphQL query failed: Field does not exist',
+      statusCode: 502,
     });
   });
 

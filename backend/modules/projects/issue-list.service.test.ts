@@ -201,7 +201,7 @@ describe('IssueListService.fetchIssueList', () => {
     expect(result.lastPage).toBe(1);
   });
 
-  it('throws when GraphQL response contains errors', async () => {
+  it('throws BAD_GATEWAY when GraphQL response contains errors', async () => {
     // given
     mockExecAsync.mockResolvedValue({
       stdout: JSON.stringify({
@@ -210,12 +210,14 @@ describe('IssueListService.fetchIssueList', () => {
     });
 
     // when / then
-    await expect(service.fetchIssueList('owner/repo')).rejects.toThrow(
-      'Failed to fetch PR data from GitHub'
-    );
+    await expect(service.fetchIssueList('owner/repo')).rejects.toMatchObject({
+      message:
+        'GraphQL issue list query failed for owner/repo: Some GraphQL error',
+      statusCode: 502,
+    });
   });
 
-  it('throws when GraphQL response has no repository', async () => {
+  it('throws BAD_GATEWAY when GraphQL response has no repository', async () => {
     // given
     mockExecAsync.mockResolvedValue({
       stdout: JSON.stringify({
@@ -224,9 +226,11 @@ describe('IssueListService.fetchIssueList', () => {
     });
 
     // when / then
-    await expect(service.fetchIssueList('owner/repo')).rejects.toThrow(
-      'Cannot access this repository'
-    );
+    await expect(service.fetchIssueList('owner/repo')).rejects.toMatchObject({
+      message:
+        'GraphQL query failed: repository owner/repo not found or issues inaccessible',
+      statusCode: 502,
+    });
   });
 
   it('maps authentication error to AppError with 503', async () => {
