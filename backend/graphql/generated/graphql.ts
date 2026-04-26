@@ -37043,6 +37043,180 @@ export type _Entity =
   | WorkflowRun
   | WorkflowRunFile;
 
+export type IssueCursorQueryVariables = Exact<{
+  owner: Scalars['String']['input'];
+  name: Scalars['String']['input'];
+  skip: Scalars['Int']['input'];
+  states: Array<IssueState> | IssueState;
+  after?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+export type IssueCursorQuery = {
+  __typename?: 'Query';
+  repository?: {
+    __typename?: 'Repository';
+    issues: {
+      __typename?: 'IssueConnection';
+      pageInfo: { __typename?: 'PageInfo'; endCursor?: string | null };
+    };
+  } | null;
+};
+
+export type IssueDetailQueryVariables = Exact<{
+  owner: Scalars['String']['input'];
+  name: Scalars['String']['input'];
+  number: Scalars['Int']['input'];
+}>;
+
+export type IssueDetailQuery = {
+  __typename?: 'Query';
+  repository?: {
+    __typename?: 'Repository';
+    issue?: {
+      __typename?: 'Issue';
+      number: number;
+      title: string;
+      body: string;
+      state: IssueState;
+      createdAt: any;
+      updatedAt: any;
+      closedAt?: any | null;
+      url: any;
+      comments: {
+        __typename?: 'IssueCommentConnection';
+        nodes?: Array<{
+          __typename?: 'IssueComment';
+          id: string;
+          body: string;
+          createdAt: any;
+          updatedAt: any;
+          author?:
+            | { __typename?: 'Bot'; id: string; login: string; avatarUrl: any }
+            | {
+                __typename?: 'EnterpriseUserAccount';
+                login: string;
+                avatarUrl: any;
+              }
+            | { __typename?: 'Mannequin'; login: string; avatarUrl: any }
+            | { __typename?: 'Organization'; login: string; avatarUrl: any }
+            | {
+                __typename?: 'User';
+                id: string;
+                name?: string | null;
+                login: string;
+                avatarUrl: any;
+              }
+            | null;
+        } | null> | null;
+      };
+      assignees: {
+        __typename?: 'UserConnection';
+        nodes?: Array<{
+          __typename?: 'User';
+          id: string;
+          login: string;
+          name?: string | null;
+        } | null> | null;
+      };
+      author?:
+        | { __typename?: 'Bot'; id: string; login: string; avatarUrl: any }
+        | {
+            __typename?: 'EnterpriseUserAccount';
+            login: string;
+            avatarUrl: any;
+          }
+        | { __typename?: 'Mannequin'; login: string; avatarUrl: any }
+        | { __typename?: 'Organization'; login: string; avatarUrl: any }
+        | {
+            __typename?: 'User';
+            id: string;
+            name?: string | null;
+            login: string;
+            avatarUrl: any;
+          }
+        | null;
+      labels?: {
+        __typename?: 'LabelConnection';
+        nodes?: Array<{
+          __typename?: 'Label';
+          id: string;
+          name: string;
+          color: string;
+        } | null> | null;
+      } | null;
+      milestone?: {
+        __typename?: 'Milestone';
+        id: string;
+        title: string;
+      } | null;
+    } | null;
+  } | null;
+};
+
+export type IssueListQueryVariables = Exact<{
+  owner: Scalars['String']['input'];
+  name: Scalars['String']['input'];
+  limit: Scalars['Int']['input'];
+  states: Array<IssueState> | IssueState;
+  after?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+export type IssueListQuery = {
+  __typename?: 'Query';
+  repository?: {
+    __typename?: 'Repository';
+    issues: {
+      __typename?: 'IssueConnection';
+      totalCount: number;
+      nodes?: Array<{
+        __typename?: 'Issue';
+        number: number;
+        title: string;
+        body: string;
+        state: IssueState;
+        createdAt: any;
+        updatedAt: any;
+        comments: { __typename?: 'IssueCommentConnection'; totalCount: number };
+        assignees: {
+          __typename?: 'UserConnection';
+          nodes?: Array<{
+            __typename?: 'User';
+            id: string;
+            login: string;
+            name?: string | null;
+          } | null> | null;
+        };
+        author?:
+          | { __typename?: 'Bot'; id: string; login: string; avatarUrl: any }
+          | {
+              __typename?: 'EnterpriseUserAccount';
+              login: string;
+              avatarUrl: any;
+            }
+          | { __typename?: 'Mannequin'; login: string; avatarUrl: any }
+          | { __typename?: 'Organization'; login: string; avatarUrl: any }
+          | {
+              __typename?: 'User';
+              id: string;
+              name?: string | null;
+              login: string;
+              avatarUrl: any;
+            }
+          | null;
+        labels?: {
+          __typename?: 'LabelConnection';
+          nodes?: Array<{
+            __typename?: 'Label';
+            id: string;
+            name: string;
+            color: string;
+          } | null> | null;
+        } | null;
+      } | null> | null;
+    };
+  } | null;
+};
+
 export type PrCursorQueryVariables = Exact<{
   owner: Scalars['String']['input'];
   name: Scalars['String']['input'];
