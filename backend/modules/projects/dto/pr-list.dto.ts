@@ -2,7 +2,7 @@ import { isString } from 'remeda';
 import type { PRListItem } from '../../../types/pullRequests.js';
 import type { PrListQuery } from '../../../graphql/generated/graphql.js';
 
-type GraphQLPRNode = NonNullable<
+export type GraphQLPRNode = NonNullable<
   NonNullable<
     NonNullable<PrListQuery['repository']>['pullRequests']['nodes']
   >[number]

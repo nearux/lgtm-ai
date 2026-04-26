@@ -1,17 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import { PRListItemDto } from './pull-requests.dto.js';
-import type { PrListQuery } from '../../../graphql/generated/graphql.js';
-
-type GraphQLPRNode = NonNullable<
-  NonNullable<PrListQuery['repository']>['pullRequests']['nodes']
->[number];
+import { PRListItemDto } from './pr-list.dto.js';
+import type { GraphQLPRNode } from './pr-list.dto.js';
+import { PullRequestState } from '../../../graphql/generated/graphql.js';
 
 describe('PRListItemDto.fromGraphQL', () => {
   const baseNode: GraphQLPRNode = {
     number: 42,
     title: 'My PR',
     body: 'Description',
-    state: 'OPEN',
+    state: PullRequestState.Open,
     createdAt: '2024-01-01T00:00:00Z',
     updatedAt: '2024-01-02T00:00:00Z',
     totalCommentsCount: 10,
@@ -74,7 +71,7 @@ describe('PRListItemDto.fromGraphQL', () => {
   });
 
   it('falls back to empty string when body is null', () => {
-    const node = { ...baseNode, body: null };
+    const node = { ...baseNode, body: null } as unknown as GraphQLPRNode;
     const dto = PRListItemDto.fromGraphQL(node);
     expect(dto.body).toBe('');
   });

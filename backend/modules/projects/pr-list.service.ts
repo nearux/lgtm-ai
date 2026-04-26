@@ -13,7 +13,7 @@ import type {
 } from '../../graphql/generated/graphql.js';
 import prListGql from '../../graphql/queries/pr-list.gql';
 import prCursorGql from '../../graphql/queries/pr-cursor.gql';
-import { PRListItemDto } from './dto/pull-requests.dto.js';
+import { PRListItemDto } from './dto/pr-list.dto.js';
 import { validateRepoOwnerName, mapGhError } from './gh.util.js';
 import { AppError } from '../../errors/AppError.js';
 import HttpStatus from 'http-status';
