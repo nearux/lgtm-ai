@@ -1,16 +1,15 @@
-import { isString, map, sumBy } from 'remeda';
-import type {
-  PRDetail,
-  PRReview,
-  GhPRDetail,
-  GhPRAssignee,
-  GhPRComment,
-  GhPRReview,
-  GhReviewInlineComment,
-} from '../../../types/pullRequests.js';
-import { GhAuthorDto } from './gh-author.dto.js';
-import { GhInlineCommentDto } from './gh-inline-comment.dto.js';
+import { isString } from 'remeda';
+import type { PRDetail, PRReview } from '../../../types/pullRequests.js';
+import type { PrDetailQuery } from '../../../graphql/generated/graphql.js';
 import { countNonEmptyReviewBodies } from './comment-counts.js';
+
+type GraphQLPRDetail = NonNullable<
+  NonNullable<PrDetailQuery['repository']>['pullRequest']
+>;
+type GraphQLReview = NonNullable<
+  NonNullable<GraphQLPRDetail['reviews']>['nodes']
+>[number];
+type GraphQLActor = NonNullable<GraphQLPRDetail['author']>;
 
 export class PRDetailDto implements PRDetail {
   number: number;
@@ -45,67 +44,101 @@ export class PRDetailDto implements PRDetail {
     this.commits = data.commits;
   }
 
-  static fromGh(
-    raw: GhPRDetail,
-    inlineCommentsByReview: Map<string, GhReviewInlineComment[]>
-  ): PRDetailDto {
-    const inlineCount = sumBy(
-      Array.from(inlineCommentsByReview.values()),
-      (arr) => arr.length
+  static fromGraphQL(pr: GraphQLPRDetail): PRDetailDto {
+    const reviewNodes = pr.reviews?.nodes ?? [];
+    const inlineCount = reviewNodes.reduce(
+      (sum, r) => sum + (r?.comments.nodes?.length ?? 0),
+      0
     );
-    const reviewBodyCount = countNonEmptyReviewBodies(raw.reviews);
+    const reviewBodyCount = countNonEmptyReviewBodies(
+      reviewNodes.map((r) => ({ body: r?.body }))
+    );
+    const commentNodes = pr.comments.nodes ?? [];
     const totalCommentsCount =
-      raw.comments.length + inlineCount + reviewBodyCount;
+      commentNodes.length + inlineCount + reviewBodyCount;
 
     return new PRDetailDto({
-      number: raw.number,
-      title: raw.title,
-      body: isString(raw.body) ? raw.body : '',
+      number: pr.number,
+      title: pr.title,
+      body: isString(pr.body) ? pr.body : '',
       totalCommentsCount,
-      baseBranch: raw.baseRefName,
-      headBranch: raw.headRefName,
-      assignees: map(raw.assignees, toAssignee),
-      author: GhAuthorDto.fromGh(raw.author),
-      createdAt: raw.createdAt,
-      updatedAt: raw.updatedAt,
-      state: raw.state,
-      comments: map(raw.comments, toComment),
-      reviews: map(raw.reviews, toReview(inlineCommentsByReview)),
-      commits: raw.commits,
+      baseBranch: pr.baseRefName,
+      headBranch: pr.headRefName,
+      assignees: (pr.assignees.nodes ?? []).map((a) => ({
+        id: a?.id ?? a?.login ?? '',
+        login: a?.login ?? '',
+        name: a?.name ?? a?.login ?? '',
+      })),
+      author: toAuthor(pr.author),
+      createdAt: String(pr.createdAt),
+      updatedAt: String(pr.updatedAt),
+      state: pr.state,
+      comments: commentNodes.map((c) => ({
+        id: c?.id ?? '',
+        author: toAuthor(c?.author),
+        body: c?.body ?? '',
+        createdAt: String(c?.createdAt ?? ''),
+        updatedAt: String(c?.updatedAt ?? ''),
+      })),
+      reviews: reviewNodes.map(toReview),
+      commits: (pr.commits.nodes ?? []).flatMap((n) => {
+        if (!n?.commit) return [];
+        const {
+          oid,
+          messageHeadline,
+          messageBody,
+          authoredDate,
+          committedDate,
+          authors,
+        } = n.commit;
+        return [
+          {
+            oid,
+            messageHeadline,
+            messageBody,
+            authoredDate,
+            committedDate,
+            authors: (authors.nodes ?? []).map((a) => ({
+              name: a?.name ?? '',
+              email: a?.email ?? '',
+            })),
+          },
+        ];
+      }),
     });
   }
 }
 
-function toAssignee(a: GhPRAssignee): PRDetail['assignees'][number] {
+function toAuthor(actor: GraphQLActor | null | undefined): PRDetail['author'] {
+  const id = (actor as { id?: string } | null)?.id ?? actor?.login ?? '';
+  const name =
+    (actor as { name?: string | null } | null)?.name ?? actor?.login ?? '';
   return {
-    id: a.id ?? a.login,
-    login: a.login,
-    name: a.name ?? a.login,
+    id,
+    login: actor?.login ?? '',
+    name,
+    avatarUrl: String(actor?.avatarUrl ?? ''),
+    ...(actor?.__typename === 'Bot' ? { is_bot: true } : {}),
   };
 }
 
-function toComment(c: GhPRComment): PRDetail['comments'][number] {
+function toReview(r: GraphQLReview | null | undefined): PRReview {
+  const inlineCommentNodes = r?.comments.nodes ?? [];
   return {
-    id: c.id,
-    author: GhAuthorDto.fromGh(c.author),
-    body: c.body,
-    createdAt: c.createdAt,
-    updatedAt: c.updatedAt,
+    id: r?.id ?? '',
+    author: toAuthor(r?.author),
+    state: r?.state ?? '',
+    body: r?.body ?? '',
+    submittedAt: String(r?.submittedAt ?? ''),
+    inlineComments: inlineCommentNodes.map((c) => ({
+      id: c?.id ?? '',
+      ...(c?.replyTo?.id != null ? { inReplyToId: c.replyTo.id } : {}),
+      author: toAuthor(c?.author),
+      body: c?.body ?? '',
+      path: c?.path ?? '',
+      diffHunk: c?.diffHunk ?? '',
+      createdAt: String(c?.createdAt ?? ''),
+      updatedAt: String(c?.updatedAt ?? ''),
+    })),
   };
-}
-
-function toReview(
-  inlineCommentsByReview: Map<string, GhReviewInlineComment[]>
-): (r: GhPRReview) => PRReview {
-  return (r) => ({
-    id: r.id,
-    author: GhAuthorDto.fromGh(r.author),
-    state: r.state,
-    body: r.body,
-    submittedAt: r.submittedAt,
-    inlineComments: map(
-      inlineCommentsByReview.get(r.id) ?? [],
-      GhInlineCommentDto.fromGh
-    ),
-  });
 }

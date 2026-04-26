@@ -1,0 +1,112 @@
+query PrDetail($owner: String!, $name: String!, $number: Int!) {
+  repository(owner: $owner, name: $name) {
+    pullRequest(number: $number) {
+      number
+      title
+      body
+      state
+      baseRefName
+      headRefName
+      createdAt
+      updatedAt
+      totalCommentsCount
+      assignees(first: 20) {
+        nodes {
+          id
+          login
+          name
+        }
+      }
+      author {
+        login
+        avatarUrl
+        ... on User {
+          id
+          name
+        }
+        ... on Bot {
+          id
+        }
+      }
+      comments(first: 100) {
+        nodes {
+          id
+          author {
+            login
+            avatarUrl
+            ... on User {
+              id
+              name
+            }
+            ... on Bot {
+              id
+            }
+          }
+          body
+          createdAt
+          updatedAt
+        }
+      }
+      reviews(first: 100) {
+        nodes {
+          id
+          author {
+            login
+            avatarUrl
+            ... on User {
+              id
+              name
+            }
+            ... on Bot {
+              id
+            }
+          }
+          state
+          body
+          submittedAt
+          comments(first: 100) {
+            nodes {
+              id
+              replyTo {
+                id
+              }
+              author {
+                login
+                avatarUrl
+                ... on User {
+                  id
+                  name
+                }
+                ... on Bot {
+                  id
+                }
+              }
+              body
+              path
+              diffHunk
+              createdAt
+              updatedAt
+            }
+          }
+        }
+      }
+      commits(last: 100) {
+        nodes {
+          commit {
+            oid
+            messageHeadline
+            messageBody
+            authoredDate
+            committedDate
+            authors(first: 5) {
+              nodes {
+                name
+                email
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
