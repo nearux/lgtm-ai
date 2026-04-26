@@ -2,7 +2,11 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { clamp } from 'remeda';
 import { injectable } from 'inversify';
-import type { PaginatedIssueList, IssueState } from '../../types/issues.js';
+import type {
+  PaginatedIssueList,
+  IssueListItem,
+  IssueState,
+} from '../../types/issues.js';
 import type {
   IssueListQuery,
   IssueCursorQuery,
@@ -44,7 +48,7 @@ export class IssueListService {
     const state = this.normalizeIssueState(options.state);
 
     let totalCount: number;
-    let nodes: NonNullable<IssueListQuery['repository']>['issues']['nodes'];
+    let items: IssueListItem[];
 
     try {
       let cursor: string | null = null;
@@ -56,7 +60,7 @@ export class IssueListService {
         }
       }
 
-      ({ totalCount, nodes } = await this.fetchIssueListGraphQL(
+      ({ totalCount, items } = await this.fetchIssueListGraphQL(
         repoOwnerName,
         state,
         limit,
@@ -68,10 +72,7 @@ export class IssueListService {
 
     const lastPage = Math.max(1, Math.ceil(totalCount / limit));
 
-    return {
-      items: (nodes ?? []).map((node) => IssueListItemDto.fromGraphQL(node)),
-      lastPage,
-    };
+    return { items, lastPage };
   }
 
   private async resolvePageCursor(
@@ -130,10 +131,7 @@ export class IssueListService {
     state: IssueState,
     limit: number,
     cursor: string | null
-  ): Promise<{
-    totalCount: number;
-    nodes: NonNullable<IssueListQuery['repository']>['issues']['nodes'];
-  }> {
+  ): Promise<{ totalCount: number; items: IssueListItem[] }> {
     const [owner, name] = repoOwnerName.split('/');
 
     const { stdout } = await execFileAsync('gh', [
@@ -160,7 +158,12 @@ export class IssueListService {
     const issues = result.data.repository?.issues;
     if (!issues) throw new Error('GraphQL query failed: no data');
 
-    return { totalCount: issues.totalCount, nodes: issues.nodes };
+    return {
+      totalCount: issues.totalCount,
+      items: (issues.nodes ?? []).map((node) =>
+        IssueListItemDto.fromGraphQL(node)
+      ),
+    };
   }
 
   private normalizePositiveInt(

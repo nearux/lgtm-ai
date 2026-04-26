@@ -2,10 +2,14 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { clamp } from 'remeda';
 import { injectable } from 'inversify';
-import type { PaginatedPRList, PRState } from '../../types/pullRequests.js';
 import type {
-  PrListQuery,
+  PaginatedPRList,
+  PRListItem,
+  PRState,
+} from '../../types/pullRequests.js';
+import type {
   PrCursorQuery,
+  PrListQuery,
 } from '../../graphql/generated/graphql.js';
 import prListGql from '../../graphql/queries/pr-list.gql';
 import prCursorGql from '../../graphql/queries/pr-cursor.gql';
@@ -45,7 +49,7 @@ export class PRListService {
     const state = this.normalizePRState(options.state);
 
     let totalCount: number;
-    let nodes: NonNullable<PrListQuery['repository']>['pullRequests']['nodes'];
+    let items: PRListItem[];
 
     try {
       let cursor: string | null = null;
@@ -57,7 +61,7 @@ export class PRListService {
         }
       }
 
-      ({ totalCount, nodes } = await this.fetchPRListGraphQL(
+      ({ totalCount, items } = await this.fetchPRListGraphQL(
         repoOwnerName,
         state,
         limit,
@@ -69,10 +73,7 @@ export class PRListService {
 
     const lastPage = Math.max(1, Math.ceil(totalCount / limit));
 
-    return {
-      items: (nodes ?? []).map((node) => PRListItemDto.fromGraphQL(node)),
-      lastPage,
-    };
+    return { items, lastPage };
   }
 
   private async resolvePageCursor(
@@ -131,10 +132,7 @@ export class PRListService {
     state: PRState,
     limit: number,
     cursor: string | null
-  ): Promise<{
-    totalCount: number;
-    nodes: NonNullable<PrListQuery['repository']>['pullRequests']['nodes'];
-  }> {
+  ): Promise<{ totalCount: number; items: PRListItem[] }> {
     const [owner, name] = repoOwnerName.split('/');
 
     const { stdout } = await execFileAsync('gh', [
@@ -161,7 +159,10 @@ export class PRListService {
     const prs = result.data.repository?.pullRequests;
     if (!prs) throw new Error('GraphQL query failed: no data');
 
-    return { totalCount: prs.totalCount, nodes: prs.nodes };
+    return {
+      totalCount: prs.totalCount,
+      items: (prs.nodes ?? []).map((node) => PRListItemDto.fromGraphQL(node)),
+    };
   }
 
   private normalizePositiveInt(
