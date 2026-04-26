@@ -49,7 +49,8 @@ async function seedChatSession(
     data: {
       id: randomUUID(),
       project_id: 'project-1',
-      pr_number: 45,
+      target_type: 'PR',
+      target_number: 45,
       scope_type: 'REVIEW',
       scope_target_id: 'review-123',
       claude_session_id: `claude-${randomUUID()}`,
@@ -93,7 +94,8 @@ describe('ChatSessionsService', () => {
     const result = await service.createChatSessionFromExecution(
       {
         projectId: 'project-1',
-        prNumber: 45,
+        targetType: 'PR',
+        targetNumber: 45,
         scopeType: 'REVIEW',
         scopeTargetId: 'review-123',
         title: 'Validate review',
@@ -107,7 +109,7 @@ describe('ChatSessionsService', () => {
 
     expect(persisted).not.toBeNull();
     expect(persisted?.project_id).toBe('project-1');
-    expect(persisted?.pr_number).toBe(45);
+    expect(persisted?.target_number).toBe(45);
     expect(persisted?.scope_type).toBe('REVIEW');
     expect(result.id).toBe(persisted?.id);
     expect(result.claudeSessionId).toBe('claude-session-1');
@@ -117,7 +119,8 @@ describe('ChatSessionsService', () => {
     const result = await service.createChatSessionFromExecution(
       {
         projectId: 'project-1',
-        prNumber: 45,
+        targetType: 'PR',
+        targetNumber: 45,
         scopeType: 'REVIEW',
         scopeTargetId: 'review-123',
         title: 'Validate review',
@@ -141,14 +144,16 @@ describe('ChatSessionsService', () => {
 
     const first = await seedChatSession({
       project_id: 'project-1',
-      pr_number: 45,
+      target_type: 'PR',
+      target_number: 45,
       last_used_at: older,
       updated_at: older,
       claude_session_id: 'claude-old',
     });
     const second = await seedChatSession({
       project_id: 'project-1',
-      pr_number: 45,
+      target_type: 'PR',
+      target_number: 45,
       last_used_at: newer,
       updated_at: newer,
       claude_session_id: 'claude-new',
@@ -162,14 +167,16 @@ describe('ChatSessionsService', () => {
   it('filters sessions by scope type and scope target id', async () => {
     await seedChatSession({
       project_id: 'project-1',
-      pr_number: 45,
+      target_type: 'PR',
+      target_number: 45,
       scope_type: 'REVIEW',
       scope_target_id: 'review-123',
       claude_session_id: 'claude-review',
     });
     await seedChatSession({
       project_id: 'project-1',
-      pr_number: 45,
+      target_type: 'PR',
+      target_number: 45,
       scope_type: 'COMMENT',
       scope_target_id: 'comment-55',
       claude_session_id: 'claude-comment',
@@ -189,7 +196,8 @@ describe('ChatSessionsService', () => {
 
     await seedChatSession({
       project_id: 'project-1',
-      pr_number: 45,
+      target_type: 'PR',
+      target_number: 45,
       claude_session_id: 'claude-to-update',
       updated_at: oldTime,
       last_used_at: oldTime,
@@ -218,7 +226,8 @@ describe('ChatSessionsService', () => {
   it('throws not found when session belongs to another project or pr', async () => {
     const session = await seedChatSession({
       project_id: 'project-2',
-      pr_number: 99,
+      target_type: 'PR',
+      target_number: 99,
       claude_session_id: 'claude-foreign',
     });
 
@@ -237,7 +246,8 @@ describe('ChatSessionsService', () => {
     });
     const session = await seedChatSession({
       project_id: project.id,
-      pr_number: 45,
+      target_type: 'PR',
+      target_number: 45,
       claude_session_id: 'claude-session-1',
     });
     const now = new Date('2026-03-11T00:00:00.000Z').toISOString();
@@ -283,7 +293,8 @@ describe('ChatSessionsService', () => {
   it('throws not found when project does not exist for history lookup', async () => {
     const session = await seedChatSession({
       project_id: 'project-1',
-      pr_number: 45,
+      target_type: 'PR',
+      target_number: 45,
       claude_session_id: 'claude-session-1',
     });
 

@@ -21,7 +21,8 @@ export class ChatSessionRepository {
     return this.prisma.chatSession.findMany({
       where: {
         project_id: projectId,
-        pr_number: prNumber,
+        target_type: 'PR',
+        target_number: prNumber,
         ...(filters.scopeType ? { scope_type: filters.scopeType } : {}),
         ...(filters.scopeTargetId
           ? { scope_target_id: filters.scopeTargetId }

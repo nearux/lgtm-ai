@@ -45,7 +45,8 @@ async function seedChatSession(
     data: {
       id: randomUUID(),
       project_id: 'project-1',
-      pr_number: 45,
+      target_type: 'PR',
+      target_number: 45,
       scope_type: 'REVIEW',
       scope_target_id: 'review-123',
       claude_session_id: `claude-${randomUUID()}`,
@@ -111,7 +112,8 @@ describe('chat sessions REST integration', () => {
 
     const oldSession = await seedChatSession({
       project_id: project.id,
-      pr_number: 45,
+      target_type: 'PR',
+      target_number: 45,
       scope_type: 'REVIEW',
       scope_target_id: 'review-123',
       claude_session_id: 'claude-old',
@@ -120,7 +122,8 @@ describe('chat sessions REST integration', () => {
     });
     const newSession = await seedChatSession({
       project_id: project.id,
-      pr_number: 45,
+      target_type: 'PR',
+      target_number: 45,
       scope_type: 'COMMENT',
       scope_target_id: 'comment-55',
       claude_session_id: 'claude-new',
@@ -166,7 +169,8 @@ describe('chat sessions REST integration', () => {
     const session = await seedChatSession({
       id: 'session-1',
       project_id: project.id,
-      pr_number: 45,
+      target_type: 'PR',
+      target_number: 45,
       claude_session_id: 'claude-session-1',
     });
 

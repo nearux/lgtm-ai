@@ -228,3 +228,62 @@ export function batchCustomPrompt(
 ## Review Comments Context
 ${batchSection}`;
 }
+
+// ── Issue prompt templates ──────────────────────────────────────────
+
+export interface IssueSystemPromptParams {
+  repoOwnerName: string;
+  number: number;
+  title: string;
+  body: string;
+  defaultBranch: string;
+}
+
+export function systemPromptForIssue(p: IssueSystemPromptParams): string {
+  return `You are a software development assistant for a GitHub repository.
+
+## Issue Context
+- Repository: ${p.repoOwnerName}
+- Issue #${p.number}: ${p.title}
+- Branch: ${p.defaultBranch} (default branch, currently checked out)
+
+## Issue Description
+${p.body || '(no description)'}
+
+## Guidelines
+- You have access to the local codebase (checked out to the default branch).
+- Use \`gh\` CLI or file reading tools to explore additional context when needed.
+- Focus on the specific issue provided.`;
+}
+
+export function explainIssuePrompt(
+  issueNumber: number,
+  repoOwnerName: string
+): string {
+  return `Please explain this issue in detail.
+
+## Instructions
+1. Retrieve full issue details using: \`gh issue view ${issueNumber} --repo ${repoOwnerName}\`
+2. Summarize what the issue is about in plain language
+3. Identify the relevant parts of the codebase by exploring files and searching for related symbols
+4. Explain the root cause or context if it can be determined from the code
+5. Describe the expected vs actual behavior if applicable`;
+}
+
+export function fixIssuePrompt(
+  issueNumber: number,
+  repoOwnerName: string
+): string {
+  return `Please analyze this issue and apply a fix to the codebase.
+
+## Instructions
+1. Retrieve full issue details using: \`gh issue view ${issueNumber} --repo ${repoOwnerName}\`
+2. Explore the relevant parts of the codebase to understand the context
+3. Implement the minimal necessary changes to address the issue
+4. Do NOT use git commands — only modify local files
+5. After applying changes, briefly explain what you changed and why`;
+}
+
+export function customIssuePrompt(userPrompt: string): string {
+  return userPrompt;
+}

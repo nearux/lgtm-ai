@@ -34,7 +34,8 @@ export class ChatSessionsService {
     const record = await this.chatSessionRepository.create({
       id: randomUUID(),
       project_id: context.projectId,
-      pr_number: context.prNumber,
+      target_type: context.targetType,
+      target_number: context.targetNumber,
       scope_type: context.scopeType,
       scope_target_id: context.scopeTargetId,
       claude_session_id: claudeSessionId,
@@ -80,7 +81,7 @@ export class ChatSessionsService {
     if (
       !record ||
       record.project_id !== projectId ||
-      record.pr_number !== prNumber
+      record.target_number !== prNumber
     ) {
       throw new AppError('Chat session not found', HttpStatus.NOT_FOUND);
     }
