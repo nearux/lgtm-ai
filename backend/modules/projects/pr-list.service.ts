@@ -1,8 +1,5 @@
-import { readFileSync } from 'node:fs';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
 import { clamp } from 'remeda';
 import { injectable } from 'inversify';
 import type { PaginatedPRList, PRState } from '../../types/pullRequests.js';
@@ -10,13 +7,12 @@ import type {
   PrListQuery,
   PrCursorQuery,
 } from '../../graphql/generated/graphql.js';
+import prListGql from '../../graphql/queries/pr-list.gql';
+import prCursorGql from '../../graphql/queries/pr-cursor.gql';
 import { PRListItemDto } from './dto/pull-requests.dto.js';
 import { validateRepoOwnerName, mapGhError } from './gh.util.js';
 
 const execFileAsync = promisify(execFile);
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const QUERIES_DIR = join(__dirname, '../../graphql/queries');
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 100;
@@ -31,17 +27,10 @@ const GRAPHQL_PR_STATES: Record<PRState, string[]> = {
   all: ['OPEN', 'CLOSED', 'MERGED'],
 };
 
+type GhGraphQLResponse<T> = { data?: T; errors?: { message: string }[] };
+
 @injectable()
 export class PRListService {
-  private readonly prListQuery = readFileSync(
-    join(QUERIES_DIR, 'pr-list.gql'),
-    'utf-8'
-  );
-  private readonly prCursorQuery = readFileSync(
-    join(QUERIES_DIR, 'pr-cursor.gql'),
-    'utf-8'
-  );
-
   async fetchPRList(
     repoOwnerName: string,
     options: { page?: number; limit?: number; state?: PRState } = {}
@@ -117,7 +106,7 @@ export class PRListService {
       'api',
       'graphql',
       '-f',
-      `query=${this.prCursorQuery}`,
+      `query=${prCursorGql}`,
       '-f',
       `owner=${owner}`,
       '-f',
@@ -127,16 +116,14 @@ export class PRListService {
       ...this.statesArgs(state),
       ...(after ? ['-f', `after=${after}`] : []),
     ]);
-    const result = JSON.parse(stdout) as PrCursorQuery & {
-      errors?: { message: string }[];
-    };
+    const result = JSON.parse(stdout) as GhGraphQLResponse<PrCursorQuery>;
 
-    if ('errors' in result && result.errors) {
-      const message = result.errors[0]?.message ?? 'Unknown GraphQL error';
+    if (result.errors || !result.data) {
+      const message = result.errors?.[0]?.message ?? 'Unknown GraphQL error';
       throw new Error(`GraphQL query failed: ${message}`);
     }
 
-    return result.repository?.pullRequests.pageInfo.endCursor ?? null;
+    return result.data.repository?.pullRequests.pageInfo.endCursor ?? null;
   }
 
   private async fetchPRListGraphQL(
@@ -154,7 +141,7 @@ export class PRListService {
       'api',
       'graphql',
       '-f',
-      `query=${this.prListQuery}`,
+      `query=${prListGql}`,
       '-f',
       `owner=${owner}`,
       '-f',
@@ -164,16 +151,14 @@ export class PRListService {
       ...this.statesArgs(state),
       ...(cursor ? ['-f', `after=${cursor}`] : []),
     ]);
-    const result = JSON.parse(stdout) as PrListQuery & {
-      errors?: { message: string }[];
-    };
+    const result = JSON.parse(stdout) as GhGraphQLResponse<PrListQuery>;
 
-    if ('errors' in result && result.errors) {
-      const message = result.errors[0]?.message ?? 'Unknown GraphQL error';
+    if (result.errors || !result.data) {
+      const message = result.errors?.[0]?.message ?? 'Unknown GraphQL error';
       throw new Error(`GraphQL query failed: ${message}`);
     }
 
-    const prs = result.repository?.pullRequests;
+    const prs = result.data.repository?.pullRequests;
     if (!prs) throw new Error('GraphQL query failed: no data');
 
     return { totalCount: prs.totalCount, nodes: prs.nodes };

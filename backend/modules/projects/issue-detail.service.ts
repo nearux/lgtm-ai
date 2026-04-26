@@ -1,26 +1,20 @@
-import { readFileSync } from 'node:fs';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
 import { injectable } from 'inversify';
+import HttpStatus from 'http-status';
 import type { IssueDetail } from '../../types/issues.js';
 import type { IssueDetailQuery } from '../../graphql/generated/graphql.js';
+import issueDetailGql from '../../graphql/queries/issue-detail.gql';
 import { IssueDetailDto } from './dto/issue-detail.dto.js';
 import { validateRepoOwnerName, mapGhError } from './gh.util.js';
+import { AppError } from '../../errors/AppError.js';
 
 const execFileAsync = promisify(execFile);
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const QUERIES_DIR = join(__dirname, '../../graphql/queries');
+type GhGraphQLResponse<T> = { data?: T; errors?: { message: string }[] };
 
 @injectable()
 export class IssueDetailService {
-  private readonly issueDetailQuery = readFileSync(
-    join(QUERIES_DIR, 'issue-detail.gql'),
-    'utf-8'
-  );
-
   async fetchIssueDetail(
     repoOwnerName: string,
     issueNumber: number
@@ -29,14 +23,14 @@ export class IssueDetailService {
 
     const [owner, name] = repoOwnerName.split('/');
 
-    let result: IssueDetailQuery & { errors?: { message: string }[] };
+    let result: GhGraphQLResponse<IssueDetailQuery>;
 
     try {
       const { stdout } = await execFileAsync('gh', [
         'api',
         'graphql',
         '-f',
-        `query=${this.issueDetailQuery}`,
+        `query=${issueDetailGql}`,
         '-f',
         `owner=${owner}`,
         '-f',
@@ -44,21 +38,19 @@ export class IssueDetailService {
         '-F',
         `number=${issueNumber}`,
       ]);
-      result = JSON.parse(stdout) as IssueDetailQuery & {
-        errors?: { message: string }[];
-      };
+      result = JSON.parse(stdout) as GhGraphQLResponse<IssueDetailQuery>;
     } catch (error) {
       throw mapGhError(error, 'fetch');
     }
 
-    if ('errors' in result && result.errors) {
-      const message = result.errors[0]?.message ?? 'Unknown GraphQL error';
+    if (result.errors || !result.data) {
+      const message = result.errors?.[0]?.message ?? 'Unknown GraphQL error';
       throw new Error(`GraphQL query failed: ${message}`);
     }
 
-    const issue = result.repository?.issue;
+    const issue = result.data.repository?.issue;
     if (!issue) {
-      throw mapGhError(new Error('Issue not found'), 'fetch');
+      throw new AppError('Issue not found', HttpStatus.NOT_FOUND);
     }
 
     return IssueDetailDto.fromGraphQL(issue);

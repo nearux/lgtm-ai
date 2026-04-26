@@ -10,6 +10,7 @@ query IssueDetail($owner: String!, $name: String!, $number: Int!) {
       closedAt
       url
       comments(first: 100) {
+        totalCount
         nodes {
           id
           author {

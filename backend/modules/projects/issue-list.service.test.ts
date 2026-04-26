@@ -7,10 +7,6 @@ vi.mock('node:util', () => ({
   promisify: () => mockExecAsync,
 }));
 
-vi.mock('node:fs', () => ({
-  readFileSync: () => 'mock gql query',
-}));
-
 const { IssueListService } = await import('./issue-list.service.js');
 
 describe('IssueListService.fetchIssueList', () => {
@@ -42,10 +38,12 @@ describe('IssueListService.fetchIssueList', () => {
   ];
 
   const mockResponse = {
-    repository: {
-      issues: {
-        totalCount: 1,
-        nodes: mockIssueNodes,
+    data: {
+      repository: {
+        issues: {
+          totalCount: 1,
+          nodes: mockIssueNodes,
+        },
       },
     },
   };
@@ -81,7 +79,9 @@ describe('IssueListService.fetchIssueList', () => {
   it('calculates lastPage correctly', async () => {
     mockExecAsync.mockResolvedValue({
       stdout: JSON.stringify({
-        repository: { issues: { totalCount: 250, nodes: mockIssueNodes } },
+        data: {
+          repository: { issues: { totalCount: 250, nodes: mockIssueNodes } },
+        },
       }),
     });
 
@@ -111,7 +111,7 @@ describe('IssueListService.fetchIssueList', () => {
   it('returns empty items when GraphQL returns null nodes', async () => {
     mockExecAsync.mockResolvedValue({
       stdout: JSON.stringify({
-        repository: { issues: { totalCount: 0, nodes: null } },
+        data: { repository: { issues: { totalCount: 0, nodes: null } } },
       }),
     });
 

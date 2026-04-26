@@ -47,7 +47,9 @@ export class IssueDetailDto implements IssueDetail {
       title: issue.title,
       body: isString(issue.body) ? issue.body : '',
       state: issue.state,
-      totalCommentsCount: commentNodes.length,
+      totalCommentsCount:
+        (issue.comments?.totalCount as number | undefined) ??
+        commentNodes.length,
       assignees: (issue.assignees?.nodes ?? []).map((u) => ({
         id: u?.id ?? u?.login ?? '',
         login: u?.login ?? '',
@@ -64,6 +66,7 @@ export class IssueDetailDto implements IssueDetail {
           issue.author?.login ??
           '',
         avatarUrl: String(issue.author?.avatarUrl ?? ''),
+        is_bot: issue.author?.__typename === 'Bot',
       },
       labels: (issue.labels?.nodes ?? []).map((l) => ({
         id: l?.id ?? '',
@@ -85,6 +88,7 @@ export class IssueDetailDto implements IssueDetail {
             c?.author?.login ??
             '',
           avatarUrl: String(c?.author?.avatarUrl ?? ''),
+          is_bot: c?.author?.__typename === 'Bot',
         },
         body: c?.body ?? '',
         createdAt: String(c?.createdAt ?? ''),

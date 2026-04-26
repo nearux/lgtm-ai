@@ -7,10 +7,6 @@ vi.mock('node:util', () => ({
   promisify: () => mockExecAsync,
 }));
 
-vi.mock('node:fs', () => ({
-  readFileSync: () => 'mock-query-content',
-}));
-
 const { PRListService } = await import('./pr-list.service.js');
 
 describe('PRListService.fetchPRList', () => {
@@ -95,7 +91,7 @@ describe('PRListService.fetchPRList', () => {
   ) {
     mockExecAsync.mockResolvedValueOnce({
       stdout: JSON.stringify({
-        repository: { pullRequests: { totalCount, nodes } },
+        data: { repository: { pullRequests: { totalCount, nodes } } },
       }),
       stderr: '',
     });
@@ -104,9 +100,7 @@ describe('PRListService.fetchPRList', () => {
   function mockGraphQLCursorResponse(endCursor: string) {
     mockExecAsync.mockResolvedValueOnce({
       stdout: JSON.stringify({
-        repository: {
-          pullRequests: { pageInfo: { endCursor } },
-        },
+        data: { repository: { pullRequests: { pageInfo: { endCursor } } } },
       }),
       stderr: '',
     });
@@ -363,8 +357,8 @@ describe('PRListService.fetchPRList', () => {
   it('should return empty result when page is out of bounds (cursor is null)', async () => {
     mockExecAsync.mockResolvedValueOnce({
       stdout: JSON.stringify({
-        repository: {
-          pullRequests: { pageInfo: { endCursor: null } },
+        data: {
+          repository: { pullRequests: { pageInfo: { endCursor: null } } },
         },
       }),
       stderr: '',

@@ -54,6 +54,7 @@ export class IssueListItemDto implements IssueListItem {
           node.author?.login ??
           '',
         avatarUrl: String(node.author?.avatarUrl ?? ''),
+        is_bot: node.author?.__typename === 'Bot',
       },
       labels: (node.labels?.nodes ?? []).map((l) => ({
         id: l?.id ?? '',

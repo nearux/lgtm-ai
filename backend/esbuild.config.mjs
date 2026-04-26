@@ -1,5 +1,4 @@
 import { build } from 'esbuild';
-import { cpSync, mkdirSync } from 'node:fs';
 
 await build({
   entryPoints: ['index.ts'],
@@ -12,12 +11,19 @@ await build({
     'process.env.NODE_ENV': '"production"',
   },
   minify: true,
+  loader: {
+    // Inline .gql files as string constants so no runtime file reads are needed
+    '.gql': 'text',
+  },
   external: [
+    // Prisma and libsql use native binaries and must remain external
     '@prisma/client',
     '@prisma/adapter-libsql',
     '@libsql/client',
+    // tsoa and @tsoa/cli are build-time tools
     'tsoa',
     '@tsoa/cli',
+    // swagger-ui-express is dev-only
     'swagger-ui-express',
   ],
   banner: {
@@ -29,7 +35,3 @@ await build({
     ].join('\n'),
   },
 });
-
-// .gql 파일을 dist에 복사 (런타임에 readFileSync로 읽음)
-mkdirSync('dist/graphql/queries', { recursive: true });
-cpSync('graphql/queries', 'dist/graphql/queries', { recursive: true });

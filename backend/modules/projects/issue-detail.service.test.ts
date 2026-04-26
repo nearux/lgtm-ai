@@ -6,10 +6,6 @@ vi.mock('node:util', () => ({
   promisify: () => mockExecAsync,
 }));
 
-vi.mock('node:fs', () => ({
-  readFileSync: () => 'mock gql query',
-}));
-
 const { IssueDetailService } = await import('./issue-detail.service.js');
 
 describe('IssueDetailService.fetchIssueDetail', () => {
@@ -20,42 +16,46 @@ describe('IssueDetailService.fetchIssueDetail', () => {
     service = new IssueDetailService();
   });
 
+  const mockIssueNode = {
+    number: 42,
+    title: 'Fix memory leak',
+    body: 'There is a memory leak in the auth module.',
+    state: 'OPEN',
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-02T00:00:00Z',
+    closedAt: null,
+    url: 'https://github.com/owner/repo/issues/42',
+    comments: {
+      nodes: [
+        {
+          id: 'IC_1',
+          author: {
+            id: 'U_3',
+            login: 'commenter',
+            name: 'Commenter',
+            avatarUrl: 'https://avatars.githubusercontent.com/u/3',
+          },
+          body: 'I can reproduce this.',
+          createdAt: '2024-01-01T01:00:00Z',
+          updatedAt: '2024-01-01T01:00:00Z',
+        },
+      ],
+    },
+    assignees: { nodes: [{ id: 'U_1', login: 'user1', name: 'User One' }] },
+    author: {
+      id: 'U_2',
+      login: 'author1',
+      name: 'Author One',
+      avatarUrl: 'https://avatars.githubusercontent.com/u/2',
+    },
+    labels: { nodes: [{ id: 'L_1', name: 'bug', color: 'ee0701' }] },
+    milestone: { id: 'M_1', title: 'v2.0' },
+  };
+
   const mockIssueDetailData = {
-    repository: {
-      issue: {
-        number: 42,
-        title: 'Fix memory leak',
-        body: 'There is a memory leak in the auth module.',
-        state: 'OPEN',
-        createdAt: '2024-01-01T00:00:00Z',
-        updatedAt: '2024-01-02T00:00:00Z',
-        closedAt: null,
-        url: 'https://github.com/owner/repo/issues/42',
-        comments: {
-          nodes: [
-            {
-              id: 'IC_1',
-              author: {
-                id: 'U_3',
-                login: 'commenter',
-                name: 'Commenter',
-                avatarUrl: 'https://avatars.githubusercontent.com/u/3',
-              },
-              body: 'I can reproduce this.',
-              createdAt: '2024-01-01T01:00:00Z',
-              updatedAt: '2024-01-01T01:00:00Z',
-            },
-          ],
-        },
-        assignees: { nodes: [{ id: 'U_1', login: 'user1', name: 'User One' }] },
-        author: {
-          id: 'U_2',
-          login: 'author1',
-          name: 'Author One',
-          avatarUrl: 'https://avatars.githubusercontent.com/u/2',
-        },
-        labels: { nodes: [{ id: 'L_1', name: 'bug', color: 'ee0701' }] },
-        milestone: { id: 'M_1', title: 'v2.0' },
+    data: {
+      repository: {
+        issue: mockIssueNode,
       },
     },
   };
@@ -80,8 +80,10 @@ describe('IssueDetailService.fetchIssueDetail', () => {
 
   it('returns null milestone when not set', async () => {
     const dataWithoutMilestone = {
-      repository: {
-        issue: { ...mockIssueDetailData.repository.issue, milestone: null },
+      data: {
+        repository: {
+          issue: { ...mockIssueNode, milestone: null },
+        },
       },
     };
     mockExecAsync.mockResolvedValue({

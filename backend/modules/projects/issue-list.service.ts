@@ -1,8 +1,5 @@
-import { readFileSync } from 'node:fs';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
 import { clamp } from 'remeda';
 import { injectable } from 'inversify';
 import type { PaginatedIssueList, IssueState } from '../../types/issues.js';
@@ -10,13 +7,12 @@ import type {
   IssueListQuery,
   IssueCursorQuery,
 } from '../../graphql/generated/graphql.js';
+import issueListGql from '../../graphql/queries/issue-list.gql';
+import issueCursorGql from '../../graphql/queries/issue-cursor.gql';
 import { IssueListItemDto } from './dto/issue-list.dto.js';
 import { validateRepoOwnerName, mapGhError } from './gh.util.js';
 
 const execFileAsync = promisify(execFile);
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const QUERIES_DIR = join(__dirname, '../../graphql/queries');
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 100;
@@ -30,17 +26,10 @@ const GRAPHQL_ISSUE_STATES: Record<IssueState, string[]> = {
   closed: ['CLOSED'],
 };
 
+type GhGraphQLResponse<T> = { data?: T; errors?: { message: string }[] };
+
 @injectable()
 export class IssueListService {
-  private readonly issueListQuery = readFileSync(
-    join(QUERIES_DIR, 'issue-list.gql'),
-    'utf-8'
-  );
-  private readonly issueCursorQuery = readFileSync(
-    join(QUERIES_DIR, 'issue-cursor.gql'),
-    'utf-8'
-  );
-
   async fetchIssueList(
     repoOwnerName: string,
     options: { page?: number; limit?: number; state?: IssueState } = {}
@@ -116,7 +105,7 @@ export class IssueListService {
       'api',
       'graphql',
       '-f',
-      `query=${this.issueCursorQuery}`,
+      `query=${issueCursorGql}`,
       '-f',
       `owner=${owner}`,
       '-f',
@@ -126,16 +115,14 @@ export class IssueListService {
       ...this.statesArgs(state),
       ...(after ? ['-f', `after=${after}`] : []),
     ]);
-    const result = JSON.parse(stdout) as IssueCursorQuery & {
-      errors?: { message: string }[];
-    };
+    const result = JSON.parse(stdout) as GhGraphQLResponse<IssueCursorQuery>;
 
-    if ('errors' in result && result.errors) {
-      const message = result.errors[0]?.message ?? 'Unknown GraphQL error';
+    if (result.errors || !result.data) {
+      const message = result.errors?.[0]?.message ?? 'Unknown GraphQL error';
       throw new Error(`GraphQL query failed: ${message}`);
     }
 
-    return result.repository?.issues.pageInfo.endCursor ?? null;
+    return result.data.repository?.issues.pageInfo.endCursor ?? null;
   }
 
   private async fetchIssueListGraphQL(
@@ -153,7 +140,7 @@ export class IssueListService {
       'api',
       'graphql',
       '-f',
-      `query=${this.issueListQuery}`,
+      `query=${issueListGql}`,
       '-f',
       `owner=${owner}`,
       '-f',
@@ -163,16 +150,14 @@ export class IssueListService {
       ...this.statesArgs(state),
       ...(cursor ? ['-f', `after=${cursor}`] : []),
     ]);
-    const result = JSON.parse(stdout) as IssueListQuery & {
-      errors?: { message: string }[];
-    };
+    const result = JSON.parse(stdout) as GhGraphQLResponse<IssueListQuery>;
 
-    if ('errors' in result && result.errors) {
-      const message = result.errors[0]?.message ?? 'Unknown GraphQL error';
+    if (result.errors || !result.data) {
+      const message = result.errors?.[0]?.message ?? 'Unknown GraphQL error';
       throw new Error(`GraphQL query failed: ${message}`);
     }
 
-    const issues = result.repository?.issues;
+    const issues = result.data.repository?.issues;
     if (!issues) throw new Error('GraphQL query failed: no data');
 
     return { totalCount: issues.totalCount, nodes: issues.nodes };
