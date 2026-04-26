@@ -45,10 +45,24 @@ export interface PRCommandContext extends BaseCommandContext {
   type: 'pr';
 }
 
+export interface IssueMeta {
+  number: number;
+  title: string;
+  body: string;
+  repoOwnerName: string;
+  defaultBranch: string;
+}
+
+export interface IssueCommandContext {
+  type: 'issue';
+  issueMeta: IssueMeta;
+}
+
 export type CommandContext =
   | ReviewCommandContext
   | CommentCommandContext
-  | PRCommandContext;
+  | PRCommandContext
+  | IssueCommandContext;
 
 export type ClaudeCommand =
   | 'validate'

@@ -1,8 +1,10 @@
-export type ChatSessionScopeType = 'REVIEW' | 'COMMENT' | 'PR';
+export type ChatSessionScopeType = 'REVIEW' | 'COMMENT' | 'PR' | 'ISSUE';
+export type ChatSessionTargetType = 'PR' | 'ISSUE';
 
 export interface ClaudeChatContext {
   projectId: string;
-  prNumber: number;
+  targetType: ChatSessionTargetType;
+  targetNumber: number;
   scopeType: ChatSessionScopeType;
   scopeTargetId: string;
   title?: string;
@@ -11,7 +13,8 @@ export interface ClaudeChatContext {
 export interface ChatSessionSummary {
   id: string;
   projectId: string;
-  prNumber: number;
+  targetType: ChatSessionTargetType;
+  targetNumber: number;
   scopeType: ChatSessionScopeType;
   scopeTargetId: string;
   claudeSessionId: string;
