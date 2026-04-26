@@ -22,45 +22,11 @@ export class CheckoutService {
     validateRepoOwnerName(repoOwnerName);
 
     const force = options.force === true;
-
-    const { stdout: gitStatusStdout } = await execFileAsync(
-      'git',
-      ['status', '--porcelain', '--untracked-files=normal'],
-      { cwd: workingDir }
-    );
-
-    const isDirty = gitStatusStdout.trim().length > 0;
-    let stashed = false;
-
-    if (isDirty && !force) {
-      throw new AppError(
+    const stashed = await this.prepareWorkingDirectory(workingDir, force, {
+      conflictMessage:
         'Cannot checkout PR branch because local changes exist. Retry with force=true to auto-stash.',
-        HttpStatus.CONFLICT
-      );
-    }
-
-    if (isDirty && force) {
-      try {
-        await execFileAsync(
-          'git',
-          [
-            'stash',
-            'push',
-            '--include-untracked',
-            '-m',
-            `lgtmai: auto-stash before PR #${prNumber} checkout`,
-          ],
-          { cwd: workingDir }
-        );
-        stashed = true;
-      } catch (error) {
-        throw new AppError(
-          'Failed to stash local changes before checkout',
-          HttpStatus.INTERNAL_SERVER_ERROR,
-          error
-        );
-      }
-    }
+      stashMessage: `lgtmai: auto-stash before PR #${prNumber} checkout`,
+    });
 
     try {
       await execFileAsync(
@@ -95,45 +61,11 @@ export class CheckoutService {
     const force = options.force === true;
 
     const defaultBranch = await this.resolveDefaultBranch(workingDir, origin);
-
-    const { stdout: gitStatusStdout } = await execFileAsync(
-      'git',
-      ['status', '--porcelain', '--untracked-files=normal'],
-      { cwd: workingDir }
-    );
-
-    const isDirty = gitStatusStdout.trim().length > 0;
-    let stashed = false;
-
-    if (isDirty && !force) {
-      throw new AppError(
+    const stashed = await this.prepareWorkingDirectory(workingDir, force, {
+      conflictMessage:
         'Cannot checkout default branch because local changes exist. Retry with force=true to auto-stash.',
-        HttpStatus.CONFLICT
-      );
-    }
-
-    if (isDirty && force) {
-      try {
-        await execFileAsync(
-          'git',
-          [
-            'stash',
-            'push',
-            '--include-untracked',
-            '-m',
-            `lgtmai: auto-stash before default branch checkout`,
-          ],
-          { cwd: workingDir }
-        );
-        stashed = true;
-      } catch (error) {
-        throw new AppError(
-          'Failed to stash local changes before checkout',
-          HttpStatus.INTERNAL_SERVER_ERROR,
-          error
-        );
-      }
-    }
+      stashMessage: `lgtmai: auto-stash before default branch checkout`,
+    });
 
     try {
       await execFileAsync('git', ['checkout', defaultBranch], {
@@ -152,6 +84,43 @@ export class CheckoutService {
       targetBranch: defaultBranch,
       stashed,
     };
+  }
+
+  private async prepareWorkingDirectory(
+    workingDir: string,
+    force: boolean,
+    messages: { conflictMessage: string; stashMessage: string }
+  ): Promise<boolean> {
+    const { stdout: gitStatusStdout } = await execFileAsync(
+      'git',
+      ['status', '--porcelain', '--untracked-files=normal'],
+      { cwd: workingDir }
+    );
+
+    const isDirty = gitStatusStdout.trim().length > 0;
+
+    if (isDirty && !force) {
+      throw new AppError(messages.conflictMessage, HttpStatus.CONFLICT);
+    }
+
+    if (isDirty && force) {
+      try {
+        await execFileAsync(
+          'git',
+          ['stash', 'push', '--include-untracked', '-m', messages.stashMessage],
+          { cwd: workingDir }
+        );
+        return true;
+      } catch (error) {
+        throw new AppError(
+          'Failed to stash local changes before checkout',
+          HttpStatus.INTERNAL_SERVER_ERROR,
+          error
+        );
+      }
+    }
+
+    return false;
   }
 
   private async resolveDefaultBranch(
