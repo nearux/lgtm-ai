@@ -1,5 +1,10 @@
 import { isString } from 'remeda';
-import type { PRListItem, GraphQLPRNode } from '../../../types/pullRequests.js';
+import type { PRListItem } from '../../../types/pullRequests.js';
+import type { PrListQuery } from '../../../graphql/generated/graphql.js';
+
+type GraphQLPRNode = NonNullable<
+  NonNullable<PrListQuery['repository']>['pullRequests']['nodes']
+>[number];
 
 export class PRListItemDto implements PRListItem {
   number: number;
@@ -29,20 +34,26 @@ export class PRListItemDto implements PRListItem {
       number: node.number,
       title: node.title,
       body: isString(node.body) ? node.body : '',
-      totalCommentsCount: node.totalCommentsCount,
-      assignees: node.assignees.nodes.map((u) => ({
-        id: u.id,
-        login: u.login,
-        name: u.name ?? u.login,
+      totalCommentsCount: node.totalCommentsCount ?? 0,
+      assignees: (node.assignees?.nodes ?? []).map((u) => ({
+        id: u?.id ?? u?.login ?? '',
+        login: u?.login ?? '',
+        name: u?.name ?? u?.login ?? '',
       })),
       author: {
-        id: node.author.id ?? node.author.login,
-        login: node.author.login,
-        name: node.author.name ?? node.author.login,
-        avatarUrl: node.author.avatarUrl,
+        id:
+          (node.author as { id?: string } | null)?.id ??
+          node.author?.login ??
+          '',
+        login: node.author?.login ?? '',
+        name:
+          (node.author as { name?: string | null } | null)?.name ??
+          node.author?.login ??
+          '',
+        avatarUrl: String(node.author?.avatarUrl ?? ''),
       },
-      createdAt: node.createdAt,
-      updatedAt: node.updatedAt,
+      createdAt: String(node.createdAt),
+      updatedAt: String(node.updatedAt),
       state: node.state,
     });
   }

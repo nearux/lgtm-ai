@@ -1,18 +1,22 @@
+import { readFileSync } from 'node:fs';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 import { clamp } from 'remeda';
 import { injectable } from 'inversify';
+import type { PaginatedPRList, PRState } from '../../types/pullRequests.js';
 import type {
-  PaginatedPRList,
-  PRState,
-  GraphQLPRListResponse,
-  GraphQLCursorResponse,
-  GraphQLPRNode,
-} from '../../types/pullRequests.js';
+  PrListQuery,
+  PrCursorQuery,
+} from '../../graphql/generated/graphql.js';
 import { PRListItemDto } from './dto/pull-requests.dto.js';
 import { validateRepoOwnerName, mapGhError } from './gh.util.js';
 
 const execFileAsync = promisify(execFile);
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const QUERIES_DIR = join(__dirname, '../../graphql/queries');
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 100;
@@ -29,6 +33,15 @@ const GRAPHQL_PR_STATES: Record<PRState, string[]> = {
 
 @injectable()
 export class PRListService {
+  private readonly prListQuery = readFileSync(
+    join(QUERIES_DIR, 'pr-list.gql'),
+    'utf-8'
+  );
+  private readonly prCursorQuery = readFileSync(
+    join(QUERIES_DIR, 'pr-cursor.gql'),
+    'utf-8'
+  );
+
   async fetchPRList(
     repoOwnerName: string,
     options: { page?: number; limit?: number; state?: PRState } = {}
@@ -38,14 +51,12 @@ export class PRListService {
     const page = this.normalizePositiveInt(options.page, DEFAULT_PAGE);
     const limit = clamp(
       this.normalizePositiveInt(options.limit, DEFAULT_LIMIT),
-      {
-        max: MAX_LIMIT,
-      }
+      { max: MAX_LIMIT }
     );
     const state = this.normalizePRState(options.state);
 
     let totalCount: number;
-    let nodes: GraphQLPRNode[];
+    let nodes: NonNullable<PrListQuery['repository']>['pullRequests']['nodes'];
 
     try {
       let cursor: string | null = null;
@@ -70,7 +81,7 @@ export class PRListService {
     const lastPage = Math.max(1, Math.ceil(totalCount / limit));
 
     return {
-      items: nodes.map((node) => PRListItemDto.fromGraphQL(node)),
+      items: (nodes ?? []).map((node) => PRListItemDto.fromGraphQL(node)),
       lastPage,
     };
   }
@@ -102,13 +113,11 @@ export class PRListService {
     hop: number,
     after: string | null
   ): Promise<string | null> {
-    const query = `query($owner: String!, $name: String!, $skip: Int!, $states: [PullRequestState!]!, $after: String) { repository(owner: $owner, name: $name) { pullRequests(first: $skip, after: $after, states: $states, orderBy: {field: CREATED_AT, direction: DESC}) { pageInfo { endCursor } } } }`;
-
     const { stdout } = await execFileAsync('gh', [
       'api',
       'graphql',
       '-f',
-      `query=${query}`,
+      `query=${this.prCursorQuery}`,
       '-f',
       `owner=${owner}`,
       '-f',
@@ -118,14 +127,16 @@ export class PRListService {
       ...this.statesArgs(state),
       ...(after ? ['-f', `after=${after}`] : []),
     ]);
-    const result = JSON.parse(stdout) as GraphQLCursorResponse;
+    const result = JSON.parse(stdout) as PrCursorQuery & {
+      errors?: { message: string }[];
+    };
 
-    if (result.errors || !result.data) {
-      const message = result.errors?.[0]?.message ?? 'Unknown GraphQL error';
+    if ('errors' in result && result.errors) {
+      const message = result.errors[0]?.message ?? 'Unknown GraphQL error';
       throw new Error(`GraphQL query failed: ${message}`);
     }
 
-    return result.data.repository.pullRequests.pageInfo.endCursor;
+    return result.repository?.pullRequests.pageInfo.endCursor ?? null;
   }
 
   private async fetchPRListGraphQL(
@@ -133,39 +144,17 @@ export class PRListService {
     state: PRState,
     limit: number,
     cursor: string | null
-  ): Promise<{ totalCount: number; nodes: GraphQLPRNode[] }> {
+  ): Promise<{
+    totalCount: number;
+    nodes: NonNullable<PrListQuery['repository']>['pullRequests']['nodes'];
+  }> {
     const [owner, name] = repoOwnerName.split('/');
-    const query = `query($owner: String!, $name: String!, $limit: Int!, $states: [PullRequestState!]!, $after: String) {
-  repository(owner: $owner, name: $name) {
-    pullRequests(first: $limit, states: $states, after: $after, orderBy: {field: CREATED_AT, direction: DESC}) {
-      totalCount
-      nodes {
-        number
-        title
-        body
-        state
-        createdAt
-        updatedAt
-        totalCommentsCount
-        assignees(first: 20) {
-          nodes { id login name }
-        }
-        author {
-          login
-          avatarUrl
-          ... on User { id name }
-          ... on Bot { id }
-        }
-      }
-    }
-  }
-}`;
 
     const { stdout } = await execFileAsync('gh', [
       'api',
       'graphql',
       '-f',
-      `query=${query}`,
+      `query=${this.prListQuery}`,
       '-f',
       `owner=${owner}`,
       '-f',
@@ -175,14 +164,19 @@ export class PRListService {
       ...this.statesArgs(state),
       ...(cursor ? ['-f', `after=${cursor}`] : []),
     ]);
-    const result = JSON.parse(stdout) as GraphQLPRListResponse;
+    const result = JSON.parse(stdout) as PrListQuery & {
+      errors?: { message: string }[];
+    };
 
-    if (result.errors || !result.data) {
-      const message = result.errors?.[0]?.message ?? 'Unknown GraphQL error';
+    if ('errors' in result && result.errors) {
+      const message = result.errors[0]?.message ?? 'Unknown GraphQL error';
       throw new Error(`GraphQL query failed: ${message}`);
     }
 
-    return result.data.repository.pullRequests;
+    const prs = result.repository?.pullRequests;
+    if (!prs) throw new Error('GraphQL query failed: no data');
+
+    return { totalCount: prs.totalCount, nodes: prs.nodes };
   }
 
   private normalizePositiveInt(

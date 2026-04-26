@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { PRListItemDto } from './pull-requests.dto.js';
-import type { GraphQLPRNode } from '../../../types/pullRequests.js';
+import type { PrListQuery } from '../../../graphql/generated/graphql.js';
+
+type GraphQLPRNode = NonNullable<
+  NonNullable<PrListQuery['repository']>['pullRequests']['nodes']
+>[number];
 
 describe('PRListItemDto.fromGraphQL', () => {
   const baseNode: GraphQLPRNode = {
@@ -15,10 +19,11 @@ describe('PRListItemDto.fromGraphQL', () => {
       nodes: [{ id: 'U_1', login: 'alice', name: 'Alice' }],
     },
     author: {
-      login: 'bob',
-      avatarUrl: 'https://avatars.githubusercontent.com/u/99',
+      __typename: 'User',
       id: 'U_99',
+      login: 'bob',
       name: 'Bob',
+      avatarUrl: 'https://avatars.githubusercontent.com/u/99',
     },
   };
 
@@ -55,9 +60,13 @@ describe('PRListItemDto.fromGraphQL', () => {
   });
 
   it('falls back to login when author id is absent', () => {
-    const node = {
+    const node: GraphQLPRNode = {
       ...baseNode,
-      author: { login: 'charlie', avatarUrl: 'https://example.com/avatar' },
+      author: {
+        __typename: 'Mannequin',
+        login: 'charlie',
+        avatarUrl: 'https://example.com/avatar',
+      },
     };
     const dto = PRListItemDto.fromGraphQL(node);
     expect(dto.author.id).toBe('charlie');
@@ -71,7 +80,7 @@ describe('PRListItemDto.fromGraphQL', () => {
   });
 
   it('falls back to login when assignee name is null', () => {
-    const node = {
+    const node: GraphQLPRNode = {
       ...baseNode,
       assignees: { nodes: [{ id: 'U_2', login: 'dave', name: null }] },
     };
