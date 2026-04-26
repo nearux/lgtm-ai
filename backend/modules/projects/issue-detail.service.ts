@@ -22,9 +22,26 @@ export class IssueDetailService {
     validateRepoOwnerName(repoOwnerName);
 
     const [owner, name] = repoOwnerName.split('/');
+    const result = await this.queryIssueDetail(owner, name, issueNumber);
 
-    let result: GhGraphQLResponse<IssueDetailQuery>;
+    if (result.errors || !result.data) {
+      const message = result.errors?.[0]?.message ?? 'Unknown GraphQL error';
+      throw new Error(`GraphQL query failed: ${message}`);
+    }
 
+    const issue = result.data.repository?.issue;
+    if (!issue) {
+      throw new AppError('Issue not found', HttpStatus.NOT_FOUND);
+    }
+
+    return IssueDetailDto.fromGraphQL(issue);
+  }
+
+  private async queryIssueDetail(
+    owner: string,
+    name: string,
+    issueNumber: number
+  ): Promise<GhGraphQLResponse<IssueDetailQuery>> {
     try {
       const { stdout } = await execFileAsync('gh', [
         'api',
@@ -38,21 +55,9 @@ export class IssueDetailService {
         '-F',
         `number=${issueNumber}`,
       ]);
-      result = JSON.parse(stdout) as GhGraphQLResponse<IssueDetailQuery>;
+      return JSON.parse(stdout) as GhGraphQLResponse<IssueDetailQuery>;
     } catch (error) {
       throw mapGhError(error, 'fetch');
     }
-
-    if (result.errors || !result.data) {
-      const message = result.errors?.[0]?.message ?? 'Unknown GraphQL error';
-      throw new Error(`GraphQL query failed: ${message}`);
-    }
-
-    const issue = result.data.repository?.issue;
-    if (!issue) {
-      throw new AppError('Issue not found', HttpStatus.NOT_FOUND);
-    }
-
-    return IssueDetailDto.fromGraphQL(issue);
   }
 }

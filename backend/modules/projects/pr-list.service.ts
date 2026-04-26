@@ -42,32 +42,35 @@ export class PRListService {
     const limit = normalizeLimit(options.limit);
     const state = this.normalizePRState(options.state);
 
-    let totalCount: number;
-    let items: PRListItem[];
-
     try {
-      let cursor: string | null = null;
       if (page > 1) {
-        const skip = (page - 1) * limit;
-        cursor = await this.resolvePageCursor(repoOwnerName, state, skip);
+        const cursor = await this.resolvePageCursor(
+          repoOwnerName,
+          state,
+          (page - 1) * limit
+        );
         if (cursor === null) {
           return { items: [], lastPage: 1 };
         }
+        const { totalCount, items } = await this.fetchPRListGraphQL(
+          repoOwnerName,
+          state,
+          limit,
+          cursor
+        );
+        return { items, lastPage: Math.max(1, Math.ceil(totalCount / limit)) };
       }
 
-      ({ totalCount, items } = await this.fetchPRListGraphQL(
+      const { totalCount, items } = await this.fetchPRListGraphQL(
         repoOwnerName,
         state,
         limit,
-        cursor
-      ));
+        null
+      );
+      return { items, lastPage: Math.max(1, Math.ceil(totalCount / limit)) };
     } catch (error) {
       throw mapGhError(error, 'fetch');
     }
-
-    const lastPage = Math.max(1, Math.ceil(totalCount / limit));
-
-    return { items, lastPage };
   }
 
   private async resolvePageCursor(
@@ -108,7 +111,7 @@ export class PRListService {
       `name=${name}`,
       '-F',
       `skip=${hop}`,
-      ...this.statesArgs(state),
+      ...this.buildStatesFilterArgs(state),
       ...(after ? ['-f', `after=${after}`] : []),
     ]);
     const result = JSON.parse(stdout) as GhGraphQLResponse<PrCursorQuery>;
@@ -140,7 +143,7 @@ export class PRListService {
       `name=${name}`,
       '-F',
       `limit=${limit}`,
-      ...this.statesArgs(state),
+      ...this.buildStatesFilterArgs(state),
       ...(cursor ? ['-f', `after=${cursor}`] : []),
     ]);
     const result = JSON.parse(stdout) as GhGraphQLResponse<PrListQuery>;
@@ -166,7 +169,7 @@ export class PRListService {
     return 'open';
   }
 
-  private statesArgs(state: PRState): string[] {
+  private buildStatesFilterArgs(state: PRState): string[] {
     return GRAPHQL_PR_STATES[state].flatMap((s) => ['-f', `states[]=${s}`]);
   }
 }
