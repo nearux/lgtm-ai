@@ -3,8 +3,10 @@ import type { PRListItem } from '../../../types/pullRequests.js';
 import type { PrListQuery } from '../../../graphql/generated/graphql.js';
 
 type GraphQLPRNode = NonNullable<
-  NonNullable<PrListQuery['repository']>['pullRequests']['nodes']
->[number];
+  NonNullable<
+    NonNullable<PrListQuery['repository']>['pullRequests']['nodes']
+  >[number]
+>;
 
 export class PRListItemDto implements PRListItem {
   number: number;

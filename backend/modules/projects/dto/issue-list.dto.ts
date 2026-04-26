@@ -3,8 +3,10 @@ import type { IssueListItem } from '../../../types/issues.js';
 import type { IssueListQuery } from '../../../graphql/generated/graphql.js';
 
 type GraphQLIssueNode = NonNullable<
-  NonNullable<IssueListQuery['repository']>['issues']['nodes']
->[number];
+  NonNullable<
+    NonNullable<IssueListQuery['repository']>['issues']['nodes']
+  >[number]
+>;
 
 export class IssueListItemDto implements IssueListItem {
   number: number;

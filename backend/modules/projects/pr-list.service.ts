@@ -170,7 +170,9 @@ export class PRListService {
 
     return {
       totalCount: prs.totalCount,
-      items: (prs.nodes ?? []).map((node) => PRListItemDto.fromGraphQL(node)),
+      items: (prs.nodes ?? []).flatMap((node) =>
+        node ? [PRListItemDto.fromGraphQL(node)] : []
+      ),
     };
   }
 

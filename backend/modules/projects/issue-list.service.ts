@@ -160,8 +160,8 @@ export class IssueListService {
 
     return {
       totalCount: issues.totalCount,
-      items: (issues.nodes ?? []).map((node) =>
-        IssueListItemDto.fromGraphQL(node)
+      items: (issues.nodes ?? []).flatMap((node) =>
+        node ? [IssueListItemDto.fromGraphQL(node)] : []
       ),
     };
   }
