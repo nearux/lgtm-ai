@@ -8,7 +8,7 @@ import { fileURLToPath } from 'url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig(
-  { ignores: ['dist'] },
+  { ignores: ['dist', 'graphql/generated'] },
   {
     extends: [
       js.configs.recommended,
