@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { clamp } from 'remeda';
 import { injectable } from 'inversify';
+import { normalizePage, normalizeLimit } from './pagination.util.js';
 import type {
   PaginatedIssueList,
   IssueListItem,
@@ -18,9 +18,6 @@ import { validateRepoOwnerName, mapGhError } from './gh.util.js';
 
 const execFileAsync = promisify(execFile);
 
-const DEFAULT_PAGE = 1;
-const DEFAULT_LIMIT = 100;
-const MAX_LIMIT = 100;
 const MAX_GRAPHQL_FIRST = 100;
 
 const VALID_ISSUE_STATES: IssueState[] = ['open', 'closed'];
@@ -40,11 +37,8 @@ export class IssueListService {
   ): Promise<PaginatedIssueList> {
     validateRepoOwnerName(repoOwnerName);
 
-    const page = this.normalizePositiveInt(options.page, DEFAULT_PAGE);
-    const limit = clamp(
-      this.normalizePositiveInt(options.limit, DEFAULT_LIMIT),
-      { max: MAX_LIMIT }
-    );
+    const page = normalizePage(options.page);
+    const limit = normalizeLimit(options.limit);
     const state = this.normalizeIssueState(options.state);
 
     let totalCount: number;
@@ -171,16 +165,6 @@ export class IssueListService {
         IssueListItemDto.fromGraphQL(node)
       ),
     };
-  }
-
-  private normalizePositiveInt(
-    value: number | undefined,
-    fallback: number
-  ): number {
-    if (typeof value !== 'number' || !Number.isFinite(value)) {
-      return fallback;
-    }
-    return clamp(Math.trunc(value), { min: 1 });
   }
 
   private normalizeIssueState(state: string | undefined): IssueState {
