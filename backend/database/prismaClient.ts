@@ -2,7 +2,7 @@ import path from 'node:path';
 import { mkdirSync } from 'node:fs';
 import { PrismaLibSql } from '@prisma/adapter-libsql';
 import { PrismaClient } from '@prisma/client';
-import { resolveDbPath } from './utils/dbPath.js';
+import { resolveDbPath } from './dbPath.js';
 
 const dbPath = resolveDbPath();
 const dbDir = path.dirname(dbPath);

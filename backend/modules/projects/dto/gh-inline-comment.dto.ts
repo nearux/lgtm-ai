@@ -1,4 +1,7 @@
-import type { PRReview, GhReviewInlineComment } from '../types/pullRequests.js';
+import type {
+  PRReview,
+  GhReviewInlineComment,
+} from '../../../types/pullRequests.js';
 
 export class GhInlineCommentDto {
   static fromGh(

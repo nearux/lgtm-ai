@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { Container } from 'inversify';
-import prisma from './prismaClient.js';
+import prisma from './database/prismaClient.js';
 import type { PrismaClient } from '@prisma/client';
 import { authModule } from './modules/auth/auth.module.js';
 import { filesModule } from './modules/files/files.module.js';

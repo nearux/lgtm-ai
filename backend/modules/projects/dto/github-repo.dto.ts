@@ -1,6 +1,6 @@
 import HttpStatus from 'http-status';
-import { AppError } from '../errors/AppError.js';
-import type { GitHubRepo } from '../types/projects.js';
+import { AppError } from '../../../errors/AppError.js';
+import type { GitHubRepo } from '../../../types/projects.js';
 
 export class GitHubRepoDto implements GitHubRepo {
   owner: string;

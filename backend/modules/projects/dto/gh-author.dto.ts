@@ -1,4 +1,4 @@
-import type { PRDetail, GhPRAuthor } from '../types/pullRequests.js';
+import type { PRDetail, GhPRAuthor } from '../../../types/pullRequests.js';
 
 export class GhAuthorDto {
   static fromGh(author: GhPRAuthor): PRDetail['author'] {

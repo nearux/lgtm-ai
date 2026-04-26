@@ -7,10 +7,10 @@ import type {
   GhPRComment,
   GhPRReview,
   GhReviewInlineComment,
-} from '../types/pullRequests.js';
-import { GhAuthorDto } from './ghAuthorDto.js';
-import { GhInlineCommentDto } from './ghInlineCommentDto.js';
-import { countNonEmptyReviewBodies } from './commentCounts.js';
+} from '../../../types/pullRequests.js';
+import { GhAuthorDto } from './gh-author.dto.js';
+import { GhInlineCommentDto } from './gh-inline-comment.dto.js';
+import { countNonEmptyReviewBodies } from './comment-counts.js';
 
 export class PRDetailDto implements PRDetail {
   number: number;
