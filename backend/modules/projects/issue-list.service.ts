@@ -120,7 +120,9 @@ export class IssueListService {
 
     if (result.errors || !result.data) {
       const message = result.errors?.[0]?.message ?? 'Unknown GraphQL error';
-      throw new Error(`GraphQL query failed: ${message}`);
+      throw new Error(
+        `GraphQL cursor query failed for ${owner}/${name}: ${message}`
+      );
     }
 
     return result.data.repository?.issues.pageInfo.endCursor ?? null;
@@ -152,11 +154,16 @@ export class IssueListService {
 
     if (result.errors || !result.data) {
       const message = result.errors?.[0]?.message ?? 'Unknown GraphQL error';
-      throw new Error(`GraphQL query failed: ${message}`);
+      throw new Error(
+        `GraphQL issue list query failed for ${repoOwnerName}: ${message}`
+      );
     }
 
     const issues = result.data.repository?.issues;
-    if (!issues) throw new Error('GraphQL query failed: no data');
+    if (!issues)
+      throw new Error(
+        `GraphQL query failed: repository ${repoOwnerName} not found or issues inaccessible`
+      );
 
     return {
       totalCount: issues.totalCount,
