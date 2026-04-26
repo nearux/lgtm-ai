@@ -42,6 +42,8 @@ import type {
   PRState,
   CheckoutPRBranchBody,
   CheckoutPRBranchResult,
+  CheckoutDefaultBranchBody,
+  CheckoutDefaultBranchResult,
 } from '../../types/pullRequests.js';
 import type {
   ChatSessionHistoryResponse,
@@ -67,6 +69,7 @@ export type {
   ChatSessionSummary,
   ChatSessionHistoryResponse,
   CheckoutPRBranchResult,
+  CheckoutDefaultBranchResult,
   CommitMessageResponse,
   CommitAndPushResponse,
   IssueListItem,
@@ -260,11 +263,9 @@ export class ProjectsController extends Controller {
 
     return this.chatSessionsService.listChatSessions(
       parsedProjectId,
+      'PR',
       prNumber,
-      {
-        scopeType,
-        scopeTargetId,
-      }
+      { scopeType, scopeTargetId }
     );
   }
 
@@ -286,6 +287,7 @@ export class ProjectsController extends Controller {
   ): Promise<ChatSessionHistoryResponse> {
     return this.chatSessionsService.getChatSessionHistory(
       this.parseUUID(projectId),
+      'PR',
       prNumber,
       sessionId
     );
@@ -360,6 +362,62 @@ export class ProjectsController extends Controller {
   }
 
   /**
+   * List saved chat sessions for a specific issue
+   * @param projectId Project UUID
+   * @param issueNumber Issue number
+   */
+  @Get('{projectId}/issues/{issueNumber}/chat-sessions')
+  @Response<ErrorResponse>(HttpStatus.BAD_REQUEST, 'Invalid request')
+  @Response<ErrorResponse>(HttpStatus.NOT_FOUND, 'Project not found')
+  public async listIssueChatSessions(
+    @Path() projectId: string,
+    @Path() issueNumber: number,
+    @Query() scopeType?: ChatSessionScopeType,
+    @Query() scopeTargetId?: string
+  ): Promise<ChatSessionSummary[]> {
+    const parsedProjectId = this.parseUUID(projectId);
+    await this.projectsService.findById(parsedProjectId);
+
+    if ((scopeType && !scopeTargetId) || (!scopeType && scopeTargetId)) {
+      throw new AppError(
+        'scopeType and scopeTargetId must be provided together',
+        HttpStatus.BAD_REQUEST
+      );
+    }
+
+    return this.chatSessionsService.listChatSessions(
+      parsedProjectId,
+      'ISSUE',
+      issueNumber,
+      { scopeType, scopeTargetId }
+    );
+  }
+
+  /**
+   * Get saved chat history for a specific issue session
+   * @param projectId Project UUID
+   * @param issueNumber Issue number
+   * @param sessionId Saved chat session id
+   */
+  @Get('{projectId}/issues/{issueNumber}/chat-sessions/{sessionId}/history')
+  @Response<ErrorResponse>(
+    HttpStatus.NOT_FOUND,
+    'Project or chat session not found'
+  )
+  public async getIssueChatSessionHistory(
+    @Path() projectId: string,
+    @Path() issueNumber: number,
+    @Path() sessionId: string
+  ): Promise<ChatSessionHistoryResponse> {
+    return this.chatSessionsService.getChatSessionHistory(
+      this.parseUUID(projectId),
+      'ISSUE',
+      issueNumber,
+      sessionId
+    );
+  }
+
+  /**
    * Checkout the branch associated with a pull request
    * @param projectId Project UUID
    * @param prNumber Pull request number
@@ -398,6 +456,33 @@ export class ProjectsController extends Controller {
       project.working_dir,
       { force: body?.force }
     );
+  }
+
+  /**
+   * Checkout the default branch of the project repository
+   * @param projectId Project UUID
+   */
+  @Post('{projectId}/checkout')
+  @Response<ErrorResponse>(
+    HttpStatus.CONFLICT,
+    'Uncommitted local changes exist'
+  )
+  @Response<ErrorResponse>(HttpStatus.NOT_FOUND, 'Project not found')
+  @Response<ErrorResponse>(
+    HttpStatus.UNPROCESSABLE_ENTITY,
+    'Default branch reference not set'
+  )
+  public async checkoutDefaultBranch(
+    @Path() projectId: string,
+    @Body() body: CheckoutDefaultBranchBody
+  ): Promise<CheckoutDefaultBranchResult> {
+    const project = await this.projectsService.findById(
+      this.parseUUID(projectId)
+    );
+    return this.checkoutService.checkoutDefaultBranch(project.working_dir, {
+      force: body.force,
+      origin: body.origin,
+    });
   }
 
   /**

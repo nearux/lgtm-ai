@@ -159,7 +159,7 @@ describe('ChatSessionsService', () => {
       claude_session_id: 'claude-new',
     });
 
-    const result = await service.listChatSessions('project-1', 45);
+    const result = await service.listChatSessions('project-1', 'PR', 45);
 
     expect(result.map((item) => item.id)).toEqual([second.id, first.id]);
   });
@@ -182,7 +182,7 @@ describe('ChatSessionsService', () => {
       claude_session_id: 'claude-comment',
     });
 
-    const result = await service.listChatSessions('project-1', 45, {
+    const result = await service.listChatSessions('project-1', 'PR', 45, {
       scopeType: 'REVIEW',
       scopeTargetId: 'review-123',
     });
@@ -216,7 +216,7 @@ describe('ChatSessionsService', () => {
 
   it('throws not found when session does not exist', async () => {
     await expect(
-      service.getChatSession('project-1', 45, 'missing-session')
+      service.getChatSession('project-1', 'PR', 45, 'missing-session')
     ).rejects.toMatchObject({
       message: 'Chat session not found',
       statusCode: 404,
@@ -232,7 +232,7 @@ describe('ChatSessionsService', () => {
     });
 
     await expect(
-      service.getChatSession('project-1', 45, session.id)
+      service.getChatSession('project-1', 'PR', 45, session.id)
     ).rejects.toMatchObject({
       message: 'Chat session not found',
       statusCode: 404,
@@ -267,6 +267,7 @@ describe('ChatSessionsService', () => {
 
     const result = await service.getChatSessionHistory(
       project.id,
+      'PR',
       45,
       session.id
     );
@@ -299,7 +300,7 @@ describe('ChatSessionsService', () => {
     });
 
     await expect(
-      service.getChatSessionHistory('project-1', 45, session.id)
+      service.getChatSessionHistory('project-1', 'PR', 45, session.id)
     ).rejects.toMatchObject({
       message: 'Project not found',
       statusCode: 404,

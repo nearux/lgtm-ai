@@ -1,7 +1,10 @@
 import type { ChatSession, Prisma, PrismaClient } from '@prisma/client';
 import { inject, injectable } from 'inversify';
 import { PRISMA_CLIENT } from '../../container-tokens.js';
-import type { ListChatSessionsFilters } from '../../types/chatSessions.js';
+import type {
+  ChatSessionTargetType,
+  ListChatSessionsFilters,
+} from '../../types/chatSessions.js';
 
 @injectable()
 export class ChatSessionRepository {
@@ -13,16 +16,17 @@ export class ChatSessionRepository {
     return this.prisma.chatSession.create({ data });
   }
 
-  async findManyByProjectAndPr(
+  async findManyByProjectAndTarget(
     projectId: string,
-    prNumber: number,
+    targetType: ChatSessionTargetType,
+    targetNumber: number,
     filters: ListChatSessionsFilters = {}
   ): Promise<ChatSession[]> {
     return this.prisma.chatSession.findMany({
       where: {
         project_id: projectId,
-        target_type: 'PR',
-        target_number: prNumber,
+        target_type: targetType,
+        target_number: targetNumber,
         ...(filters.scopeType ? { scope_type: filters.scopeType } : {}),
         ...(filters.scopeTargetId
           ? { scope_target_id: filters.scopeTargetId }
