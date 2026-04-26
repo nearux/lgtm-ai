@@ -105,7 +105,7 @@ export class IssueListService {
       `name=${name}`,
       '-F',
       `skip=${hop}`,
-      ...this.statesArgs(state),
+      ...this.buildStatesFilterArgs(state),
       ...(after ? ['-f', `after=${after}`] : []),
     ]);
     const result = JSON.parse(stdout) as GhGraphQLResponse<IssueCursorQuery>;
@@ -139,7 +139,7 @@ export class IssueListService {
       `name=${name}`,
       '-F',
       `limit=${limit}`,
-      ...this.statesArgs(state),
+      ...this.buildStatesFilterArgs(state),
       ...(cursor ? ['-f', `after=${cursor}`] : []),
     ]);
     const result = JSON.parse(stdout) as GhGraphQLResponse<IssueListQuery>;
@@ -172,7 +172,7 @@ export class IssueListService {
     return 'open';
   }
 
-  private statesArgs(state: IssueState): string[] {
+  private buildStatesFilterArgs(state: IssueState): string[] {
     return GRAPHQL_ISSUE_STATES[state].flatMap((s) => ['-f', `states[]=${s}`]);
   }
 }
