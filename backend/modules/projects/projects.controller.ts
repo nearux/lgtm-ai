@@ -19,6 +19,8 @@ import { AppError } from '../../errors/AppError.js';
 import { ProjectsService } from './projects.service.js';
 import { PRListService } from './pr-list.service.js';
 import { PRDetailService } from './pr-detail.service.js';
+import { IssueListService } from './issue-list.service.js';
+import { IssueDetailService } from './issue-detail.service.js';
 import { CheckoutService } from './checkout-pr-branch.service.js';
 import { ChatSessionsService } from './chat-sessions.service.js';
 import { GitService } from './git.service.js';
@@ -46,6 +48,12 @@ import type {
   ChatSessionScopeType,
   ChatSessionSummary,
 } from '../../types/chatSessions.js';
+import type {
+  IssueListItem,
+  IssueDetail,
+  IssueState,
+  PaginatedIssueList,
+} from '../../types/issues.js';
 
 export type {
   Project,
@@ -61,6 +69,9 @@ export type {
   CheckoutPRBranchResult,
   CommitMessageResponse,
   CommitAndPushResponse,
+  IssueListItem,
+  PaginatedIssueList,
+  IssueDetail,
 };
 
 const uuidSchema = z.uuid();
@@ -73,6 +84,10 @@ export class ProjectsController extends Controller {
     @inject(ProjectsService) private readonly projectsService: ProjectsService,
     @inject(PRListService) private readonly prListService: PRListService,
     @inject(PRDetailService) private readonly prDetailService: PRDetailService,
+    @inject(IssueListService)
+    private readonly issueListService: IssueListService,
+    @inject(IssueDetailService)
+    private readonly issueDetailService: IssueDetailService,
     @inject(CheckoutService) private readonly checkoutService: CheckoutService,
     @inject(ChatSessionsService)
     private readonly chatSessionsService: ChatSessionsService,
@@ -274,6 +289,74 @@ export class ProjectsController extends Controller {
       prNumber,
       sessionId
     );
+  }
+
+  /**
+   * Get list of issues for a project
+   * @param projectId Project UUID
+   * @param page Page number (1-based)
+   * @param limit Results per page (max 100)
+   * @param state Issue state filter: open or closed (default: open)
+   * @param origin Git remote name to use (default: origin)
+   */
+  @Get('{projectId}/issues')
+  @Response<ErrorResponse>(HttpStatus.BAD_REQUEST, 'Invalid remote URL')
+  @Response<ErrorResponse>(HttpStatus.BAD_REQUEST, 'Invalid remote name')
+  @Response<ErrorResponse>(HttpStatus.NOT_FOUND, 'Project not found')
+  @Response<ErrorResponse>(
+    HttpStatus.UNPROCESSABLE_ENTITY,
+    'Project does not have a configured Git remote'
+  )
+  @Response<ErrorResponse>(
+    HttpStatus.SERVICE_UNAVAILABLE,
+    'GitHub CLI unavailable'
+  )
+  public async listProjectIssues(
+    @Path() projectId: string,
+    @Query() page?: number,
+    @Query() limit?: number,
+    @Query() state?: IssueState,
+    @Query() origin?: string
+  ): Promise<PaginatedIssueList> {
+    const repoOwnerName = await this.projectsService.resolveGitHubRepo(
+      this.parseUUID(projectId),
+      origin ?? 'origin'
+    );
+    return this.issueListService.fetchIssueList(repoOwnerName, {
+      page,
+      limit,
+      state,
+    });
+  }
+
+  /**
+   * Get detailed information for a specific issue
+   * @param projectId Project UUID
+   * @param issueNumber Issue number
+   * @param origin Git remote name to use (default: origin)
+   */
+  @Get('{projectId}/issues/{issueNumber}')
+  @Response<ErrorResponse>(HttpStatus.BAD_REQUEST, 'Invalid remote URL')
+  @Response<ErrorResponse>(HttpStatus.BAD_REQUEST, 'Invalid remote name')
+  @Response<ErrorResponse>(HttpStatus.NOT_FOUND, 'Project or issue not found')
+  @Response<ErrorResponse>(
+    HttpStatus.UNPROCESSABLE_ENTITY,
+    'Project does not have a configured Git remote'
+  )
+  @Response<ErrorResponse>(
+    HttpStatus.SERVICE_UNAVAILABLE,
+    'GitHub CLI unavailable'
+  )
+  public async getProjectIssue(
+    @Path() projectId: string,
+    @Path() issueNumber: number,
+    @Query() origin?: string
+  ): Promise<IssueDetail> {
+    const repoOwnerName = await this.projectsService.resolveGitHubRepo(
+      this.parseUUID(projectId),
+      origin ?? 'origin'
+    );
+    return this.issueDetailService.fetchIssueDetail(repoOwnerName, issueNumber);
   }
 
   /**

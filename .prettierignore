@@ -1,3 +1,4 @@
 **/*.md
 backend/routes.ts
+backend/graphql/generated/
 pnpm-lock.yaml

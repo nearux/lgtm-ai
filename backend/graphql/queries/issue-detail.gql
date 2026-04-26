@@ -1,0 +1,63 @@
+query IssueDetail($owner: String!, $name: String!, $number: Int!) {
+  repository(owner: $owner, name: $name) {
+    issue(number: $number) {
+      number
+      title
+      body
+      state
+      createdAt
+      updatedAt
+      closedAt
+      url
+      comments(first: 100) {
+        totalCount
+        nodes {
+          id
+          author {
+            login
+            avatarUrl
+            ... on User {
+              id
+              name
+            }
+            ... on Bot {
+              id
+            }
+          }
+          body
+          createdAt
+          updatedAt
+        }
+      }
+      assignees(first: 20) {
+        nodes {
+          id
+          login
+          name
+        }
+      }
+      author {
+        login
+        avatarUrl
+        ... on User {
+          id
+          name
+        }
+        ... on Bot {
+          id
+        }
+      }
+      labels(first: 10) {
+        nodes {
+          id
+          name
+          color
+        }
+      }
+      milestone {
+        id
+        title
+      }
+    }
+  }
+}

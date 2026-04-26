@@ -3,17 +3,17 @@ import { promisify } from 'node:util';
 import { injectable } from 'inversify';
 import { normalizePage, normalizeLimit } from './pagination.util.js';
 import type {
-  PaginatedPRList,
-  PRListItem,
-  PRState,
-} from '../../types/pullRequests.js';
+  PaginatedIssueList,
+  IssueListItem,
+  IssueState,
+} from '../../types/issues.js';
 import type {
-  PrCursorQuery,
-  PrListQuery,
+  IssueListQuery,
+  IssueCursorQuery,
 } from '../../graphql/generated/graphql.js';
-import prListGql from '../../graphql/queries/pr-list.gql';
-import prCursorGql from '../../graphql/queries/pr-cursor.gql';
-import { PRListItemDto } from './dto/pr-list.dto.js';
+import issueListGql from '../../graphql/queries/issue-list.gql';
+import issueCursorGql from '../../graphql/queries/issue-cursor.gql';
+import { IssueListItemDto } from './dto/issue-list.dto.js';
 import { validateRepoOwnerName, mapGhError } from './gh.util.js';
 import { AppError } from '../../errors/AppError.js';
 import HttpStatus from 'http-status';
@@ -22,58 +22,48 @@ const execFileAsync = promisify(execFile);
 
 const MAX_GRAPHQL_FIRST = 100;
 
-const VALID_PR_STATES: PRState[] = ['open', 'closed', 'all'];
+const VALID_ISSUE_STATES: IssueState[] = ['open', 'closed'];
 
-const GRAPHQL_PR_STATES: Record<PRState, string[]> = {
+const GRAPHQL_ISSUE_STATES: Record<IssueState, string[]> = {
   open: ['OPEN'],
-  closed: ['CLOSED', 'MERGED'],
-  all: ['OPEN', 'CLOSED', 'MERGED'],
+  closed: ['CLOSED'],
 };
 
 type GhGraphQLResponse<T> = { data?: T; errors?: { message: string }[] };
 
 @injectable()
-export class PRListService {
-  async fetchPRList(
+export class IssueListService {
+  async fetchIssueList(
     repoOwnerName: string,
-    options: { page?: number; limit?: number; state?: PRState } = {}
-  ): Promise<PaginatedPRList> {
+    options: { page?: number; limit?: number; state?: IssueState } = {}
+  ): Promise<PaginatedIssueList> {
     validateRepoOwnerName(repoOwnerName);
 
     const page = normalizePage(options.page);
     const limit = normalizeLimit(options.limit);
-    const state = this.normalizePRState(options.state);
+    const state = this.normalizeIssueState(options.state);
 
-    if (page > 1) {
-      const cursor = await this.resolvePageCursor(
-        repoOwnerName,
-        state,
-        (page - 1) * limit
-      );
-      if (cursor === null) {
-        return { items: [], lastPage: 1 };
-      }
-      const { totalCount, items } = await this.fetchPRListGraphQL(
-        repoOwnerName,
-        state,
-        limit,
-        cursor
-      );
-      return { items, lastPage: Math.max(1, Math.ceil(totalCount / limit)) };
+    const cursor =
+      page > 1
+        ? await this.resolvePageCursor(repoOwnerName, state, (page - 1) * limit)
+        : null;
+    if (page > 1 && cursor === null) {
+      return { items: [], lastPage: 1 };
     }
 
-    const { totalCount, items } = await this.fetchPRListGraphQL(
+    const { totalCount, items } = await this.fetchIssueListGraphQL(
       repoOwnerName,
       state,
       limit,
-      null
+      cursor
     );
-    return { items, lastPage: Math.max(1, Math.ceil(totalCount / limit)) };
+    const lastPage = Math.max(1, Math.ceil(totalCount / limit));
+    return { items, lastPage };
   }
 
   private async resolvePageCursor(
     repoOwnerName: string,
-    state: PRState,
+    state: IssueState,
     skip: number
   ): Promise<string | null> {
     const [owner, name] = repoOwnerName.split('/');
@@ -94,7 +84,7 @@ export class PRListService {
   private async fetchCursorHop(
     owner: string,
     name: string,
-    state: PRState,
+    state: IssueState,
     hop: number,
     after: string | null
   ): Promise<string | null> {
@@ -102,7 +92,7 @@ export class PRListService {
       'api',
       'graphql',
       '-f',
-      `query=${prCursorGql}`,
+      `query=${issueCursorGql}`,
       '-f',
       `owner=${owner}`,
       '-f',
@@ -114,32 +104,32 @@ export class PRListService {
     ]).catch((error) => {
       throw mapGhError(error, 'fetch');
     });
-    const result = JSON.parse(stdout) as GhGraphQLResponse<PrCursorQuery>;
+    const result = JSON.parse(stdout) as GhGraphQLResponse<IssueCursorQuery>;
 
     if (result.errors || !result.data) {
       const message = result.errors?.[0]?.message ?? 'Unknown GraphQL error';
       throw new AppError(
-        `GraphQL query failed: ${message}`,
+        `GraphQL cursor query failed for ${owner}/${name}: ${message}`,
         HttpStatus.BAD_GATEWAY
       );
     }
 
-    return result.data.repository?.pullRequests.pageInfo.endCursor ?? null;
+    return result.data.repository?.issues.pageInfo.endCursor ?? null;
   }
 
-  private async fetchPRListGraphQL(
+  private async fetchIssueListGraphQL(
     repoOwnerName: string,
-    state: PRState,
+    state: IssueState,
     limit: number,
     cursor: string | null
-  ): Promise<{ totalCount: number; items: PRListItem[] }> {
+  ): Promise<{ totalCount: number; items: IssueListItem[] }> {
     const [owner, name] = repoOwnerName.split('/');
 
     const { stdout } = await execFileAsync('gh', [
       'api',
       'graphql',
       '-f',
-      `query=${prListGql}`,
+      `query=${issueListGql}`,
       '-f',
       `owner=${owner}`,
       '-f',
@@ -151,39 +141,39 @@ export class PRListService {
     ]).catch((error) => {
       throw mapGhError(error, 'fetch');
     });
-    const result = JSON.parse(stdout) as GhGraphQLResponse<PrListQuery>;
+    const result = JSON.parse(stdout) as GhGraphQLResponse<IssueListQuery>;
 
     if (result.errors || !result.data) {
       const message = result.errors?.[0]?.message ?? 'Unknown GraphQL error';
       throw new AppError(
-        `GraphQL query failed: ${message}`,
+        `GraphQL issue list query failed for ${repoOwnerName}: ${message}`,
         HttpStatus.BAD_GATEWAY
       );
     }
 
-    const prs = result.data.repository?.pullRequests;
-    if (!prs)
+    const issues = result.data.repository?.issues;
+    if (!issues)
       throw new AppError(
-        'GraphQL query failed: no data',
+        `GraphQL query failed: repository ${repoOwnerName} not found or issues inaccessible`,
         HttpStatus.BAD_GATEWAY
       );
 
     return {
-      totalCount: prs.totalCount,
-      items: (prs.nodes ?? []).flatMap((node) =>
-        node ? [PRListItemDto.fromGraphQL(node)] : []
+      totalCount: issues.totalCount,
+      items: (issues.nodes ?? []).flatMap((node) =>
+        node ? [IssueListItemDto.fromGraphQL(node)] : []
       ),
     };
   }
 
-  private normalizePRState(state: string | undefined): PRState {
-    if (state && VALID_PR_STATES.includes(state as PRState)) {
-      return state as PRState;
+  private normalizeIssueState(state: string | undefined): IssueState {
+    if (state && VALID_ISSUE_STATES.includes(state as IssueState)) {
+      return state as IssueState;
     }
     return 'open';
   }
 
-  private buildStatesFilterArgs(state: PRState): string[] {
-    return GRAPHQL_PR_STATES[state].flatMap((s) => ['-f', `states[]=${s}`]);
+  private buildStatesFilterArgs(state: IssueState): string[] {
+    return GRAPHQL_ISSUE_STATES[state].flatMap((s) => ['-f', `states[]=${s}`]);
   }
 }

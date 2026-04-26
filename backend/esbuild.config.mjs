@@ -11,6 +11,10 @@ await build({
     'process.env.NODE_ENV': '"production"',
   },
   minify: true,
+  loader: {
+    // Inline .gql files as string constants so no runtime file reads are needed
+    '.gql': 'text',
+  },
   external: [
     // Prisma and libsql use native binaries and must remain external
     '@prisma/client',

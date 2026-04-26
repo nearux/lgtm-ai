@@ -17,6 +17,7 @@ describe('CheckoutService.checkoutPRBranch', () => {
   });
 
   it('should checkout PR branch when working tree is clean', async () => {
+    // given
     mockExecAsync
       .mockResolvedValueOnce({ stdout: '', stderr: '' }) // git status (clean)
       .mockResolvedValueOnce({ stdout: '', stderr: '' }) // gh pr checkout
@@ -25,10 +26,12 @@ describe('CheckoutService.checkoutPRBranch', () => {
         stderr: '',
       }); // git branch --show-current
 
+    // when
     const result = await service.checkoutPRBranch('owner/repo', 23, '/repo', {
       force: false,
     });
 
+    // then
     expect(result).toEqual({
       success: true,
       message: 'Checked out PR branch successfully',
@@ -56,11 +59,13 @@ describe('CheckoutService.checkoutPRBranch', () => {
   });
 
   it('should throw CONFLICT when working tree is dirty and force is false', async () => {
+    // given
     mockExecAsync.mockResolvedValueOnce({
       stdout: ' M backend/services/pullRequests.ts',
       stderr: '',
     }); // git status (dirty)
 
+    // when / then
     await expect(
       service.checkoutPRBranch('owner/repo', 23, '/repo', { force: false })
     ).rejects.toMatchObject({
@@ -73,6 +78,7 @@ describe('CheckoutService.checkoutPRBranch', () => {
   });
 
   it('should stash including untracked files when force is true', async () => {
+    // given
     mockExecAsync
       .mockResolvedValueOnce({
         stdout: ' M backend/services/pullRequests.ts\n?? new-file.txt',
@@ -88,10 +94,12 @@ describe('CheckoutService.checkoutPRBranch', () => {
         stderr: '',
       }); // git branch --show-current
 
+    // when
     const result = await service.checkoutPRBranch('owner/repo', 23, '/repo', {
       force: true,
     });
 
+    // then
     expect(result).toEqual({
       success: true,
       message: 'Checked out PR branch successfully',
@@ -119,10 +127,12 @@ describe('CheckoutService.checkoutPRBranch', () => {
   });
 
   it('should throw INTERNAL_SERVER_ERROR when stash fails', async () => {
+    // given
     mockExecAsync
       .mockResolvedValueOnce({ stdout: ' M file.ts', stderr: '' }) // git status (dirty)
       .mockRejectedValueOnce(new Error('stash failed')); // git stash push
 
+    // when / then
     await expect(
       service.checkoutPRBranch('owner/repo', 23, '/repo', { force: true })
     ).rejects.toMatchObject({
@@ -132,10 +142,12 @@ describe('CheckoutService.checkoutPRBranch', () => {
   });
 
   it('should throw NOT_FOUND when PR does not exist', async () => {
+    // given
     mockExecAsync
       .mockResolvedValueOnce({ stdout: '', stderr: '' }) // git status (clean)
       .mockRejectedValueOnce(new Error('could not resolve to a PullRequest')); // gh pr checkout
 
+    // when / then
     await expect(
       service.checkoutPRBranch('owner/repo', 999, '/repo', { force: false })
     ).rejects.toMatchObject({
@@ -145,12 +157,14 @@ describe('CheckoutService.checkoutPRBranch', () => {
   });
 
   it('should throw SERVICE_UNAVAILABLE for gh authentication failure', async () => {
+    // given
     mockExecAsync
       .mockResolvedValueOnce({ stdout: '', stderr: '' }) // git status (clean)
       .mockRejectedValueOnce(
         new Error('authentication required: gh auth login')
       ); // gh pr checkout
 
+    // when / then
     await expect(
       service.checkoutPRBranch('owner/repo', 23, '/repo', { force: false })
     ).rejects.toMatchObject({
@@ -161,10 +175,12 @@ describe('CheckoutService.checkoutPRBranch', () => {
   });
 
   it('should throw INTERNAL_SERVER_ERROR for general checkout failure', async () => {
+    // given
     mockExecAsync
       .mockResolvedValueOnce({ stdout: '', stderr: '' }) // git status (clean)
       .mockRejectedValueOnce(new Error('unexpected error')); // gh pr checkout
 
+    // when / then
     await expect(
       service.checkoutPRBranch('owner/repo', 23, '/repo', { force: false })
     ).rejects.toMatchObject({
@@ -174,6 +190,7 @@ describe('CheckoutService.checkoutPRBranch', () => {
   });
 
   it('should throw BAD_REQUEST for invalid repo name', async () => {
+    // given / when / then
     await expect(
       service.checkoutPRBranch('bad repo!', 23, '/repo', { force: false })
     ).rejects.toMatchObject({

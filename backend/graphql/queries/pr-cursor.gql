@@ -1,0 +1,20 @@
+query PRCursor(
+  $owner: String!
+  $name: String!
+  $skip: Int!
+  $states: [PullRequestState!]!
+  $after: String
+) {
+  repository(owner: $owner, name: $name) {
+    pullRequests(
+      first: $skip
+      after: $after
+      states: $states
+      orderBy: { field: CREATED_AT, direction: DESC }
+    ) {
+      pageInfo {
+        endCursor
+      }
+    }
+  }
+}

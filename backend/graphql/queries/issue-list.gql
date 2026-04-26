@@ -1,0 +1,54 @@
+query IssueList(
+  $owner: String!
+  $name: String!
+  $limit: Int!
+  $states: [IssueState!]!
+  $after: String
+) {
+  repository(owner: $owner, name: $name) {
+    issues(
+      first: $limit
+      states: $states
+      after: $after
+      orderBy: { field: CREATED_AT, direction: DESC }
+    ) {
+      totalCount
+      nodes {
+        number
+        title
+        body
+        state
+        createdAt
+        updatedAt
+        comments {
+          totalCount
+        }
+        assignees(first: 20) {
+          nodes {
+            id
+            login
+            name
+          }
+        }
+        author {
+          login
+          avatarUrl
+          ... on User {
+            id
+            name
+          }
+          ... on Bot {
+            id
+          }
+        }
+        labels(first: 10) {
+          nodes {
+            id
+            name
+            color
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,20 @@
+query IssueCursor(
+  $owner: String!
+  $name: String!
+  $skip: Int!
+  $states: [IssueState!]!
+  $after: String
+) {
+  repository(owner: $owner, name: $name) {
+    issues(
+      first: $skip
+      after: $after
+      states: $states
+      orderBy: { field: CREATED_AT, direction: DESC }
+    ) {
+      pageInfo {
+        endCursor
+      }
+    }
+  }
+}
