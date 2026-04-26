@@ -26,7 +26,10 @@ export function buildUserPrompt(
   context: CommandContext,
   customPrompt?: string
 ): string {
-  if (context.type === 'issue' || context.type === 'issueComment') {
+  if (context.type === 'issueComment') {
+    return buildIssueCommentUserPrompt(command, context, customPrompt);
+  }
+  if (context.type === 'issue') {
     return buildIssueUserPrompt(command, context, customPrompt);
   }
   if (context.type === 'pr') {
@@ -62,14 +65,17 @@ type IssueTemplateFn = (
 ) => string;
 
 const issueTemplates: Partial<Record<ClaudeCommand, IssueTemplateFn>> = {
-  explain: (n, r) => templates.explainIssuePrompt(n, r),
-  fix: (n, r) => templates.fixIssuePrompt(n, r),
-  custom: (_n, _r, cp) => templates.customIssuePrompt(cp!),
+  explain: (issueNumber, repoOwnerName) =>
+    templates.explainIssuePrompt(issueNumber, repoOwnerName),
+  fix: (issueNumber, repoOwnerName) =>
+    templates.fixIssuePrompt(issueNumber, repoOwnerName),
+  custom: (_issueNumber, _repoOwnerName, customPrompt) =>
+    templates.customIssuePrompt(customPrompt!),
 };
 
 function buildIssueUserPrompt(
   command: ClaudeCommand,
-  context: IssueCommandContext | IssueCommentCommandContext,
+  context: IssueCommandContext,
   customPrompt?: string
 ): string {
   if (command === 'custom') requireCustomPrompt(customPrompt);
@@ -83,6 +89,47 @@ function buildIssueUserPrompt(
   }
   const { number, repoOwnerName } = context.issueMeta;
   return templateFn(number, repoOwnerName, customPrompt);
+}
+
+// ── Issue comment prompt ────────────────────────────────────────────
+
+type IssueCommentTemplateFn = (
+  issueNumber: number,
+  repoOwnerName: string,
+  commentSection: string,
+  customPrompt?: string
+) => string;
+
+const issueCommentTemplates: Partial<
+  Record<ClaudeCommand, IssueCommentTemplateFn>
+> = {
+  explain: (issueNumber, repoOwnerName, commentSection) =>
+    templates.explainIssueCommentPrompt(
+      issueNumber,
+      repoOwnerName,
+      commentSection
+    ),
+  custom: (_issueNumber, _repoOwnerName, commentSection, customPrompt) =>
+    templates.customIssueCommentPrompt(customPrompt!, commentSection),
+};
+
+function buildIssueCommentUserPrompt(
+  command: ClaudeCommand,
+  context: IssueCommentCommandContext,
+  customPrompt?: string
+): string {
+  if (command === 'custom') requireCustomPrompt(customPrompt);
+
+  const templateFn = issueCommentTemplates[command];
+  if (!templateFn) {
+    throw new AppError(
+      `Command '${command}' is not supported for issue comment context`,
+      HttpStatus.BAD_REQUEST
+    );
+  }
+  const { number, repoOwnerName } = context.issueMeta;
+  const commentSection = templates.issueCommentSection(context);
+  return templateFn(number, repoOwnerName, commentSection, customPrompt);
 }
 
 // ── PR-level prompt ─────────────────────────────────────────────────

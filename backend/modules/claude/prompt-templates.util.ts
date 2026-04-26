@@ -287,3 +287,41 @@ export function fixIssuePrompt(
 export function customIssuePrompt(userPrompt: string): string {
   return userPrompt;
 }
+
+// ── Issue comment prompt templates ──────────────────────────────────
+
+export interface IssueCommentSectionParams {
+  author: string;
+  body: string;
+}
+
+export function issueCommentSection(p: IssueCommentSectionParams): string {
+  return `Author: ${p.author}\n\nComment:\n${p.body}`;
+}
+
+export function explainIssueCommentPrompt(
+  issueNumber: number,
+  repoOwnerName: string,
+  commentSection: string
+): string {
+  return `A commenter left the following on an issue. Explain what they are pointing out.
+
+## Issue Comment
+${commentSection}
+
+## Instructions
+1. Retrieve full issue details using: \`gh issue view ${issueNumber} --repo ${repoOwnerName}\`
+2. Summarize what the commenter is asking for or pointing out in plain language
+3. Explain why it matters in the context of the issue and the codebase
+4. If applicable, identify the relevant parts of the codebase`;
+}
+
+export function customIssueCommentPrompt(
+  userPrompt: string,
+  commentSection: string
+): string {
+  return `${userPrompt}
+
+## Issue Comment Context
+${commentSection}`;
+}

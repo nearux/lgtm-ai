@@ -301,28 +301,28 @@ describe('buildUserPrompt', () => {
         const result = buildUserPrompt('explain', issueCommentContext);
         expect(result).toContain('gh issue view 7 --repo acme/app');
       });
-    });
 
-    describe('fix', () => {
-      it('includes instruction to not use git', () => {
-        const result = buildUserPrompt('fix', issueCommentContext);
-        expect(result).toContain('Do NOT use git commands');
+      it('includes comment author', () => {
+        const result = buildUserPrompt('explain', issueCommentContext);
+        expect(result).toContain('carol');
       });
 
-      it('includes gh issue view instruction', () => {
-        const result = buildUserPrompt('fix', issueCommentContext);
-        expect(result).toContain('gh issue view 7 --repo acme/app');
+      it('includes comment body', () => {
+        const result = buildUserPrompt('explain', issueCommentContext);
+        expect(result).toContain('This needs a null check');
       });
     });
 
     describe('custom', () => {
-      it('returns custom prompt as-is', () => {
+      it('includes custom prompt and comment context', () => {
         const result = buildUserPrompt(
           'custom',
           issueCommentContext,
           'List affected files'
         );
         expect(result).toContain('List affected files');
+        expect(result).toContain('carol');
+        expect(result).toContain('This needs a null check');
       });
 
       it('throws if customPrompt is missing', () => {
@@ -332,15 +332,21 @@ describe('buildUserPrompt', () => {
       });
     });
 
+    it('throws on fix command for issueComment context', () => {
+      expect(() => buildUserPrompt('fix', issueCommentContext)).toThrow(
+        "Command 'fix' is not supported for issue comment context"
+      );
+    });
+
     it('throws on validate command for issueComment context', () => {
       expect(() => buildUserPrompt('validate', issueCommentContext)).toThrow(
-        "Command 'validate' is not supported for issue context"
+        "Command 'validate' is not supported for issue comment context"
       );
     });
 
     it('throws on review command for issueComment context', () => {
       expect(() => buildUserPrompt('review', issueCommentContext)).toThrow(
-        "Command 'review' is not supported for issue context"
+        "Command 'review' is not supported for issue comment context"
       );
     });
   });
