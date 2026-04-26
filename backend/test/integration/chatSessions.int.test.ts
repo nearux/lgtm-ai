@@ -106,6 +106,7 @@ beforeEach(async () => {
 
 describe('chat sessions REST integration', () => {
   it('lists chat sessions for PR and supports scope filters', async () => {
+    // given
     const project = await seedProject();
     const older = new Date('2026-03-10T00:00:00.000Z');
     const newer = new Date('2026-03-11T00:00:00.000Z');
@@ -131,6 +132,7 @@ describe('chat sessions REST integration', () => {
       last_used_at: newer,
     });
 
+    // when / then
     const listResponse = await fetch(
       `${baseUrl}/api/projects/${project.id}/prs/45/chat-sessions`
     );
@@ -152,12 +154,15 @@ describe('chat sessions REST integration', () => {
   });
 
   it('returns 400 when scopeType and scopeTargetId are partially provided', async () => {
+    // given
     const project = await seedProject();
 
+    // when
     const response = await fetch(
       `${baseUrl}/api/projects/${project.id}/prs/45/chat-sessions?scopeType=REVIEW`
     );
 
+    // then
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toMatchObject({
       message: 'scopeType and scopeTargetId must be provided together',
@@ -165,6 +170,7 @@ describe('chat sessions REST integration', () => {
   });
 
   it('returns chat session history and enforces project/pr ownership', async () => {
+    // given
     const project = await seedProject({ working_dir: '/tmp/project' });
     const session = await seedChatSession({
       id: 'session-1',
@@ -174,6 +180,7 @@ describe('chat sessions REST integration', () => {
       claude_session_id: 'claude-session-1',
     });
 
+    // when / then
     mockGetClaudeSessionHistory.mockResolvedValue({
       claudeSessionId: 'claude-session-1',
       entries: [

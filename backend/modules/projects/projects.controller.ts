@@ -365,6 +365,8 @@ export class ProjectsController extends Controller {
    * List saved chat sessions for a specific issue
    * @param projectId Project UUID
    * @param issueNumber Issue number
+   * @param scopeType Optional scope type filter
+   * @param scopeTargetId Optional scope target id filter (required when scopeType is provided)
    */
   @Get('{projectId}/issues/{issueNumber}/chat-sessions')
   @Response<ErrorResponse>(HttpStatus.BAD_REQUEST, 'Invalid request')

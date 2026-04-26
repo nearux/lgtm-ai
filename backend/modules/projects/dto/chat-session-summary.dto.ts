@@ -1,5 +1,6 @@
 import type { ChatSession } from '@prisma/client';
 import type {
+  ChatSessionScopeType,
   ChatSessionSummary,
   ChatSessionTargetType,
 } from '../../../types/chatSessions.js';
@@ -9,7 +10,7 @@ export class ChatSessionSummaryDto implements ChatSessionSummary {
   projectId: string;
   targetType: ChatSessionTargetType;
   targetNumber: number;
-  scopeType: 'REVIEW' | 'COMMENT' | 'PR' | 'ISSUE';
+  scopeType: ChatSessionScopeType;
   scopeTargetId: string;
   claudeSessionId: string;
   title?: string;

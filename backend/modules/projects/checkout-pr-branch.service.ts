@@ -94,24 +94,7 @@ export class CheckoutService {
     const origin = options.origin ?? 'origin';
     const force = options.force === true;
 
-    let defaultBranch: string;
-    try {
-      const { stdout } = await execFileAsync(
-        'git',
-        ['symbolic-ref', `refs/remotes/${origin}/HEAD`],
-        { cwd: workingDir }
-      );
-      const ref = stdout.trim();
-      defaultBranch = ref.replace(`refs/remotes/${origin}/`, '');
-      if (!defaultBranch) {
-        throw new Error('empty branch name');
-      }
-    } catch {
-      throw new AppError(
-        `Cannot determine default branch: refs/remotes/${origin}/HEAD is not set. Run 'git remote set-head ${origin} --auto' to fix this.`,
-        HttpStatus.UNPROCESSABLE_ENTITY
-      );
-    }
+    const defaultBranch = await this.resolveDefaultBranch(workingDir, origin);
 
     const { stdout: gitStatusStdout } = await execFileAsync(
       'git',
@@ -169,5 +152,29 @@ export class CheckoutService {
       targetBranch: defaultBranch,
       stashed,
     };
+  }
+
+  private async resolveDefaultBranch(
+    workingDir: string,
+    origin: string
+  ): Promise<string> {
+    try {
+      const { stdout } = await execFileAsync(
+        'git',
+        ['symbolic-ref', `refs/remotes/${origin}/HEAD`],
+        { cwd: workingDir }
+      );
+      const ref = stdout.trim();
+      const branch = ref.replace(`refs/remotes/${origin}/`, '');
+      if (!branch) {
+        throw new Error('empty branch name');
+      }
+      return branch;
+    } catch {
+      throw new AppError(
+        `Cannot determine default branch: refs/remotes/${origin}/HEAD is not set. Run 'git remote set-head ${origin} --auto' to fix this.`,
+        HttpStatus.UNPROCESSABLE_ENTITY
+      );
+    }
   }
 }
