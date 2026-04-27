@@ -9,6 +9,7 @@ import type {
   ClaudeCommand,
   PRReviewCommandContext,
   PRCommentCommandContext,
+  IssueCommentCommandContext,
 } from '../../types/claude.js';
 import HttpStatus from 'http-status';
 import { AppError } from '../../errors/AppError.js';
@@ -19,7 +20,10 @@ import {
 } from './prompt-builders/review-comment.builder.js';
 import { buildPrUserPrompt } from './prompt-builders/pr.builder.js';
 import { buildIssueUserPrompt } from './prompt-builders/issue.builder.js';
-import { buildIssueCommentUserPrompt } from './prompt-builders/issue-comment.builder.js';
+import {
+  buildIssueCommentUserPrompt,
+  buildBatchIssueCommentUserPrompt,
+} from './prompt-builders/issue-comment.builder.js';
 
 export function buildSystemPrompt(context: CommandContext): string {
   if (context.type === 'issue' || context.type === 'issueComment') {
@@ -55,11 +59,25 @@ export function buildUserPrompt(
 
 export function buildBatchUserPrompt(
   command: ClaudeCommand,
-  contexts: (PRReviewCommandContext | PRCommentCommandContext)[],
+  contexts:
+    | (PRReviewCommandContext | PRCommentCommandContext)[]
+    | IssueCommentCommandContext[],
   customPrompt?: string
 ): string {
+  if (contexts[0].type === 'issueComment') {
+    assertCommand(command, ISSUE_COMMENT_COMMANDS, 'issue comment batch');
+    return buildBatchIssueCommentUserPrompt(
+      command,
+      contexts as IssueCommentCommandContext[],
+      customPrompt
+    );
+  }
   assertCommand(command, REVIEW_COMMENT_COMMANDS, 'batch');
-  return buildBatchReviewCommentUserPrompt(command, contexts, customPrompt);
+  return buildBatchReviewCommentUserPrompt(
+    command,
+    contexts as (PRReviewCommandContext | PRCommentCommandContext)[],
+    customPrompt
+  );
 }
 
 function assertCommand<T extends ClaudeCommand>(

@@ -113,7 +113,9 @@ export interface WsBatchExecuteMessage {
   requestId: string;
   workingDir: string;
   command: ClaudeCommand;
-  contexts: (PRReviewCommandContext | PRCommentCommandContext)[];
+  contexts:
+    | (PRReviewCommandContext | PRCommentCommandContext)[]
+    | IssueCommentCommandContext[];
   customPrompt?: string;
   options?: ClaudeExecuteOptions;
   chatContext?: ClaudeChatContext;

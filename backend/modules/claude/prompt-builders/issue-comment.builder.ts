@@ -30,3 +30,31 @@ export function buildIssueCommentUserPrompt(
       return templates.customIssueCommentPrompt(customPrompt, commentSection);
   }
 }
+
+export function buildBatchIssueCommentUserPrompt(
+  command: IssueCommentCommand,
+  contexts: IssueCommentCommandContext[],
+  customPrompt?: string
+): string {
+  const { number, repoOwnerName } = contexts[0].issueMeta;
+  const batchSection = templates.batchIssueCommentSection(contexts);
+  switch (command) {
+    case 'explain':
+      return templates.batchExplainIssueCommentPrompt(
+        number,
+        repoOwnerName,
+        batchSection
+      );
+    case 'custom':
+      if (!customPrompt || customPrompt.trim() === '') {
+        throw new AppError(
+          'customPrompt is required for custom command',
+          HttpStatus.BAD_REQUEST
+        );
+      }
+      return templates.batchCustomIssueCommentPrompt(
+        customPrompt,
+        batchSection
+      );
+  }
+}

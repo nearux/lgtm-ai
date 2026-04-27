@@ -325,3 +325,40 @@ export function customIssueCommentPrompt(
 ## Issue Comment Context
 ${commentSection}`;
 }
+
+// ── Batch issue comment prompt templates ────────────────────────────
+
+export function batchIssueCommentSection(
+  contexts: IssueCommentSectionParams[]
+): string {
+  return contexts
+    .map((ctx, i) => `### [${i + 1}]\n${issueCommentSection(ctx)}`)
+    .join('\n\n');
+}
+
+export function batchExplainIssueCommentPrompt(
+  issueNumber: number,
+  repoOwnerName: string,
+  batchSection: string
+): string {
+  return `Multiple commenters left the following on an issue. Explain what each commenter is pointing out.
+
+## Issue Comments
+${batchSection}
+
+## Instructions
+1. Retrieve full issue details using: \`gh issue view ${issueNumber} --repo ${repoOwnerName}\`
+2. For each comment ([1], [2], ...), summarize what the commenter is asking for or pointing out in plain language
+3. Explain why it matters in the context of the issue and the codebase
+4. If applicable, identify the relevant parts of the codebase`;
+}
+
+export function batchCustomIssueCommentPrompt(
+  userPrompt: string,
+  batchSection: string
+): string {
+  return `${userPrompt}
+
+## Issue Comments Context
+${batchSection}`;
+}
