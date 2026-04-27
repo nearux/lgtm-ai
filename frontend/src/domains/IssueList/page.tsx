@@ -13,7 +13,7 @@ export const IssueListPage = () => {
   const { state, page, limit, setState, setPage } = useIssueListParams();
 
   const { data: project } = useQuery({
-    ...getProjectDetailQueryOptions(projectId!),
+    ...getProjectDetailQueryOptions(projectId ?? ''),
     throwOnError: false,
     enabled: !!projectId,
   });
@@ -44,7 +44,15 @@ export const IssueListPage = () => {
                 options={remotes.map((r) => ({ value: r.name, label: r.name }))}
                 value={selectedOrigin}
                 onChange={(e) =>
-                  setSearchParams({ origin: e.target.value }, { replace: true })
+                  setSearchParams(
+                    (prev) => {
+                      const params = new URLSearchParams(prev);
+                      params.set('origin', e.target.value);
+                      params.delete('page');
+                      return params;
+                    },
+                    { replace: true }
+                  )
                 }
               />
             )}
