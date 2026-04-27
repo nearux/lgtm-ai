@@ -211,7 +211,7 @@ describe('GhGraphQLClient.request', () => {
     await expect(
       client.request('query { node { id } }', {})
     ).rejects.toMatchObject({
-      message: 'Failed to fetch PR data from GitHub',
+      message: 'Failed to fetch data from GitHub',
       statusCode: 500,
     });
   });
