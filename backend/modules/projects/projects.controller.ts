@@ -42,6 +42,8 @@ import type {
   PRState,
   CheckoutPRBranchBody,
   CheckoutPRBranchResult,
+  CheckoutDefaultBranchBody,
+  CheckoutDefaultBranchResult,
 } from '../../types/pullRequests.js';
 import type {
   ChatSessionHistoryResponse,
@@ -67,6 +69,7 @@ export type {
   ChatSessionSummary,
   ChatSessionHistoryResponse,
   CheckoutPRBranchResult,
+  CheckoutDefaultBranchResult,
   CommitMessageResponse,
   CommitAndPushResponse,
   IssueListItem,
@@ -75,6 +78,37 @@ export type {
 };
 
 const uuidSchema = z.uuid();
+
+const prChatSessionsQuery = z
+  .object({
+    scopeType: z.enum(['PR', 'REVIEW', 'COMMENT']).optional().default('PR'),
+    scopeTargetId: z.string().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.scopeType === 'REVIEW' || data.scopeType === 'COMMENT') {
+      if (!data.scopeTargetId) {
+        ctx.addIssue({
+          code: 'custom',
+          message:
+            'scopeTargetId is required when scopeType is REVIEW or COMMENT',
+        });
+      }
+    }
+  });
+
+const issueChatSessionsQuery = z
+  .object({
+    scopeType: z.enum(['ISSUE', 'COMMENT']).optional().default('ISSUE'),
+    scopeTargetId: z.string().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.scopeType === 'COMMENT' && !data.scopeTargetId) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'scopeTargetId is required when scopeType is COMMENT',
+      });
+    }
+  });
 
 @injectable()
 @Route('api/projects')
@@ -236,8 +270,8 @@ export class ProjectsController extends Controller {
    * Get saved chat sessions for a specific pull request
    * @param projectId Project UUID
    * @param prNumber Pull request number
-   * @param scopeType Optional chat target type filter
-   * @param scopeTargetId Optional chat target id filter
+   * @param scopeType Scope type filter (default: PR). REVIEW or COMMENT requires scopeTargetId.
+   * @param scopeTargetId Required when scopeType is REVIEW or COMMENT
    */
   @Get('{projectId}/prs/{prNumber}/chat-sessions')
   @Response<ErrorResponse>(HttpStatus.BAD_REQUEST, 'Invalid request')
@@ -251,20 +285,19 @@ export class ProjectsController extends Controller {
     const parsedProjectId = this.parseUUID(projectId);
     await this.projectsService.findById(parsedProjectId);
 
-    if ((scopeType && !scopeTargetId) || (!scopeType && scopeTargetId)) {
+    const result = prChatSessionsQuery.safeParse({ scopeType, scopeTargetId });
+    if (!result.success) {
       throw new AppError(
-        'scopeType and scopeTargetId must be provided together',
+        result.error.issues[0]?.message ?? 'Invalid scope parameters',
         HttpStatus.BAD_REQUEST
       );
     }
 
     return this.chatSessionsService.listChatSessions(
       parsedProjectId,
+      'PR',
       prNumber,
-      {
-        scopeType,
-        scopeTargetId,
-      }
+      result.data
     );
   }
 
@@ -286,6 +319,7 @@ export class ProjectsController extends Controller {
   ): Promise<ChatSessionHistoryResponse> {
     return this.chatSessionsService.getChatSessionHistory(
       this.parseUUID(projectId),
+      'PR',
       prNumber,
       sessionId
     );
@@ -360,6 +394,68 @@ export class ProjectsController extends Controller {
   }
 
   /**
+   * List saved chat sessions for a specific issue
+   * @param projectId Project UUID
+   * @param issueNumber Issue number
+   * @param scopeType Scope type filter (default: ISSUE). COMMENT requires scopeTargetId.
+   * @param scopeTargetId Required when scopeType is COMMENT
+   */
+  @Get('{projectId}/issues/{issueNumber}/chat-sessions')
+  @Response<ErrorResponse>(HttpStatus.BAD_REQUEST, 'Invalid request')
+  @Response<ErrorResponse>(HttpStatus.NOT_FOUND, 'Project not found')
+  public async listIssueChatSessions(
+    @Path() projectId: string,
+    @Path() issueNumber: number,
+    @Query() scopeType?: ChatSessionScopeType,
+    @Query() scopeTargetId?: string
+  ): Promise<ChatSessionSummary[]> {
+    const parsedProjectId = this.parseUUID(projectId);
+    await this.projectsService.findById(parsedProjectId);
+
+    const result = issueChatSessionsQuery.safeParse({
+      scopeType,
+      scopeTargetId,
+    });
+    if (!result.success) {
+      throw new AppError(
+        result.error.issues[0]?.message ?? 'Invalid scope parameters',
+        HttpStatus.BAD_REQUEST
+      );
+    }
+
+    return this.chatSessionsService.listChatSessions(
+      parsedProjectId,
+      'ISSUE',
+      issueNumber,
+      result.data
+    );
+  }
+
+  /**
+   * Get saved chat history for a specific issue session
+   * @param projectId Project UUID
+   * @param issueNumber Issue number
+   * @param sessionId Saved chat session id
+   */
+  @Get('{projectId}/issues/{issueNumber}/chat-sessions/{sessionId}/history')
+  @Response<ErrorResponse>(
+    HttpStatus.NOT_FOUND,
+    'Project or chat session not found'
+  )
+  public async getIssueChatSessionHistory(
+    @Path() projectId: string,
+    @Path() issueNumber: number,
+    @Path() sessionId: string
+  ): Promise<ChatSessionHistoryResponse> {
+    return this.chatSessionsService.getChatSessionHistory(
+      this.parseUUID(projectId),
+      'ISSUE',
+      issueNumber,
+      sessionId
+    );
+  }
+
+  /**
    * Checkout the branch associated with a pull request
    * @param projectId Project UUID
    * @param prNumber Pull request number
@@ -398,6 +494,33 @@ export class ProjectsController extends Controller {
       project.working_dir,
       { force: body?.force }
     );
+  }
+
+  /**
+   * Checkout the default branch of the project repository
+   * @param projectId Project UUID
+   */
+  @Post('{projectId}/checkout')
+  @Response<ErrorResponse>(
+    HttpStatus.CONFLICT,
+    'Uncommitted local changes exist'
+  )
+  @Response<ErrorResponse>(HttpStatus.NOT_FOUND, 'Project not found')
+  @Response<ErrorResponse>(
+    HttpStatus.UNPROCESSABLE_ENTITY,
+    'Default branch reference not set'
+  )
+  public async checkoutDefaultBranch(
+    @Path() projectId: string,
+    @Body() body: CheckoutDefaultBranchBody
+  ): Promise<CheckoutDefaultBranchResult> {
+    const project = await this.projectsService.findById(
+      this.parseUUID(projectId)
+    );
+    return this.checkoutService.checkoutDefaultBranch(project.working_dir, {
+      force: body.force,
+      origin: body.origin,
+    });
   }
 
   /**

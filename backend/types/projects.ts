@@ -10,6 +10,7 @@ export interface Project {
 export interface ProjectGitInfo {
   remoteUrl: string | null;
   currentBranch: string | null;
+  defaultBranch: string | null;
   branches: string[];
   remotes: ProjectGitRemote[];
 }

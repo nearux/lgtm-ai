@@ -95,7 +95,8 @@ export function useActivityChat({
 
     const chatContext: ClaudeChatContext = {
       projectId,
-      prNumber,
+      targetType: 'PR',
+      targetNumber: prNumber,
       scopeType: target.type === 'review' ? 'REVIEW' : 'COMMENT',
       scopeTargetId: target.id,
       title: userMessage,

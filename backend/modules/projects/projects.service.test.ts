@@ -143,6 +143,9 @@ describe('ProjectsService', () => {
       if (sub.includes('branch --show-current')) {
         return Promise.resolve({ stdout: 'feature/my-branch\n' });
       }
+      if (sub.includes('symbolic-ref refs/remotes/origin/HEAD')) {
+        return Promise.resolve({ stdout: 'refs/remotes/origin/main\n' });
+      }
       if (sub.includes('branch') && !sub.includes('--show-current')) {
         return Promise.resolve({ stdout: '* feature/my-branch\n  main\n' });
       }
@@ -151,13 +154,14 @@ describe('ProjectsService', () => {
 
     const result = await service.findById(project.id);
 
-    // All 4 git calls must still be made
-    expect(mockExecFileAsync).toHaveBeenCalledTimes(4);
+    // All 5 git calls must still be made
+    expect(mockExecFileAsync).toHaveBeenCalledTimes(5);
     expect(result).toEqual({
       ...project,
       gitInfo: {
         remoteUrl: 'git@github.com:owner/repo.git',
         currentBranch: 'feature/my-branch',
+        defaultBranch: 'main',
         branches: ['feature/my-branch', 'main'],
         remotes: [
           { name: 'origin', url: 'git@github.com:owner/repo.git' },

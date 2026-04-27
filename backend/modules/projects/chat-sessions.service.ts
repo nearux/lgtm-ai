@@ -10,6 +10,7 @@ import { ProjectRepository } from './project.repository.js';
 import type {
   ChatSessionHistoryResponse,
   ChatSessionSummary,
+  ChatSessionTargetType,
   ClaudeChatContext,
   ListChatSessionsFilters,
 } from '../../types/chatSessions.js';
@@ -34,7 +35,8 @@ export class ChatSessionsService {
     const record = await this.chatSessionRepository.create({
       id: randomUUID(),
       project_id: context.projectId,
-      pr_number: context.prNumber,
+      target_type: context.targetType,
+      target_number: context.targetNumber,
       scope_type: context.scopeType,
       scope_target_id: context.scopeTargetId,
       claude_session_id: claudeSessionId,
@@ -51,12 +53,14 @@ export class ChatSessionsService {
 
   async listChatSessions(
     projectId: string,
-    prNumber: number,
+    targetType: ChatSessionTargetType,
+    targetNumber: number,
     filters: ListChatSessionsFilters = {}
   ): Promise<ChatSessionSummary[]> {
-    const records = await this.chatSessionRepository.findManyByProjectAndPr(
+    const records = await this.chatSessionRepository.findManyByProjectAndTarget(
       projectId,
-      prNumber,
+      targetType,
+      targetNumber,
       filters
     );
     return records.map(ChatSessionSummaryDto.fromModel);
@@ -72,7 +76,8 @@ export class ChatSessionsService {
 
   async getChatSession(
     projectId: string,
-    prNumber: number,
+    targetType: ChatSessionTargetType,
+    targetNumber: number,
     sessionId: string
   ): Promise<ChatSessionSummary> {
     const record = await this.chatSessionRepository.findById(sessionId);
@@ -80,7 +85,8 @@ export class ChatSessionsService {
     if (
       !record ||
       record.project_id !== projectId ||
-      record.pr_number !== prNumber
+      record.target_type !== targetType ||
+      record.target_number !== targetNumber
     ) {
       throw new AppError('Chat session not found', HttpStatus.NOT_FOUND);
     }
@@ -90,7 +96,8 @@ export class ChatSessionsService {
 
   async getChatSessionHistory(
     projectId: string,
-    prNumber: number,
+    targetType: ChatSessionTargetType,
+    targetNumber: number,
     sessionId: string
   ): Promise<ChatSessionHistoryResponse> {
     const workingDirectory =
@@ -100,7 +107,12 @@ export class ChatSessionsService {
       throw new AppError('Project not found', HttpStatus.NOT_FOUND);
     }
 
-    const session = await this.getChatSession(projectId, prNumber, sessionId);
+    const session = await this.getChatSession(
+      projectId,
+      targetType,
+      targetNumber,
+      sessionId
+    );
     const history =
       await this.claudeSessionHistoryService.getClaudeSessionHistory({
         claudeSessionId: session.claudeSessionId,

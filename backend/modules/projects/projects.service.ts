@@ -113,46 +113,58 @@ export class ProjectsService {
   }
 
   private async getGitInfo(workingDir: string): Promise<ProjectGitInfo> {
-    const [remoteUrl, remotes, currentBranch, branches] = await Promise.all([
-      this.withFallback(
-        'Failed to resolve origin remote URL',
-        null as string | null
-      )(
-        git(workingDir, ['remote', 'get-url', 'origin']).then((out) =>
-          out.trim()
-        )
-      ),
-      this.withFallback(
-        'Failed to list git remotes',
-        [] as Array<{ name: string; url: string }>
-      )(
-        git(workingDir, ['remote', '-v']).then((raw) =>
-          ProjectGitRemoteDto.fromGitRemoteList(raw)
-        )
-      ),
-      this.withFallback(
-        'Failed to get current branch',
-        null as string | null
-      )(
-        git(workingDir, ['branch', '--show-current']).then(
-          (out) => out.trim() || null
-        )
-      ),
-      this.withFallback(
-        'Failed to list branches',
-        [] as string[]
-      )(
-        git(workingDir, ['branch']).then((raw) =>
-          pipe(
-            raw.split('\n'),
-            map((line) => line.replace(/^\*?\s+/, '').trim()),
-            filter((line) => line.length > 0)
+    const [remoteUrl, remotes, currentBranch, defaultBranch, branches] =
+      await Promise.all([
+        this.withFallback(
+          'Failed to resolve origin remote URL',
+          null as string | null
+        )(
+          git(workingDir, ['remote', 'get-url', 'origin']).then((out) =>
+            out.trim()
           )
-        )
-      ),
-    ]);
+        ),
+        this.withFallback(
+          'Failed to list git remotes',
+          [] as Array<{ name: string; url: string }>
+        )(
+          git(workingDir, ['remote', '-v']).then((raw) =>
+            ProjectGitRemoteDto.fromGitRemoteList(raw)
+          )
+        ),
+        this.withFallback(
+          'Failed to get current branch',
+          null as string | null
+        )(
+          git(workingDir, ['branch', '--show-current']).then(
+            (out) => out.trim() || null
+          )
+        ),
+        this.withFallback(
+          'Failed to get default branch',
+          null as string | null
+        )(
+          git(workingDir, ['symbolic-ref', 'refs/remotes/origin/HEAD']).then(
+            (out) => {
+              const ref = out.trim();
+              return ref.replace('refs/remotes/origin/', '') || null;
+            }
+          )
+        ),
+        this.withFallback(
+          'Failed to list branches',
+          [] as string[]
+        )(
+          git(workingDir, ['branch']).then((raw) =>
+            pipe(
+              raw.split('\n'),
+              map((line) => line.replace(/^\*?\s+/, '').trim()),
+              filter((line) => line.length > 0)
+            )
+          )
+        ),
+      ]);
 
-    return { remoteUrl, currentBranch, branches, remotes };
+    return { remoteUrl, currentBranch, defaultBranch, branches, remotes };
   }
 
   private withFallback<T>(label: string, fallback: T) {

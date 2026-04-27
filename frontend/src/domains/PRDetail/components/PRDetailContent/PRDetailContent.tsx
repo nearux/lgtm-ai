@@ -58,6 +58,10 @@ export const PRDetailContent = ({ projectId, prNumber, origin, ws }: Props) => {
     prAuthor: pr.author.login,
     prBody: pr.body ?? '',
     workingDir: project.working_dir,
+    prState: pr.state,
+    currentBranch: project.gitInfo.currentBranch,
+    prHeadBranch: pr.headBranch,
+    origin,
     ws,
   });
 

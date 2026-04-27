@@ -96,3 +96,14 @@ export interface CheckoutPRBranchResult {
   targetBranch: string;
   stashed: boolean;
 }
+
+export interface CheckoutDefaultBranchBody {
+  force?: boolean;
+  origin?: string;
+}
+
+export interface CheckoutDefaultBranchResult {
+  success: boolean;
+  targetBranch: string;
+  stashed: boolean;
+}

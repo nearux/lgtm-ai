@@ -1,11 +1,16 @@
 import type { ChatSession } from '@prisma/client';
-import type { ChatSessionSummary } from '../../../types/chatSessions.js';
+import type {
+  ChatSessionScopeType,
+  ChatSessionSummary,
+  ChatSessionTargetType,
+} from '../../../types/chatSessions.js';
 
 export class ChatSessionSummaryDto implements ChatSessionSummary {
   id: string;
   projectId: string;
-  prNumber: number;
-  scopeType: 'REVIEW' | 'COMMENT' | 'PR';
+  targetType: ChatSessionTargetType;
+  targetNumber: number;
+  scopeType: ChatSessionScopeType;
   scopeTargetId: string;
   claudeSessionId: string;
   title?: string;
@@ -18,7 +23,8 @@ export class ChatSessionSummaryDto implements ChatSessionSummary {
   constructor(data: ChatSessionSummary) {
     this.id = data.id;
     this.projectId = data.projectId;
-    this.prNumber = data.prNumber;
+    this.targetType = data.targetType;
+    this.targetNumber = data.targetNumber;
     this.scopeType = data.scopeType;
     this.scopeTargetId = data.scopeTargetId;
     this.claudeSessionId = data.claudeSessionId;
@@ -34,7 +40,8 @@ export class ChatSessionSummaryDto implements ChatSessionSummary {
     return new ChatSessionSummaryDto({
       id: model.id,
       projectId: model.project_id,
-      prNumber: model.pr_number,
+      targetType: model.target_type,
+      targetNumber: model.target_number,
       scopeType: model.scope_type,
       scopeTargetId: model.scope_target_id,
       claudeSessionId: model.claude_session_id,

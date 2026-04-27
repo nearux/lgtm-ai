@@ -49,7 +49,8 @@ async function seedChatSession(
     data: {
       id: randomUUID(),
       project_id: 'project-1',
-      pr_number: 45,
+      target_type: 'PR',
+      target_number: 45,
       scope_type: 'REVIEW',
       scope_target_id: 'review-123',
       claude_session_id: `claude-${randomUUID()}`,
@@ -90,10 +91,12 @@ beforeEach(async () => {
 
 describe('ChatSessionsService', () => {
   it('creates a chat session and persists it in sqlite', async () => {
+    // when
     const result = await service.createChatSessionFromExecution(
       {
         projectId: 'project-1',
-        prNumber: 45,
+        targetType: 'PR',
+        targetNumber: 45,
         scopeType: 'REVIEW',
         scopeTargetId: 'review-123',
         title: 'Validate review',
@@ -101,23 +104,27 @@ describe('ChatSessionsService', () => {
       'claude-session-1'
     );
 
+    // then
     const persisted = await prisma.chatSession.findUnique({
       where: { claude_session_id: 'claude-session-1' },
     });
 
     expect(persisted).not.toBeNull();
     expect(persisted?.project_id).toBe('project-1');
-    expect(persisted?.pr_number).toBe(45);
+    expect(persisted?.target_type).toBe('PR');
+    expect(persisted?.target_number).toBe(45);
     expect(persisted?.scope_type).toBe('REVIEW');
     expect(result.id).toBe(persisted?.id);
     expect(result.claudeSessionId).toBe('claude-session-1');
   });
 
   it('persists commandMeta fields when provided to createChatSessionFromExecution', async () => {
+    // when
     const result = await service.createChatSessionFromExecution(
       {
         projectId: 'project-1',
-        prNumber: 45,
+        targetType: 'PR',
+        targetNumber: 45,
         scopeType: 'REVIEW',
         scopeTargetId: 'review-123',
         title: 'Validate review',
@@ -126,6 +133,7 @@ describe('ChatSessionsService', () => {
       { command: 'validate', customPrompt: 'custom instructions' }
     );
 
+    // then
     const persisted = await prisma.chatSession.findUnique({
       where: { claude_session_id: 'claude-session-meta' },
     });
@@ -136,67 +144,81 @@ describe('ChatSessionsService', () => {
   });
 
   it('lists sessions sorted by last_used_at desc from sqlite data', async () => {
+    // given
     const older = new Date('2026-03-10T00:00:00.000Z');
     const newer = new Date('2026-03-11T00:00:00.000Z');
 
     const first = await seedChatSession({
       project_id: 'project-1',
-      pr_number: 45,
+      target_type: 'PR',
+      target_number: 45,
       last_used_at: older,
       updated_at: older,
       claude_session_id: 'claude-old',
     });
     const second = await seedChatSession({
       project_id: 'project-1',
-      pr_number: 45,
+      target_type: 'PR',
+      target_number: 45,
       last_used_at: newer,
       updated_at: newer,
       claude_session_id: 'claude-new',
     });
 
-    const result = await service.listChatSessions('project-1', 45);
+    // when
+    const result = await service.listChatSessions('project-1', 'PR', 45);
 
+    // then
     expect(result.map((item) => item.id)).toEqual([second.id, first.id]);
   });
 
   it('filters sessions by scope type and scope target id', async () => {
+    // given
     await seedChatSession({
       project_id: 'project-1',
-      pr_number: 45,
+      target_type: 'PR',
+      target_number: 45,
       scope_type: 'REVIEW',
       scope_target_id: 'review-123',
       claude_session_id: 'claude-review',
     });
     await seedChatSession({
       project_id: 'project-1',
-      pr_number: 45,
+      target_type: 'PR',
+      target_number: 45,
       scope_type: 'COMMENT',
       scope_target_id: 'comment-55',
       claude_session_id: 'claude-comment',
     });
 
-    const result = await service.listChatSessions('project-1', 45, {
+    // when
+    const result = await service.listChatSessions('project-1', 'PR', 45, {
       scopeType: 'REVIEW',
       scopeTargetId: 'review-123',
     });
 
+    // then
     expect(result).toHaveLength(1);
     expect(result[0]?.claudeSessionId).toBe('claude-review');
   });
 
   it('marks chat session as used and updates timestamps in sqlite', async () => {
+    // given
     const oldTime = new Date('2026-03-01T00:00:00.000Z');
 
     await seedChatSession({
       project_id: 'project-1',
-      pr_number: 45,
+      target_type: 'PR',
+      target_number: 45,
       claude_session_id: 'claude-to-update',
       updated_at: oldTime,
       last_used_at: oldTime,
     });
 
+    // when
     await service.markChatSessionAsUsed('claude-to-update');
 
+    // then
     const updated = await prisma.chatSession.findUnique({
       where: { claude_session_id: 'claude-to-update' },
     });
@@ -207,8 +229,9 @@ describe('ChatSessionsService', () => {
   });
 
   it('throws not found when session does not exist', async () => {
+    // when, then
     await expect(
-      service.getChatSession('project-1', 45, 'missing-session')
+      service.getChatSession('project-1', 'PR', 45, 'missing-session')
     ).rejects.toMatchObject({
       message: 'Chat session not found',
       statusCode: 404,
@@ -216,14 +239,17 @@ describe('ChatSessionsService', () => {
   });
 
   it('throws not found when session belongs to another project or pr', async () => {
+    // given
     const session = await seedChatSession({
       project_id: 'project-2',
-      pr_number: 99,
+      target_type: 'PR',
+      target_number: 99,
       claude_session_id: 'claude-foreign',
     });
 
+    // when, then
     await expect(
-      service.getChatSession('project-1', 45, session.id)
+      service.getChatSession('project-1', 'PR', 45, session.id)
     ).rejects.toMatchObject({
       message: 'Chat session not found',
       statusCode: 404,
@@ -231,13 +257,15 @@ describe('ChatSessionsService', () => {
   });
 
   it('returns chat session history using working directory from sqlite project data', async () => {
+    // given
     const project = await seedProject({
       id: 'project-1',
       working_dir: '/tmp/project',
     });
     const session = await seedChatSession({
       project_id: project.id,
-      pr_number: 45,
+      target_type: 'PR',
+      target_number: 45,
       claude_session_id: 'claude-session-1',
     });
     const now = new Date('2026-03-11T00:00:00.000Z').toISOString();
@@ -255,12 +283,15 @@ describe('ChatSessionsService', () => {
       ],
     });
 
+    // when
     const result = await service.getChatSessionHistory(
       project.id,
+      'PR',
       45,
       session.id
     );
 
+    // then
     // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(mockedService.getClaudeSessionHistory).toHaveBeenCalledWith({
       claudeSessionId: 'claude-session-1',
@@ -281,14 +312,17 @@ describe('ChatSessionsService', () => {
   });
 
   it('throws not found when project does not exist for history lookup', async () => {
+    // given
     const session = await seedChatSession({
       project_id: 'project-1',
-      pr_number: 45,
+      target_type: 'PR',
+      target_number: 45,
       claude_session_id: 'claude-session-1',
     });
 
+    // when, then
     await expect(
-      service.getChatSessionHistory('project-1', 45, session.id)
+      service.getChatSessionHistory('project-1', 'PR', 45, session.id)
     ).rejects.toMatchObject({
       message: 'Project not found',
       statusCode: 404,

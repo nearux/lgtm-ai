@@ -89,7 +89,8 @@ describe('ClaudeSessionManager', () => {
       options: { executionMode: 'default' },
       chatContext: {
         projectId: 'project-1',
-        prNumber: 45,
+        targetType: 'PR' as const,
+        targetNumber: 45,
         scopeType: 'REVIEW',
         scopeTargetId: 'review-123',
         title: 'Validate review',
@@ -108,7 +109,8 @@ describe('ClaudeSessionManager', () => {
     ).toHaveBeenCalledWith(
       {
         projectId: 'project-1',
-        prNumber: 45,
+        targetType: 'PR',
+        targetNumber: 45,
         scopeType: 'REVIEW',
         scopeTargetId: 'review-123',
         title: 'Validate review',
@@ -132,7 +134,8 @@ describe('ClaudeSessionManager', () => {
       options: { executionMode: 'default' },
       chatContext: {
         projectId: 'p',
-        prNumber: 1,
+        targetType: 'PR' as const,
+        targetNumber: 1,
         scopeType: 'REVIEW',
         scopeTargetId: 'r',
       },
@@ -168,7 +171,8 @@ describe('ClaudeSessionManager', () => {
       options: { executionMode: 'default' },
       chatContext: {
         projectId: 'project-1',
-        prNumber: 45,
+        targetType: 'PR' as const,
+        targetNumber: 45,
         scopeType: 'REVIEW',
         scopeTargetId: 'review-456',
         title: 'Done should not persist',

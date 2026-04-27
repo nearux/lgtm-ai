@@ -23,17 +23,17 @@ export interface PRMeta {
   repoOwnerName: string;
 }
 
-interface BaseCommandContext {
+interface WithPRMeta {
   prMeta: PRMeta;
 }
 
-export interface ReviewCommandContext extends BaseCommandContext {
+export interface PRReviewCommandContext extends WithPRMeta {
   type: 'review';
   author: string;
   body: string;
 }
 
-export interface CommentCommandContext extends BaseCommandContext {
+export interface PRCommentCommandContext extends WithPRMeta {
   type: 'comment';
   author: string;
   body: string;
@@ -41,21 +41,61 @@ export interface CommentCommandContext extends BaseCommandContext {
   diffHunk?: string;
 }
 
-export interface PRCommandContext extends BaseCommandContext {
+export interface PRCommandContext extends WithPRMeta {
   type: 'pr';
 }
 
+export interface IssueMeta {
+  number: number;
+  title: string;
+  body: string;
+  repoOwnerName: string;
+  defaultBranch: string;
+}
+
+interface WithIssueMeta {
+  issueMeta: IssueMeta;
+}
+
+export interface IssueCommandContext extends WithIssueMeta {
+  type: 'issue';
+}
+
+export interface IssueCommentCommandContext extends WithIssueMeta {
+  type: 'issueComment';
+  author: string;
+  body: string;
+}
+
 export type CommandContext =
-  | ReviewCommandContext
-  | CommentCommandContext
-  | PRCommandContext;
+  | PRReviewCommandContext
+  | PRCommentCommandContext
+  | PRCommandContext
+  | IssueCommandContext
+  | IssueCommentCommandContext;
+
+export const REVIEW_COMMENT_COMMANDS = [
+  'validate',
+  'fix',
+  'explain',
+  'custom',
+] as const;
+export type ReviewCommentCommand = (typeof REVIEW_COMMENT_COMMANDS)[number];
+
+export const ISSUE_COMMANDS = ['fix', 'explain', 'custom'] as const;
+export type IssueCommand = (typeof ISSUE_COMMANDS)[number];
+
+export const PR_COMMANDS = ['review', 'explain', 'custom'] as const;
+export type PrCommand = (typeof PR_COMMANDS)[number];
+
+export const ISSUE_COMMENT_COMMANDS = ['explain', 'custom'] as const;
+export type IssueCommentCommand = (typeof ISSUE_COMMENT_COMMANDS)[number];
 
 export type ClaudeCommand =
-  | 'validate'
-  | 'fix'
-  | 'explain'
-  | 'custom'
-  | 'review';
+  | ReviewCommentCommand
+  | IssueCommand
+  | PrCommand
+  | IssueCommentCommand;
 
 export interface WsCommandExecuteMessage {
   type: 'execute';
@@ -73,7 +113,9 @@ export interface WsBatchExecuteMessage {
   requestId: string;
   workingDir: string;
   command: ClaudeCommand;
-  contexts: (ReviewCommandContext | CommentCommandContext)[];
+  contexts:
+    | (PRReviewCommandContext | PRCommentCommandContext)[]
+    | IssueCommentCommandContext[];
   customPrompt?: string;
   options?: ClaudeExecuteOptions;
   chatContext?: ClaudeChatContext;

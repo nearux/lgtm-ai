@@ -1,15 +1,34 @@
-import HttpStatus from 'http-status';
+import {
+  ISSUE_COMMENT_COMMANDS,
+  ISSUE_COMMANDS,
+  PR_COMMANDS,
+  REVIEW_COMMENT_COMMANDS,
+} from '../../types/claude.js';
 import type {
   CommandContext,
   ClaudeCommand,
-  ReviewCommandContext,
-  CommentCommandContext,
-  PRCommandContext,
+  PRReviewCommandContext,
+  PRCommentCommandContext,
+  IssueCommentCommandContext,
 } from '../../types/claude.js';
+import HttpStatus from 'http-status';
 import { AppError } from '../../errors/AppError.js';
 import * as templates from './prompt-templates.util.js';
+import {
+  buildReviewCommentUserPrompt,
+  buildBatchReviewCommentUserPrompt,
+} from './prompt-builders/review-comment.builder.js';
+import { buildPrUserPrompt } from './prompt-builders/pr.builder.js';
+import { buildIssueUserPrompt } from './prompt-builders/issue.builder.js';
+import {
+  buildIssueCommentUserPrompt,
+  buildBatchIssueCommentUserPrompt,
+} from './prompt-builders/issue-comment.builder.js';
 
 export function buildSystemPrompt(context: CommandContext): string {
+  if (context.type === 'issue' || context.type === 'issueComment') {
+    return templates.systemPromptForIssue(context.issueMeta);
+  }
   return templates.systemPrompt(
     context.prMeta,
     context.type === 'pr' ? 'pr' : 'thread'
@@ -21,108 +40,54 @@ export function buildUserPrompt(
   context: CommandContext,
   customPrompt?: string
 ): string {
-  if (context.type === 'pr') {
-    return buildPrUserPrompt(command, context, customPrompt);
+  switch (context.type) {
+    case 'issueComment':
+      assertCommand(command, ISSUE_COMMENT_COMMANDS, 'issue comment');
+      return buildIssueCommentUserPrompt(command, context, customPrompt);
+    case 'issue':
+      assertCommand(command, ISSUE_COMMANDS, 'issue');
+      return buildIssueUserPrompt(command, context, customPrompt);
+    case 'pr':
+      assertCommand(command, PR_COMMANDS, 'PR');
+      return buildPrUserPrompt(command, context, customPrompt);
+    case 'review':
+    case 'comment':
+      assertCommand(command, REVIEW_COMMENT_COMMANDS, 'review comment');
+      return buildReviewCommentUserPrompt(command, context, customPrompt);
   }
-  return buildReviewCommentUserPrompt(command, context, customPrompt);
 }
 
 export function buildBatchUserPrompt(
   command: ClaudeCommand,
-  contexts: (ReviewCommandContext | CommentCommandContext)[],
+  contexts:
+    | (PRReviewCommandContext | PRCommentCommandContext)[]
+    | IssueCommentCommandContext[],
   customPrompt?: string
 ): string {
-  if (command === 'custom') requireCustomPrompt(customPrompt);
-
-  const templateFn = batchTemplates[command];
-  if (!templateFn) {
-    throw new AppError(
-      `Command '${command}' is not supported for batch`,
-      HttpStatus.BAD_REQUEST
+  if (contexts[0].type === 'issueComment') {
+    assertCommand(command, ISSUE_COMMENT_COMMANDS, 'issue comment batch');
+    return buildBatchIssueCommentUserPrompt(
+      command,
+      contexts as IssueCommentCommandContext[],
+      customPrompt
     );
   }
-  const batchSection = templates.batchReviewCommentSection(contexts);
-  return templateFn(batchSection, customPrompt);
+  assertCommand(command, REVIEW_COMMENT_COMMANDS, 'batch');
+  return buildBatchReviewCommentUserPrompt(
+    command,
+    contexts as (PRReviewCommandContext | PRCommentCommandContext)[],
+    customPrompt
+  );
 }
 
-// ── PR-level prompt ─────────────────────────────────────────────────
-
-type PrTemplateFn = (
-  repoOwnerName: string,
-  prNumber: number,
-  customPrompt?: string
-) => string;
-
-const prTemplates: Partial<Record<ClaudeCommand, PrTemplateFn>> = {
-  review: (r, n) => templates.reviewPrPrompt(r, n),
-  explain: (r, n) => templates.explainPrPrompt(r, n),
-  custom: (r, n, cp) => templates.customPrPrompt(cp!, r, n),
-};
-
-function buildPrUserPrompt(
+function assertCommand<T extends ClaudeCommand>(
   command: ClaudeCommand,
-  context: PRCommandContext,
-  customPrompt?: string
-): string {
-  if (command === 'custom') requireCustomPrompt(customPrompt);
-
-  const templateFn = prTemplates[command];
-  if (!templateFn) {
+  allowedCommands: readonly T[],
+  contextLabel: string
+): asserts command is T {
+  if (!allowedCommands.includes(command as T)) {
     throw new AppError(
-      `Command '${command}' is not supported for PR-level context`,
-      HttpStatus.BAD_REQUEST
-    );
-  }
-  const { repoOwnerName, number: prNumber } = context.prMeta;
-  return templateFn(repoOwnerName, prNumber, customPrompt);
-}
-
-// ── Review comment prompt ───────────────────────────────────────────
-
-type CommentTemplateFn = (
-  reviewComment: string,
-  customPrompt?: string
-) => string;
-
-const commentTemplates: Partial<Record<ClaudeCommand, CommentTemplateFn>> = {
-  explain: (s) => templates.explainPrompt(s),
-  fix: (s) => templates.fixPrompt(s),
-  validate: (s) => templates.validatePrompt(s),
-  custom: (s, cp) => templates.customPrompt(cp!, s),
-};
-
-function buildReviewCommentUserPrompt(
-  command: ClaudeCommand,
-  context: ReviewCommandContext | CommentCommandContext,
-  customPrompt?: string
-): string {
-  if (command === 'custom') requireCustomPrompt(customPrompt);
-
-  const templateFn = commentTemplates[command];
-  if (!templateFn) {
-    throw new AppError(`Unknown command: ${command}`, HttpStatus.BAD_REQUEST);
-  }
-  const reviewComment = templates.reviewCommentSection(context);
-  return templateFn(reviewComment, customPrompt);
-}
-
-// ── Batch prompt ────────────────────────────────────────────────────
-
-type BatchTemplateFn = (batchSection: string, customPrompt?: string) => string;
-
-const batchTemplates: Partial<Record<ClaudeCommand, BatchTemplateFn>> = {
-  fix: (s) => templates.batchFixPrompt(s),
-  explain: (s) => templates.batchExplainPrompt(s),
-  validate: (s) => templates.batchValidatePrompt(s),
-  custom: (s, cp) => templates.batchCustomPrompt(cp!, s),
-};
-
-// ── Shared helpers ─────────────────────────────────────────────────
-
-function requireCustomPrompt(customPrompt?: string): void {
-  if (!customPrompt || customPrompt.trim() === '') {
-    throw new AppError(
-      'customPrompt is required for custom command',
+      `Command '${command}' is not supported for ${contextLabel} context`,
       HttpStatus.BAD_REQUEST
     );
   }
