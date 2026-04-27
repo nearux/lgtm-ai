@@ -105,55 +105,85 @@ beforeEach(async () => {
 });
 
 describe('chat sessions REST integration', () => {
-  it('lists chat sessions for PR and supports scope filters', async () => {
+  it('lists PR-scoped chat sessions when scopeType is omitted', async () => {
     // given
     const project = await seedProject();
     const older = new Date('2026-03-10T00:00:00.000Z');
     const newer = new Date('2026-03-11T00:00:00.000Z');
 
-    const oldSession = await seedChatSession({
+    const prSession = await seedChatSession({
+      project_id: project.id,
+      target_type: 'PR',
+      target_number: 45,
+      scope_type: 'PR',
+      scope_target_id: '',
+      claude_session_id: 'claude-pr',
+      updated_at: newer,
+      last_used_at: newer,
+    });
+    await seedChatSession({
       project_id: project.id,
       target_type: 'PR',
       target_number: 45,
       scope_type: 'REVIEW',
       scope_target_id: 'review-123',
-      claude_session_id: 'claude-old',
+      claude_session_id: 'claude-review',
       updated_at: older,
       last_used_at: older,
     });
-    const newSession = await seedChatSession({
+
+    // when
+    const response = await fetch(
+      `${baseUrl}/api/projects/${project.id}/prs/45/chat-sessions`
+    );
+
+    // then
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { id: string }[];
+    expect(body).toHaveLength(1);
+    expect(body[0].id).toBe(prSession.id);
+  });
+
+  it('filters PR chat sessions by COMMENT scopeType and scopeTargetId', async () => {
+    // given
+    const project = await seedProject();
+    const now = new Date();
+
+    await seedChatSession({
+      project_id: project.id,
+      target_type: 'PR',
+      target_number: 45,
+      scope_type: 'COMMENT',
+      scope_target_id: 'comment-10',
+      claude_session_id: 'claude-c10',
+      updated_at: now,
+      last_used_at: now,
+    });
+    const targetSession = await seedChatSession({
       project_id: project.id,
       target_type: 'PR',
       target_number: 45,
       scope_type: 'COMMENT',
       scope_target_id: 'comment-55',
-      claude_session_id: 'claude-new',
-      updated_at: newer,
-      last_used_at: newer,
+      claude_session_id: 'claude-c55',
+      updated_at: now,
+      last_used_at: now,
     });
 
-    // when / then
-    const listResponse = await fetch(
-      `${baseUrl}/api/projects/${project.id}/prs/45/chat-sessions`
-    );
-    expect(listResponse.status).toBe(200);
-    const listBody = (await listResponse.json()) as { id: string }[];
-    expect(listBody.map((item: { id: string }) => item.id)).toEqual([
-      newSession.id,
-      oldSession.id,
-    ]);
-
-    const filteredResponse = await fetch(
+    // when
+    const response = await fetch(
       `${baseUrl}/api/projects/${project.id}/prs/45/chat-sessions` +
         '?scopeType=COMMENT&scopeTargetId=comment-55'
     );
-    expect(filteredResponse.status).toBe(200);
-    const filteredBody = (await filteredResponse.json()) as { id: string }[];
-    expect(filteredBody).toHaveLength(1);
-    expect(filteredBody[0].id).toBe(newSession.id);
+
+    // then
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { id: string }[];
+    expect(body).toHaveLength(1);
+    expect(body[0].id).toBe(targetSession.id);
   });
 
-  it('returns 400 when scopeType and scopeTargetId are partially provided', async () => {
+  it('returns 400 when scopeType is REVIEW without scopeTargetId for PR', async () => {
     // given
     const project = await seedProject();
 
@@ -165,7 +195,93 @@ describe('chat sessions REST integration', () => {
     // then
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toMatchObject({
-      message: 'scopeType and scopeTargetId must be provided together',
+      message: 'scopeTargetId is required when scopeType is REVIEW or COMMENT',
+    });
+  });
+
+  it('returns 400 when scopeType is ISSUE for PR chat sessions', async () => {
+    // given
+    const project = await seedProject();
+
+    // when
+    const response = await fetch(
+      `${baseUrl}/api/projects/${project.id}/prs/45/chat-sessions?scopeType=ISSUE`
+    );
+
+    // then
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      message: 'Invalid option: expected one of "PR"|"REVIEW"|"COMMENT"',
+    });
+  });
+
+  it('lists issue-scoped chat sessions when scopeType is omitted', async () => {
+    // given
+    const project = await seedProject();
+    const now = new Date();
+
+    const issueSession = await seedChatSession({
+      project_id: project.id,
+      target_type: 'ISSUE',
+      target_number: 10,
+      scope_type: 'ISSUE',
+      scope_target_id: '',
+      claude_session_id: 'claude-issue',
+      updated_at: now,
+      last_used_at: now,
+    });
+    await seedChatSession({
+      project_id: project.id,
+      target_type: 'ISSUE',
+      target_number: 10,
+      scope_type: 'COMMENT',
+      scope_target_id: 'comment-77',
+      claude_session_id: 'claude-comment',
+      updated_at: now,
+      last_used_at: now,
+    });
+
+    // when
+    const response = await fetch(
+      `${baseUrl}/api/projects/${project.id}/issues/10/chat-sessions`
+    );
+
+    // then
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { id: string }[];
+    expect(body).toHaveLength(1);
+    expect(body[0].id).toBe(issueSession.id);
+  });
+
+  it('returns 400 when scopeType is COMMENT without scopeTargetId for issue', async () => {
+    // given
+    const project = await seedProject();
+
+    // when
+    const response = await fetch(
+      `${baseUrl}/api/projects/${project.id}/issues/10/chat-sessions?scopeType=COMMENT`
+    );
+
+    // then
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      message: 'scopeTargetId is required when scopeType is COMMENT',
+    });
+  });
+
+  it('returns 400 when scopeType is REVIEW for issue chat sessions', async () => {
+    // given
+    const project = await seedProject();
+
+    // when
+    const response = await fetch(
+      `${baseUrl}/api/projects/${project.id}/issues/10/chat-sessions?scopeType=REVIEW`
+    );
+
+    // then
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      message: 'Invalid option: expected one of "ISSUE"|"COMMENT"',
     });
   });
 

@@ -79,6 +79,37 @@ export type {
 
 const uuidSchema = z.uuid();
 
+const prChatSessionsQuery = z
+  .object({
+    scopeType: z.enum(['PR', 'REVIEW', 'COMMENT']).optional().default('PR'),
+    scopeTargetId: z.string().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.scopeType === 'REVIEW' || data.scopeType === 'COMMENT') {
+      if (!data.scopeTargetId) {
+        ctx.addIssue({
+          code: 'custom',
+          message:
+            'scopeTargetId is required when scopeType is REVIEW or COMMENT',
+        });
+      }
+    }
+  });
+
+const issueChatSessionsQuery = z
+  .object({
+    scopeType: z.enum(['ISSUE', 'COMMENT']).optional().default('ISSUE'),
+    scopeTargetId: z.string().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.scopeType === 'COMMENT' && !data.scopeTargetId) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'scopeTargetId is required when scopeType is COMMENT',
+      });
+    }
+  });
+
 @injectable()
 @Route('api/projects')
 @Tags('Projects')
@@ -239,8 +270,8 @@ export class ProjectsController extends Controller {
    * Get saved chat sessions for a specific pull request
    * @param projectId Project UUID
    * @param prNumber Pull request number
-   * @param scopeType Optional chat target type filter
-   * @param scopeTargetId Optional chat target id filter
+   * @param scopeType Scope type filter (default: PR). REVIEW or COMMENT requires scopeTargetId.
+   * @param scopeTargetId Required when scopeType is REVIEW or COMMENT
    */
   @Get('{projectId}/prs/{prNumber}/chat-sessions')
   @Response<ErrorResponse>(HttpStatus.BAD_REQUEST, 'Invalid request')
@@ -254,9 +285,10 @@ export class ProjectsController extends Controller {
     const parsedProjectId = this.parseUUID(projectId);
     await this.projectsService.findById(parsedProjectId);
 
-    if ((scopeType && !scopeTargetId) || (!scopeType && scopeTargetId)) {
+    const result = prChatSessionsQuery.safeParse({ scopeType, scopeTargetId });
+    if (!result.success) {
       throw new AppError(
-        'scopeType and scopeTargetId must be provided together',
+        result.error.issues[0]?.message ?? 'Invalid scope parameters',
         HttpStatus.BAD_REQUEST
       );
     }
@@ -265,7 +297,7 @@ export class ProjectsController extends Controller {
       parsedProjectId,
       'PR',
       prNumber,
-      { scopeType, scopeTargetId }
+      result.data
     );
   }
 
@@ -365,8 +397,8 @@ export class ProjectsController extends Controller {
    * List saved chat sessions for a specific issue
    * @param projectId Project UUID
    * @param issueNumber Issue number
-   * @param scopeType Optional scope type filter
-   * @param scopeTargetId Optional scope target id filter (required when scopeType is provided)
+   * @param scopeType Scope type filter (default: ISSUE). COMMENT requires scopeTargetId.
+   * @param scopeTargetId Required when scopeType is COMMENT
    */
   @Get('{projectId}/issues/{issueNumber}/chat-sessions')
   @Response<ErrorResponse>(HttpStatus.BAD_REQUEST, 'Invalid request')
@@ -380,9 +412,13 @@ export class ProjectsController extends Controller {
     const parsedProjectId = this.parseUUID(projectId);
     await this.projectsService.findById(parsedProjectId);
 
-    if ((scopeType && !scopeTargetId) || (!scopeType && scopeTargetId)) {
+    const result = issueChatSessionsQuery.safeParse({
+      scopeType,
+      scopeTargetId,
+    });
+    if (!result.success) {
       throw new AppError(
-        'scopeType and scopeTargetId must be provided together',
+        result.error.issues[0]?.message ?? 'Invalid scope parameters',
         HttpStatus.BAD_REQUEST
       );
     }
@@ -391,7 +427,7 @@ export class ProjectsController extends Controller {
       parsedProjectId,
       'ISSUE',
       issueNumber,
-      { scopeType, scopeTargetId }
+      result.data
     );
   }
 
