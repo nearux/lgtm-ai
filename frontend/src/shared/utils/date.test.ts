@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { formatDate, formatDateTime } from './date';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { formatDate, formatDateTime, formatRelativeDate } from './date';
 
 describe('formatDate', () => {
   it('formats ISO date string to readable date', () => {
@@ -39,5 +39,53 @@ describe('formatDateTime', () => {
   it('handles end of day', () => {
     const result = formatDateTime('2024-01-01T23:59:59Z');
     expect(result).toMatch(/Jan \d{1,2}, 2024/);
+  });
+});
+
+describe('formatRelativeDate', () => {
+  const now = new Date('2024-06-15T12:00:00Z');
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(now);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('returns "just now" for under a minute', () => {
+    const date = new Date(now.getTime() - 30_000).toISOString();
+    expect(formatRelativeDate(date)).toBe('just now');
+  });
+
+  it('returns minutes for under an hour', () => {
+    const date = new Date(now.getTime() - 5 * 60_000).toISOString();
+    expect(formatRelativeDate(date)).toBe('5 minutes ago');
+  });
+
+  it('uses singular for 1 minute', () => {
+    const date = new Date(now.getTime() - 60_000).toISOString();
+    expect(formatRelativeDate(date)).toBe('1 minute ago');
+  });
+
+  it('returns hours for under a day', () => {
+    const date = new Date(now.getTime() - 3 * 3_600_000).toISOString();
+    expect(formatRelativeDate(date)).toBe('3 hours ago');
+  });
+
+  it('uses singular for 1 hour', () => {
+    const date = new Date(now.getTime() - 3_600_000).toISOString();
+    expect(formatRelativeDate(date)).toBe('1 hour ago');
+  });
+
+  it('falls back to formatted date past 24 hours', () => {
+    const date = new Date(now.getTime() - 2 * 24 * 3_600_000).toISOString();
+    expect(formatRelativeDate(date)).toMatch(/Jun 13, 2024/);
+  });
+
+  it('falls back to formatted date for future timestamps', () => {
+    const date = new Date(now.getTime() + 60_000).toISOString();
+    expect(formatRelativeDate(date)).toMatch(/Jun 15, 2024/);
   });
 });

@@ -10,4 +10,6 @@ export { Select } from './Select/Select';
 export { Tabs } from './Tabs/Tabs';
 export { Pagination } from './Pagination/Pagination';
 export { StatusBadge } from './StatusBadge/StatusBadge';
+export { BotBadge } from './BotBadge/BotBadge';
+export { LabelChip } from './LabelChip/LabelChip';
 export { GFMMarkdown } from './GFMMarkdown';

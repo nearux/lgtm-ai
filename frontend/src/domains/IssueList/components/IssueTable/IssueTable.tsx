@@ -1,5 +1,10 @@
 import { formatDate } from '@/shared/utils';
-import { Pagination, Spinner, StatusBadge } from '@/shared/components';
+import {
+  LabelChip,
+  Pagination,
+  Spinner,
+  StatusBadge,
+} from '@/shared/components';
 import type { IssueListItem, IssueState } from '@lgtmai/backend/types';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { getIssueListQueryOptions } from '@/queries';
@@ -95,16 +100,11 @@ export const IssueTable = ({
                     {issue.labels.length > 0 && (
                       <div className="flex flex-wrap gap-1">
                         {issue.labels.map((label) => (
-                          <span
+                          <LabelChip
                             key={label.id}
-                            className="rounded-full px-2 py-0.5 text-xs font-medium"
-                            style={{
-                              backgroundColor: `#${label.color}20`,
-                              color: `#${label.color}`,
-                            }}
-                          >
-                            {label.name}
-                          </span>
+                            name={label.name}
+                            color={label.color}
+                          />
                         ))}
                       </div>
                     )}

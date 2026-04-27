@@ -1,4 +1,4 @@
-export { formatDate, formatDateTime } from './date';
+export { formatDate, formatDateTime, formatRelativeDate } from './date';
 export {
   parseGitHubUrl,
   linkifyIssueReferences,
