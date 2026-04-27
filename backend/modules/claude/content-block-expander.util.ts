@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { ChatSessionHistoryEntry } from '../../types/chatSessions.js';
+import type { ChatSessionHistoryEntry } from '../projects/chat-session.types.js';
 
 export interface BlockContext {
   role: string;

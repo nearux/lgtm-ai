@@ -4,7 +4,7 @@ import { PRISMA_CLIENT } from '../../container-tokens.js';
 import type {
   ChatSessionTargetType,
   ListChatSessionsFilters,
-} from '../../types/chatSessions.js';
+} from './chat-session.types.js';
 
 @injectable()
 export class ChatSessionRepository {

@@ -1,5 +1,5 @@
 import { isString } from 'remeda';
-import type { PRListItem } from '../../../types/pullRequests.js';
+import type { PRListItem } from '../pull-request.types.js';
 import type { PrListQuery } from '../../../graphql/generated/graphql.js';
 
 export type GraphQLPRNode = NonNullable<

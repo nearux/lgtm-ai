@@ -13,7 +13,7 @@ import type {
   ChatSessionTargetType,
   ClaudeChatContext,
   ListChatSessionsFilters,
-} from '../../types/chatSessions.js';
+} from './chat-session.types.js';
 
 @injectable()
 export class ChatSessionsService {

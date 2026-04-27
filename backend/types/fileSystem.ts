@@ -1,10 +1,1 @@
-export interface DirectoryEntry {
-  name: string;
-  path: string;
-}
-
-export interface BrowseResponse {
-  path: string;
-  parent: string | null;
-  entries: DirectoryEntry[];
-}
+export * from '../modules/files/types.js';

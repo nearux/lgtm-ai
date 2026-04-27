@@ -3,14 +3,14 @@ import {
   ISSUE_COMMANDS,
   PR_COMMANDS,
   REVIEW_COMMENT_COMMANDS,
-} from '../../types/claude.js';
+} from './types.js';
 import type {
   CommandContext,
   ClaudeCommand,
   PRReviewCommandContext,
   PRCommentCommandContext,
   IssueCommentCommandContext,
-} from '../../types/claude.js';
+} from './types.js';
 import HttpStatus from 'http-status';
 import { AppError } from '../../errors/AppError.js';
 import * as templates from './prompt-templates.util.js';

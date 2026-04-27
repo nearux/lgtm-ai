@@ -34,7 +34,7 @@ import type {
   CommitMessageResponse,
   CommitAndPushBody,
   CommitAndPushResponse,
-} from '../../types/projects.js';
+} from './types.js';
 import type {
   PRListItem,
   PaginatedPRList,
@@ -44,18 +44,18 @@ import type {
   CheckoutPRBranchResult,
   CheckoutDefaultBranchBody,
   CheckoutDefaultBranchResult,
-} from '../../types/pullRequests.js';
+} from './pull-request.types.js';
 import type {
   ChatSessionHistoryResponse,
   ChatSessionScopeType,
   ChatSessionSummary,
-} from '../../types/chatSessions.js';
+} from './chat-session.types.js';
 import type {
   IssueListItem,
   IssueDetail,
   IssueState,
   PaginatedIssueList,
-} from '../../types/issues.js';
+} from './issue.types.js';
 
 export type {
   Project,

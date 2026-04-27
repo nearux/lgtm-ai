@@ -1,4 +1,4 @@
-import type { ClaudeExecuteOptions } from '../../types/claude.js';
+import type { ClaudeExecuteOptions } from './types.js';
 
 export class ClaudeArgsBuilder {
   private readonly args: string[];

@@ -5,7 +5,7 @@ import HttpStatus from 'http-status';
 import { injectable } from 'inversify';
 import { AppError } from '../../errors/AppError.js';
 import { DirectoryParser } from './directory-parser.js';
-import type { BrowseResponse } from '../../types/fileSystem.js';
+import type { BrowseResponse } from './types.js';
 
 const BLOCKED_PATHS = [
   '/etc',

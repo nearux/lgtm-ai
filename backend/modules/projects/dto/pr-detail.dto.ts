@@ -1,5 +1,5 @@
 import { isString } from 'remeda';
-import type { PRDetail, PRReview } from '../../../types/pullRequests.js';
+import type { PRDetail, PRReview } from '../pull-request.types.js';
 import type { PrDetailQuery } from '../../../graphql/generated/graphql.js';
 import { countNonEmptyReviewBodies } from './comment-counts.js';
 

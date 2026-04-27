@@ -6,7 +6,7 @@ import type {
   PaginatedPRList,
   PRListItem,
   PRState,
-} from '../../types/pullRequests.js';
+} from './pull-request.types.js';
 import type {
   PrCursorQuery,
   PrListQuery,

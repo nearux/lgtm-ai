@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { PRListItem } from '../../types/pullRequests.js';
+import type { PRListItem } from './pull-request.types.js';
 
 const mockExecAsync = vi.hoisted(() => vi.fn());
 
