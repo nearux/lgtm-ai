@@ -50,7 +50,7 @@ export function usePRChat({
         projectId,
         targetType: 'PR',
         targetNumber: prNumber,
-        scopeType: 'REVIEW',
+        scopeType: 'PR',
         scopeTargetId: '',
         title: label,
       };
@@ -59,8 +59,8 @@ export function usePRChat({
       ws.execute(
         {
           type: 'command',
-          command: actionId as 'validate' | 'fix' | 'explain' | 'custom',
-          context: { type: 'review', author: prAuthor, body: prBody, prMeta },
+          command: actionId as 'review' | 'explain' | 'custom',
+          context: { type: 'pr', prMeta },
           ...(customPrompt ? { customPrompt } : {}),
         },
         workingDir,
