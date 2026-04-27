@@ -9,4 +9,5 @@ export { Modal } from './Modal/Modal';
 export { Select } from './Select/Select';
 export { Tabs } from './Tabs/Tabs';
 export { Pagination } from './Pagination/Pagination';
+export { StatusBadge } from './StatusBadge/StatusBadge';
 export { GFMMarkdown } from './GFMMarkdown';
