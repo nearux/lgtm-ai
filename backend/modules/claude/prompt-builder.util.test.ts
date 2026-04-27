@@ -234,13 +234,13 @@ describe('buildUserPrompt', () => {
 
     it('throws on unsupported command for PR context', () => {
       expect(() => buildUserPrompt('fix', prContext)).toThrow(
-        "Command 'fix' is not supported for PR-level context"
+        "Command 'fix' is not supported for PR context"
       );
     });
 
     it('throws on validate command for PR context', () => {
       expect(() => buildUserPrompt('validate', prContext)).toThrow(
-        "Command 'validate' is not supported for PR-level context"
+        "Command 'validate' is not supported for PR context"
       );
     });
   });
@@ -364,7 +364,7 @@ describe('buildUserPrompt', () => {
   it('throws on unknown command', () => {
     expect(() =>
       buildUserPrompt('unknown' as ClaudeCommand, reviewContext)
-    ).toThrow('Unknown command: unknown');
+    ).toThrow("Command 'unknown' is not supported for review comment context");
   });
 });
 

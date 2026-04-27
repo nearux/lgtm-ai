@@ -74,12 +74,28 @@ export type CommandContext =
   | IssueCommandContext
   | IssueCommentCommandContext;
 
+export const REVIEW_COMMENT_COMMANDS = [
+  'validate',
+  'fix',
+  'explain',
+  'custom',
+] as const;
+export type ReviewCommentCommand = (typeof REVIEW_COMMENT_COMMANDS)[number];
+
+export const ISSUE_COMMANDS = ['fix', 'explain', 'custom'] as const;
+export type IssueCommand = (typeof ISSUE_COMMANDS)[number];
+
+export const PR_COMMANDS = ['review', 'explain', 'custom'] as const;
+export type PrCommand = (typeof PR_COMMANDS)[number];
+
+export const ISSUE_COMMENT_COMMANDS = ['explain', 'custom'] as const;
+export type IssueCommentCommand = (typeof ISSUE_COMMENT_COMMANDS)[number];
+
 export type ClaudeCommand =
-  | 'validate'
-  | 'fix'
-  | 'explain'
-  | 'custom'
-  | 'review';
+  | ReviewCommentCommand
+  | IssueCommand
+  | PrCommand
+  | IssueCommentCommand;
 
 export interface WsCommandExecuteMessage {
   type: 'execute';
