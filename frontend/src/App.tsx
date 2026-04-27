@@ -7,6 +7,8 @@ import { AppHeader } from '@/features/AppHeader/AppHeader';
 import { ProjectSelectPage } from './domains/Projects/page';
 import { PRListPage } from './domains/PRList/page';
 import { PRDetailPage } from './domains/PRDetail/page';
+import { IssueListPage } from './domains/IssueList/page';
+import { IssueDetailPage } from './domains/IssueDetail/page';
 
 const Layout = () => (
   <div className="flex min-h-screen flex-col">
@@ -32,6 +34,14 @@ const App = () => {
               <Route
                 path="/projects/:projectId/prs/:prNumber"
                 element={<PRDetailPage />}
+              />
+              <Route
+                path="/projects/:projectId/issues"
+                element={<IssueListPage />}
+              />
+              <Route
+                path="/projects/:projectId/issues/:issueNumber"
+                element={<IssueDetailPage />}
               />
             </Route>
           </Routes>

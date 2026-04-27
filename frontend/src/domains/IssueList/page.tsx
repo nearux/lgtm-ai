@@ -1,19 +1,19 @@
 import { useParams, useSearchParams } from 'react-router-dom';
 import { AsyncBoundary, Select, Spinner, Tabs } from '@/shared/components';
 import { ProjectKindTabs } from '@/features/ProjectKindTabs/ProjectKindTabs';
-import { usePRListParams } from './hooks/usePRListParams';
+import { useIssueListParams } from './hooks/useIssueListParams';
 import { useQuery } from '@tanstack/react-query';
 import { getProjectDetailQueryOptions } from '@/queries';
-import { PRTable } from './components/PRTable/PRTable';
-import type { PRState } from '@lgtmai/backend/types';
+import { IssueTable } from './components/IssueTable/IssueTable';
+import type { IssueState } from '@lgtmai/backend/types';
 
-export const PRListPage = () => {
+export const IssueListPage = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { state, page, limit, setState, setPage } = usePRListParams();
+  const { state, page, limit, setState, setPage } = useIssueListParams();
 
   const { data: project } = useQuery({
-    ...getProjectDetailQueryOptions(projectId!),
+    ...getProjectDetailQueryOptions(projectId ?? ''),
     throwOnError: false,
     enabled: !!projectId,
   });
@@ -33,10 +33,10 @@ export const PRListPage = () => {
     <div className="mx-auto max-w-6xl p-8">
       <header className="mb-8">
         <div className="mb-6">
-          <ProjectKindTabs projectId={projectId} value="prs" />
+          <ProjectKindTabs projectId={projectId} value="issues" />
         </div>
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-gray-900">Pull Requests</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Issues</h1>
           <div className="flex items-center gap-3">
             {remotes.length > 0 && (
               <Select
@@ -44,7 +44,15 @@ export const PRListPage = () => {
                 options={remotes.map((r) => ({ value: r.name, label: r.name }))}
                 value={selectedOrigin}
                 onChange={(e) =>
-                  setSearchParams({ origin: e.target.value }, { replace: true })
+                  setSearchParams(
+                    (prev) => {
+                      const params = new URLSearchParams(prev);
+                      params.set('origin', e.target.value);
+                      params.delete('page');
+                      return params;
+                    },
+                    { replace: true }
+                  )
                 }
               />
             )}
@@ -73,7 +81,7 @@ export const PRListPage = () => {
             pending={<Spinner className="w-full" />}
             key={`${state}-${selectedOrigin}`}
           >
-            <PRTable
+            <IssueTable
               projectId={projectId}
               origin={selectedOrigin}
               state={state}
@@ -88,8 +96,7 @@ export const PRListPage = () => {
   );
 };
 
-const stateOptions: { value: PRState; label: string }[] = [
+const stateOptions: { value: IssueState; label: string }[] = [
   { value: 'open', label: 'Open' },
   { value: 'closed', label: 'Closed' },
-  { value: 'all', label: 'All' },
 ];
