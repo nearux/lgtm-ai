@@ -10,8 +10,10 @@ import { CheckoutService } from './checkout-pr-branch.service.js';
 import { ChatSessionsService } from './chat-sessions.service.js';
 import { GitService } from './git.service.js';
 import { ProjectsController } from './projects.controller.js';
+import { GhGraphQLClient } from './gh-graphql.client.js';
 
 export const projectsModule = new ContainerModule((options) => {
+  options.bind(GhGraphQLClient).toSelf();
   options.bind(ProjectRepository).toSelf();
   options.bind(ChatSessionRepository).toSelf();
   options.bind(ProjectsService).toSelf();

@@ -1,6 +1,4 @@
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
-import { injectable } from 'inversify';
+import { injectable, inject } from 'inversify';
 import { normalizePage, normalizeLimit } from './pagination.util.js';
 import type {
   PaginatedIssueList,
@@ -14,11 +12,10 @@ import type {
 import issueListGql from '../../graphql/queries/issue-list.gql';
 import issueCursorGql from '../../graphql/queries/issue-cursor.gql';
 import { IssueListItemDto } from './dto/issue-list.dto.js';
-import { validateRepoOwnerName, mapGhError } from './gh.util.js';
+import { validateRepoOwnerName } from './gh.util.js';
 import { AppError } from '../../errors/AppError.js';
+import { GhGraphQLClient } from './gh-graphql.client.js';
 import HttpStatus from 'http-status';
-
-const execFileAsync = promisify(execFile);
 
 const MAX_GRAPHQL_FIRST = 100;
 
@@ -29,10 +26,12 @@ const GRAPHQL_ISSUE_STATES: Record<IssueState, string[]> = {
   closed: ['CLOSED'],
 };
 
-type GhGraphQLResponse<T> = { data?: T; errors?: { message: string }[] };
-
 @injectable()
 export class IssueListService {
+  constructor(
+    @inject(GhGraphQLClient) private readonly client: GhGraphQLClient
+  ) {}
+
   async fetchIssueList(
     repoOwnerName: string,
     options: { page?: number; limit?: number; state?: IssueState } = {}
@@ -88,33 +87,15 @@ export class IssueListService {
     hop: number,
     after: string | null
   ): Promise<string | null> {
-    const { stdout } = await execFileAsync('gh', [
-      'api',
-      'graphql',
-      '-f',
-      `query=${issueCursorGql}`,
-      '-f',
-      `owner=${owner}`,
-      '-f',
-      `name=${name}`,
-      '-F',
-      `skip=${hop}`,
-      ...this.buildStatesFilterArgs(state),
-      ...(after ? ['-f', `after=${after}`] : []),
-    ]).catch((error) => {
-      throw mapGhError(error, 'fetch');
+    const data = await this.client.request<IssueCursorQuery>(issueCursorGql, {
+      owner,
+      name,
+      skip: hop,
+      states: GRAPHQL_ISSUE_STATES[state],
+      after: after ?? undefined,
     });
-    const result = JSON.parse(stdout) as GhGraphQLResponse<IssueCursorQuery>;
 
-    if (result.errors || !result.data) {
-      const message = result.errors?.[0]?.message ?? 'Unknown GraphQL error';
-      throw new AppError(
-        `GraphQL cursor query failed for ${owner}/${name}: ${message}`,
-        HttpStatus.BAD_GATEWAY
-      );
-    }
-
-    return result.data.repository?.issues.pageInfo.endCursor ?? null;
+    return data.repository?.issues.pageInfo.endCursor ?? null;
   }
 
   private async fetchIssueListGraphQL(
@@ -125,38 +106,21 @@ export class IssueListService {
   ): Promise<{ totalCount: number; items: IssueListItem[] }> {
     const [owner, name] = repoOwnerName.split('/');
 
-    const { stdout } = await execFileAsync('gh', [
-      'api',
-      'graphql',
-      '-f',
-      `query=${issueListGql}`,
-      '-f',
-      `owner=${owner}`,
-      '-f',
-      `name=${name}`,
-      '-F',
-      `limit=${limit}`,
-      ...this.buildStatesFilterArgs(state),
-      ...(cursor ? ['-f', `after=${cursor}`] : []),
-    ]).catch((error) => {
-      throw mapGhError(error, 'fetch');
+    const data = await this.client.request<IssueListQuery>(issueListGql, {
+      owner,
+      name,
+      limit,
+      states: GRAPHQL_ISSUE_STATES[state],
+      after: cursor ?? undefined,
     });
-    const result = JSON.parse(stdout) as GhGraphQLResponse<IssueListQuery>;
 
-    if (result.errors || !result.data) {
-      const message = result.errors?.[0]?.message ?? 'Unknown GraphQL error';
-      throw new AppError(
-        `GraphQL issue list query failed for ${repoOwnerName}: ${message}`,
-        HttpStatus.BAD_GATEWAY
-      );
-    }
-
-    const issues = result.data.repository?.issues;
-    if (!issues)
+    const issues = data.repository?.issues;
+    if (!issues) {
       throw new AppError(
         `GraphQL query failed: repository ${repoOwnerName} not found or issues inaccessible`,
         HttpStatus.BAD_GATEWAY
       );
+    }
 
     return {
       totalCount: issues.totalCount,
@@ -171,9 +135,5 @@ export class IssueListService {
       return state as IssueState;
     }
     return 'open';
-  }
-
-  private buildStatesFilterArgs(state: IssueState): string[] {
-    return GRAPHQL_ISSUE_STATES[state].flatMap((s) => ['-f', `states[]=${s}`]);
   }
 }

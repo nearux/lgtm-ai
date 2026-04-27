@@ -35,7 +35,7 @@ export function mapGhError(error: unknown, context: GhErrorContext): AppError {
       );
     }
     return new AppError(
-      'Failed to fetch PR data from GitHub',
+      'Failed to fetch data from GitHub',
       HttpStatus.INTERNAL_SERVER_ERROR,
       error
     );
