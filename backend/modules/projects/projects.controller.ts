@@ -33,7 +33,7 @@ import type {
   CommitMessageResponse,
   CommitAndPushBody,
   CommitAndPushResponse,
-} from './types.js';
+} from './project.types.js';
 import type { ErrorResponse } from '../../types/common.js';
 import type {
   PRListItem,

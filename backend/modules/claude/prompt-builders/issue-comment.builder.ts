@@ -2,7 +2,7 @@ import HttpStatus from 'http-status';
 import type {
   IssueCommentCommand,
   IssueCommentCommandContext,
-} from '../types.js';
+} from '../claude.types.js';
 import { AppError } from '../../../errors/AppError.js';
 import * as templates from '../prompt-templates.util.js';
 

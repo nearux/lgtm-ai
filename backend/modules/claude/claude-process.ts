@@ -4,7 +4,10 @@ import { randomUUID } from 'node:crypto';
 import { LineBuffer } from './line-buffer.js';
 import { parseStreamJsonLine } from './stream-json-parser.util.js';
 import { ClaudeArgsBuilder } from './claude-args-builder.js';
-import type { ClaudeExecuteOptions, ClaudeExecutionMode } from './types.js';
+import type {
+  ClaudeExecuteOptions,
+  ClaudeExecutionMode,
+} from './claude.types.js';
 
 export interface ClaudeStreamEvents {
   init: [sessionId: string];
