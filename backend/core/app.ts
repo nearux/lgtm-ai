@@ -3,7 +3,7 @@ import cors from 'cors';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { existsSync } from 'node:fs';
-import { RegisterRoutes } from './routes.js';
+import { RegisterRoutes } from '../routes.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -29,7 +29,7 @@ export async function createApp(
     const swaggerUi = await import('swagger-ui-express');
     const { readFileSync } = await import('node:fs');
     const swaggerDocument = JSON.parse(
-      readFileSync(join(__dirname, 'public', 'swagger.json'), 'utf-8')
+      readFileSync(join(__dirname, '../public', 'swagger.json'), 'utf-8')
     ) as Record<string, unknown>;
     swaggerDocument.servers = [{ url: '/' }];
     app.use(
@@ -41,7 +41,7 @@ export async function createApp(
 
   RegisterRoutes(app);
 
-  const frontendDist = join(__dirname, '../../frontend/dist');
+  const frontendDist = join(__dirname, '../../../frontend/dist');
   if (existsSync(frontendDist)) {
     app.use(express.static(frontendDist));
     app.get(/^(?!\/api).*/, (_req, res) => {

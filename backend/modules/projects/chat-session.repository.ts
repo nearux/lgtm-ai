@@ -1,6 +1,6 @@
 import type { ChatSession, Prisma, PrismaClient } from '@prisma/client';
 import { inject, injectable } from 'inversify';
-import { PRISMA_CLIENT } from '../../container-tokens.js';
+import { PRISMA_CLIENT } from '../../core/container-tokens.js';
 import type {
   ChatSessionTargetType,
   ListChatSessionsFilters,
