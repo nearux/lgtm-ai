@@ -1,6 +1,6 @@
 import path from 'node:path';
 import type { Dirent } from 'node:fs';
-import type { DirectoryEntry, BrowseResponse } from './types.js';
+import type { DirectoryEntry, BrowseResponse } from './file-system.types.js';
 
 export class DirectoryParser {
   constructor(

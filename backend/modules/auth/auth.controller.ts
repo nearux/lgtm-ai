@@ -10,7 +10,7 @@ import {
 import HttpStatus from 'http-status';
 import { inject, injectable } from 'inversify';
 import { AuthService } from './auth.service.js';
-import type { GitHubAuthStatus, SwitchAccountBody } from './types.js';
+import type { GitHubAuthStatus, SwitchAccountBody } from './auth.types.js';
 import type { ErrorResponse } from '../../types/common.js';
 
 export type { GitHubAuthStatus, SwitchAccountBody };
