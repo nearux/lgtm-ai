@@ -47,10 +47,6 @@ export interface UpdateProjectBody {
   working_dir?: string;
 }
 
-export interface ErrorResponse {
-  message: string;
-}
-
 export interface GenerateCommitMessageBody {
   prContext?: {
     title: string;

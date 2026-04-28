@@ -29,12 +29,12 @@ import type {
   ProjectDetail,
   CreateProjectBody,
   UpdateProjectBody,
-  ErrorResponse,
   GenerateCommitMessageBody,
   CommitMessageResponse,
   CommitAndPushBody,
   CommitAndPushResponse,
 } from './types.js';
+import type { ErrorResponse } from '../../types/common.js';
 import type {
   PRListItem,
   PaginatedPRList,
