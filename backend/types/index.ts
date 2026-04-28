@@ -7,3 +7,4 @@ export * from '../modules/projects/pull-request.types.js';
 export * from '../modules/projects/chat-session.types.js';
 export * from '../modules/projects/git-file-change.types.js';
 export * from '../modules/claude/claude.types.js';
+export * from '../modules/claude/session-history.types.js';

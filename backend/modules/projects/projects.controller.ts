@@ -46,10 +46,10 @@ import type {
   CheckoutDefaultBranchResult,
 } from './pull-request.types.js';
 import type {
-  ChatSessionHistoryResponse,
   ChatSessionScopeType,
   ChatSessionSummary,
 } from './chat-session.types.js';
+import type { ChatSessionHistoryResponse } from '../claude/session-history.types.js';
 import type {
   IssueListItem,
   IssueDetail,

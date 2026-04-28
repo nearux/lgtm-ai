@@ -1,7 +1,7 @@
 import type {
   ChatSessionHistoryEntry,
   ChatSessionHistoryResponse,
-} from '../chat-session.types.js';
+} from '../../claude/session-history.types.js';
 
 export class ChatSessionHistoryResponseDto implements ChatSessionHistoryResponse {
   sessionId: string;
