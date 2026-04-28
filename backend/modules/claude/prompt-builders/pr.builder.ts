@@ -1,5 +1,5 @@
 import HttpStatus from 'http-status';
-import type { PrCommand, PRCommandContext } from '../claude.types.js';
+import type { PrCommand, PRCommandContext } from '../types/claude.types.js';
 import { AppError } from '../../../errors/AppError.js';
 import * as templates from '../prompt-templates.util.js';
 

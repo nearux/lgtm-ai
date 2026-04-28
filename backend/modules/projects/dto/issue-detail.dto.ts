@@ -1,5 +1,5 @@
 import { isString } from 'remeda';
-import type { IssueDetail } from '../issue.types.js';
+import type { IssueDetail } from '../types/issue.types.js';
 import type { IssueDetailQuery } from '../../../graphql/generated/graphql.js';
 
 type GraphQLIssueDetail = NonNullable<

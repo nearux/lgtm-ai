@@ -33,7 +33,7 @@ import type {
   CommitMessageResponse,
   CommitAndPushBody,
   CommitAndPushResponse,
-} from './project.types.js';
+} from './types/project.types.js';
 import type { ErrorResponse } from '../../types/common.js';
 import type {
   PRListItem,
@@ -44,18 +44,18 @@ import type {
   CheckoutPRBranchResult,
   CheckoutDefaultBranchBody,
   CheckoutDefaultBranchResult,
-} from './pull-request.types.js';
+} from './types/pull-request.types.js';
 import type {
   ChatSessionScopeType,
   ChatSessionSummary,
-} from './chat-session.types.js';
-import type { ChatSessionHistoryResponse } from '../claude/session-history.types.js';
+} from './types/chat-session.types.js';
+import type { ChatSessionHistoryResponse } from '../claude/types/session-history.types.js';
 import type {
   IssueListItem,
   IssueDetail,
   IssueState,
   PaginatedIssueList,
-} from './issue.types.js';
+} from './types/issue.types.js';
 
 export type {
   Project,

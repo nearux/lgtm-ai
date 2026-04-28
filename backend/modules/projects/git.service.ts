@@ -7,7 +7,7 @@ import type {
   FileChange,
   FileChangeStatus,
   FileChangesSummary,
-} from './git-file-change.types.js';
+} from './types/git-file-change.types.js';
 import { AppError } from '../../errors/AppError.js';
 import { git } from './git.util.js';
 

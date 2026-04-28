@@ -1,6 +1,6 @@
 import { filter, map, pipe, sortBy, uniqueBy } from 'remeda';
 
-import type { ProjectGitRemote } from '../project.types.js';
+import type { ProjectGitRemote } from '../types/project.types.js';
 
 export class ProjectGitRemoteDto implements ProjectGitRemote {
   name: string;

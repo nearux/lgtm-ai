@@ -2,7 +2,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { injectable } from 'inversify';
 import HttpStatus from 'http-status';
-import type { PRDetail } from './pull-request.types.js';
+import type { PRDetail } from './types/pull-request.types.js';
 import type { PrDetailQuery } from '../../graphql/generated/graphql.js';
 import prDetailGql from '../../graphql/queries/pr-detail.gql';
 import { PRDetailDto } from './dto/pr-detail.dto.js';

@@ -3,7 +3,7 @@ import type {
   ChatSessionScopeType,
   ChatSessionSummary,
   ChatSessionTargetType,
-} from '../chat-session.types.js';
+} from '../types/chat-session.types.js';
 
 export class ChatSessionSummaryDto implements ChatSessionSummary {
   id: string;

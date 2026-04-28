@@ -7,7 +7,7 @@ import { ClaudeArgsBuilder } from './claude-args-builder.js';
 import type {
   ClaudeExecuteOptions,
   ClaudeExecutionMode,
-} from './claude.types.js';
+} from './types/claude.types.js';
 
 export interface ClaudeStreamEvents {
   init: [sessionId: string];

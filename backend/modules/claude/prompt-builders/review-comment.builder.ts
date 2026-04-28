@@ -3,7 +3,7 @@ import type {
   ReviewCommentCommand,
   PRReviewCommandContext,
   PRCommentCommandContext,
-} from '../claude.types.js';
+} from '../types/claude.types.js';
 import { AppError } from '../../../errors/AppError.js';
 import * as templates from '../prompt-templates.util.js';
 

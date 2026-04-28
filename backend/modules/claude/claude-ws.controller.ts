@@ -17,7 +17,7 @@ import type {
   WsAbortMessage,
   WsApprovalResponseMessage,
   WsPlanApprovalResponseMessage,
-} from './claude.types.js';
+} from './types/claude.types.js';
 
 @injectable()
 export class ClaudeWSController {

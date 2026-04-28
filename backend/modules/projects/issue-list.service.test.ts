@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { IssueListItem } from './issue.types.js';
+import type { IssueListItem } from './types/issue.types.js';
 
 const mockExecAsync = vi.hoisted(() => vi.fn());
 

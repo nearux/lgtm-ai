@@ -7,13 +7,13 @@ import { ChatSessionHistoryResponseDto } from './dto/chat-session-history-respon
 import { ChatSessionSummaryDto } from './dto/chat-session-summary.dto.js';
 import { ChatSessionRepository } from './chat-session.repository.js';
 import { ProjectRepository } from './project.repository.js';
-import type { ChatSessionHistoryResponse } from '../claude/session-history.types.js';
+import type { ChatSessionHistoryResponse } from '../claude/types/session-history.types.js';
 import type {
   ChatSessionSummary,
   ChatSessionTargetType,
   ClaudeChatContext,
   ListChatSessionsFilters,
-} from './chat-session.types.js';
+} from './types/chat-session.types.js';
 
 @injectable()
 export class ChatSessionsService {

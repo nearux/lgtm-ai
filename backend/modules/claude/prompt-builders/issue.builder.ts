@@ -1,5 +1,8 @@
 import HttpStatus from 'http-status';
-import type { IssueCommand, IssueCommandContext } from '../claude.types.js';
+import type {
+  IssueCommand,
+  IssueCommandContext,
+} from '../types/claude.types.js';
 import { AppError } from '../../../errors/AppError.js';
 import * as templates from '../prompt-templates.util.js';
 

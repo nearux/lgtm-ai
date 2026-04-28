@@ -1,8 +1,8 @@
-import type { ClaudeChatContext } from '../projects/chat-session.types.js';
+import type { ClaudeChatContext } from '../../projects/types/chat-session.types.js';
 import type {
   FileChange,
   FileChangesSummary,
-} from '../projects/git-file-change.types.js';
+} from '../../projects/types/git-file-change.types.js';
 
 // ── Client → Server ──────────────────────────────────────────────────
 

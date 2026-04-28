@@ -9,7 +9,7 @@ import type {
   PRMeta,
   ClaudeCommand,
   IssueMeta,
-} from './claude.types.js';
+} from './types/claude.types.js';
 
 const prMeta: PRMeta = {
   number: 42,
