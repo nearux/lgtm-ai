@@ -24,7 +24,7 @@ export interface IssueListItem {
   number: number;
   title: string;
   body: string;
-  state: string;
+  state: 'OPEN' | 'CLOSED';
   totalCommentsCount: number;
   assignees: IssueAssignee[];
   author: IssueAuthor;

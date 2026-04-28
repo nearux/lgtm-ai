@@ -22,7 +22,7 @@ export class PRDetailDto implements PRDetail {
   author: PRDetail['author'];
   createdAt: string;
   updatedAt: string;
-  state: string;
+  state: PRDetail['state'];
   comments: PRDetail['comments'];
   reviews: PRDetail['reviews'];
   commits: PRDetail['commits'];

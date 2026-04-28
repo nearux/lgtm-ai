@@ -12,7 +12,7 @@ export class IssueListItemDto implements IssueListItem {
   number: number;
   title: string;
   body: string;
-  state: string;
+  state: IssueListItem['state'];
   totalCommentsCount: number;
   assignees: IssueListItem['assignees'];
   author: IssueListItem['author'];

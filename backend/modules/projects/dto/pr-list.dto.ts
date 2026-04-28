@@ -17,7 +17,7 @@ export class PRListItemDto implements PRListItem {
   author: PRListItem['author'];
   createdAt: string;
   updatedAt: string;
-  state: string;
+  state: PRListItem['state'];
 
   constructor(data: PRListItem) {
     this.number = data.number;

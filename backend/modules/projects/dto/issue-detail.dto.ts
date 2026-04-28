@@ -10,7 +10,7 @@ export class IssueDetailDto implements IssueDetail {
   number: number;
   title: string;
   body: string;
-  state: string;
+  state: IssueDetail['state'];
   totalCommentsCount: number;
   assignees: IssueDetail['assignees'];
   author: IssueDetail['author'];
