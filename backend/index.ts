@@ -1,9 +1,9 @@
 import 'reflect-metadata';
 import { createServer } from 'node:http';
 import { WebSocketServer } from 'ws';
-import { container } from './container.js';
+import { container } from './core/container.js';
 import { ClaudeWSController } from './modules/claude/claude-ws.controller.js';
-import { createApp } from './app.js';
+import { createApp } from './core/app.js';
 import { runStartupMigrations } from './startup/runMigrations.js';
 
 const PORT = Number(process.env.PORT ?? 5051);

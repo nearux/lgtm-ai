@@ -18,6 +18,6 @@
     "routesDir": ".",
     "middleware": "express",
     "esm": true,
-    "iocModule": "./ioc"
+    "iocModule": "./core/ioc"
   }
 }

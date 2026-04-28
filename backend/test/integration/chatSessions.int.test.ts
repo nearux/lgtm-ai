@@ -16,7 +16,7 @@ const mockGetClaudeSessionHistory = vi.fn();
 
 let prisma: PrismaClient;
 let cleanupDb: (() => Promise<void>) | null = null;
-let createApp: typeof import('../../app.js').createApp;
+let createApp: typeof import('../../core/app.js').createApp;
 let server: Server | null = null;
 let baseUrl = '';
 
@@ -74,7 +74,7 @@ beforeAll(async () => {
     return { ClaudeSessionHistoryService };
   });
 
-  ({ createApp } = await import('../../app.js'));
+  ({ createApp } = await import('../../core/app.js'));
   const app = await createApp({ enableSwagger: false });
   server = createServer(app);
 
