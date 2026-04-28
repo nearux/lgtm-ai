@@ -14,7 +14,7 @@ import type {
   ProjectGitInfo,
   CreateProjectBody,
   UpdateProjectBody,
-} from '../../types/projects.js';
+} from './types/project.types.js';
 
 const REMOTE_NAME_RE = /^[\w.-]+$/;
 

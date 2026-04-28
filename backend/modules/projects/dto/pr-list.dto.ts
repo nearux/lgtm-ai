@@ -1,5 +1,5 @@
 import { isString } from 'remeda';
-import type { PRListItem } from '../../../types/pullRequests.js';
+import type { PRListItem } from '../types/pull-request.types.js';
 import type { PrListQuery } from '../../../graphql/generated/graphql.js';
 
 export type GraphQLPRNode = NonNullable<
@@ -17,7 +17,7 @@ export class PRListItemDto implements PRListItem {
   author: PRListItem['author'];
   createdAt: string;
   updatedAt: string;
-  state: string;
+  state: PRListItem['state'];
 
   constructor(data: PRListItem) {
     this.number = data.number;

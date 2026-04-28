@@ -13,8 +13,8 @@ import { AuthService } from './auth.service.js';
 import type {
   GitHubAuthStatus,
   SwitchAccountBody,
-  ErrorResponse,
-} from '../../types/index.js';
+} from './types/auth.types.js';
+import type { ErrorResponse } from '../../types/common.js';
 
 export type { GitHubAuthStatus, SwitchAccountBody };
 

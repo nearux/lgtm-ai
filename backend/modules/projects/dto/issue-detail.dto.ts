@@ -1,5 +1,5 @@
 import { isString } from 'remeda';
-import type { IssueDetail } from '../../../types/issues.js';
+import type { IssueDetail } from '../types/issue.types.js';
 import type { IssueDetailQuery } from '../../../graphql/generated/graphql.js';
 
 type GraphQLIssueDetail = NonNullable<
@@ -10,7 +10,7 @@ export class IssueDetailDto implements IssueDetail {
   number: number;
   title: string;
   body: string;
-  state: string;
+  state: IssueDetail['state'];
   totalCommentsCount: number;
   assignees: IssueDetail['assignees'];
   author: IssueDetail['author'];

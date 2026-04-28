@@ -5,7 +5,7 @@ import { injectable } from 'inversify';
 import type {
   CheckoutPRBranchResult,
   CheckoutDefaultBranchResult,
-} from '../../types/pullRequests.js';
+} from './types/pull-request.types.js';
 import { AppError } from '../../errors/AppError.js';
 import { validateRepoOwnerName, mapGhError } from './gh.util.js';
 

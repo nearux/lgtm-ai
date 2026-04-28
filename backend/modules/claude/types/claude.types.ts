@@ -1,4 +1,8 @@
-import type { ClaudeChatContext } from './chatSessions.js';
+import type { ClaudeChatContext } from '../../projects/types/chat-session.types.js';
+import type {
+  FileChange,
+  FileChangesSummary,
+} from '../../projects/types/git-file-change.types.js';
 
 // ── Client → Server ──────────────────────────────────────────────────
 
@@ -231,22 +235,6 @@ export interface WsPlanApprovalRequestEvent {
   toolUseId: string;
   toolName: string;
   input: unknown;
-}
-
-export type FileChangeStatus = 'added' | 'modified' | 'deleted';
-
-export interface FileChange {
-  path: string;
-  status: FileChangeStatus;
-  additions: number;
-  deletions: number;
-  diff: string;
-}
-
-export interface FileChangesSummary {
-  totalFiles: number;
-  totalAdditions: number;
-  totalDeletions: number;
 }
 
 export interface WsFileChangesEvent {

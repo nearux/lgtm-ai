@@ -1,8 +1,8 @@
 import { Controller, Route, Get, Query, Response, Tags } from '@tsoa/runtime';
 import { inject, injectable } from 'inversify';
 import { FileSystemService } from './file-system.service.js';
-import type { BrowseResponse } from '../../types/fileSystem.js';
-import type { ErrorResponse } from '../../types/projects.js';
+import type { BrowseResponse } from './types/file-system.types.js';
+import type { ErrorResponse } from '../../types/common.js';
 
 @injectable()
 @Route('api/fs')

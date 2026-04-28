@@ -13,7 +13,7 @@
   },
   "scripts": {
     "postinstall": "prisma generate",
-    "codegen": "graphql-codegen --config codegen.ts",
+    "codegen": "graphql-codegen --config codegen.ts --verbose",
     "build": "pnpm codegen && tsoa routes && node esbuild.config.mjs",
     "dev": "dotenv -e ../.env -c -- sh -c 'prisma migrate dev && tsoa spec && tsoa routes && (tsx watch --loader ./gql-loader.mjs index.ts || true)'",
     "start": "prisma migrate deploy && node dist/index.js",

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { PRListItem } from '../../types/pullRequests.js';
+import type { PRListItem } from './types/pull-request.types.js';
 import { GhGraphQLClient } from './gh-graphql.client.js';
 import { PRListService } from './pr-list.service.js';
 import { AppError } from '../../errors/AppError.js';

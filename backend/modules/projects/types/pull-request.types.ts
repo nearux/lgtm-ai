@@ -27,7 +27,7 @@ export interface PRListItem {
   author: PRAuthor;
   createdAt: string;
   updatedAt: string;
-  state: string;
+  state: 'OPEN' | 'CLOSED' | 'MERGED';
 }
 
 export interface PRComment {

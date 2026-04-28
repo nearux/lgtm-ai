@@ -29,12 +29,12 @@ import type {
   ProjectDetail,
   CreateProjectBody,
   UpdateProjectBody,
-  ErrorResponse,
   GenerateCommitMessageBody,
   CommitMessageResponse,
   CommitAndPushBody,
   CommitAndPushResponse,
-} from '../../types/projects.js';
+} from './types/project.types.js';
+import type { ErrorResponse } from '../../types/common.js';
 import type {
   PRListItem,
   PaginatedPRList,
@@ -44,18 +44,18 @@ import type {
   CheckoutPRBranchResult,
   CheckoutDefaultBranchBody,
   CheckoutDefaultBranchResult,
-} from '../../types/pullRequests.js';
+} from './types/pull-request.types.js';
 import type {
-  ChatSessionHistoryResponse,
   ChatSessionScopeType,
   ChatSessionSummary,
-} from '../../types/chatSessions.js';
+} from './types/chat-session.types.js';
+import type { ChatSessionHistoryResponse } from '../claude/types/session-history.types.js';
 import type {
   IssueListItem,
   IssueDetail,
   IssueState,
   PaginatedIssueList,
-} from '../../types/issues.js';
+} from './types/issue.types.js';
 
 export type {
   Project,

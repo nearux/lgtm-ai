@@ -1,6 +1,6 @@
 import { injectable, inject } from 'inversify';
 import HttpStatus from 'http-status';
-import type { PRDetail } from '../../types/pullRequests.js';
+import type { PRDetail } from './types/pull-request.types.js';
 import type { PrDetailQuery } from '../../graphql/generated/graphql.js';
 import prDetailGql from '../../graphql/queries/pr-detail.gql';
 import { PRDetailDto } from './dto/pr-detail.dto.js';

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { IssueListItem } from '../../types/issues.js';
+import type { IssueListItem } from './types/issue.types.js';
 import { GhGraphQLClient } from './gh-graphql.client.js';
 import { IssueListService } from './issue-list.service.js';
 import { AppError } from '../../errors/AppError.js';

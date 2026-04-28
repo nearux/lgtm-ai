@@ -1,6 +1,6 @@
 import { injectable, inject } from 'inversify';
 import HttpStatus from 'http-status';
-import type { IssueDetail } from '../../types/issues.js';
+import type { IssueDetail } from './types/issue.types.js';
 import type { IssueDetailQuery } from '../../graphql/generated/graphql.js';
 import issueDetailGql from '../../graphql/queries/issue-detail.gql';
 import { IssueDetailDto } from './dto/issue-detail.dto.js';

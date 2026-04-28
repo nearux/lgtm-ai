@@ -4,7 +4,7 @@ import type {
   PaginatedIssueList,
   IssueListItem,
   IssueState,
-} from '../../types/issues.js';
+} from './types/issue.types.js';
 import type {
   IssueListQuery,
   IssueCursorQuery,

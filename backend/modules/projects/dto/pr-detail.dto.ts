@@ -1,5 +1,5 @@
 import { isString } from 'remeda';
-import type { PRDetail, PRReview } from '../../../types/pullRequests.js';
+import type { PRDetail, PRReview } from '../types/pull-request.types.js';
 import type { PrDetailQuery } from '../../../graphql/generated/graphql.js';
 import { countNonEmptyReviewBodies } from './comment-counts.js';
 
@@ -22,7 +22,7 @@ export class PRDetailDto implements PRDetail {
   author: PRDetail['author'];
   createdAt: string;
   updatedAt: string;
-  state: string;
+  state: PRDetail['state'];
   comments: PRDetail['comments'];
   reviews: PRDetail['reviews'];
   commits: PRDetail['commits'];

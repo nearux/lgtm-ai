@@ -5,7 +5,7 @@ import HttpStatus from 'http-status';
 import { injectable } from 'inversify';
 import { filter, flatMap, map, pipe } from 'remeda';
 import { AppError } from '../../errors/AppError.js';
-import type { ChatSessionHistoryEntry } from '../../types/chatSessions.js';
+import type { ChatSessionHistoryEntry } from './types/session-history.types.js';
 import { expandContentBlocks } from './content-block-expander.util.js';
 
 export interface ClaudeTranscriptHistory {
@@ -14,10 +14,10 @@ export interface ClaudeTranscriptHistory {
 }
 
 type TranscriptLine = {
-  type?: string;
+  type?: 'user' | 'assistant' | 'system';
   timestamp?: string;
   message?: {
-    role?: string;
+    role?: 'user' | 'assistant' | 'system';
     content?: string | Array<Record<string, unknown>>;
   };
 };

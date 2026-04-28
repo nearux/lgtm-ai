@@ -3,7 +3,7 @@ import { promisify } from 'node:util';
 import HttpStatus from 'http-status';
 import { injectable } from 'inversify';
 import { AppError } from '../../errors/AppError.js';
-import type { GitHubAuthStatus, GitHubAccount } from '../../types/auth.js';
+import type { GitHubAuthStatus, GitHubAccount } from './types/auth.types.js';
 
 const execFileAsync = promisify(execFile);
 
