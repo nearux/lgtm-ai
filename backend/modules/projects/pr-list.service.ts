@@ -1,6 +1,4 @@
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
-import { injectable } from 'inversify';
+import { injectable, inject } from 'inversify';
 import { normalizePage, normalizeLimit } from './pagination.util.js';
 import type {
   PaginatedPRList,
@@ -14,11 +12,10 @@ import type {
 import prListGql from '../../graphql/queries/pr-list.gql';
 import prCursorGql from '../../graphql/queries/pr-cursor.gql';
 import { PRListItemDto } from './dto/pr-list.dto.js';
-import { validateRepoOwnerName, mapGhError } from './gh.util.js';
+import { validateRepoOwnerName } from './gh.util.js';
 import { AppError } from '../../errors/AppError.js';
+import { GhGraphQLClient } from './gh-graphql.client.js';
 import HttpStatus from 'http-status';
-
-const execFileAsync = promisify(execFile);
 
 const MAX_GRAPHQL_FIRST = 100;
 
@@ -30,10 +27,12 @@ const GRAPHQL_PR_STATES: Record<PRState, string[]> = {
   all: ['OPEN', 'CLOSED', 'MERGED'],
 };
 
-type GhGraphQLResponse<T> = { data?: T; errors?: { message: string }[] };
-
 @injectable()
 export class PRListService {
+  constructor(
+    @inject(GhGraphQLClient) private readonly client: GhGraphQLClient
+  ) {}
+
   async fetchPRList(
     repoOwnerName: string,
     options: { page?: number; limit?: number; state?: PRState } = {}
@@ -98,33 +97,15 @@ export class PRListService {
     hop: number,
     after: string | null
   ): Promise<string | null> {
-    const { stdout } = await execFileAsync('gh', [
-      'api',
-      'graphql',
-      '-f',
-      `query=${prCursorGql}`,
-      '-f',
-      `owner=${owner}`,
-      '-f',
-      `name=${name}`,
-      '-F',
-      `skip=${hop}`,
-      ...this.buildStatesFilterArgs(state),
-      ...(after ? ['-f', `after=${after}`] : []),
-    ]).catch((error) => {
-      throw mapGhError(error, 'fetch');
+    const data = await this.client.request<PrCursorQuery>(prCursorGql, {
+      owner,
+      name,
+      skip: hop,
+      states: GRAPHQL_PR_STATES[state],
+      after: after ?? undefined,
     });
-    const result = JSON.parse(stdout) as GhGraphQLResponse<PrCursorQuery>;
 
-    if (result.errors || !result.data) {
-      const message = result.errors?.[0]?.message ?? 'Unknown GraphQL error';
-      throw new AppError(
-        `GraphQL query failed: ${message}`,
-        HttpStatus.BAD_GATEWAY
-      );
-    }
-
-    return result.data.repository?.pullRequests.pageInfo.endCursor ?? null;
+    return data.repository?.pullRequests.pageInfo.endCursor ?? null;
   }
 
   private async fetchPRListGraphQL(
@@ -135,38 +116,21 @@ export class PRListService {
   ): Promise<{ totalCount: number; items: PRListItem[] }> {
     const [owner, name] = repoOwnerName.split('/');
 
-    const { stdout } = await execFileAsync('gh', [
-      'api',
-      'graphql',
-      '-f',
-      `query=${prListGql}`,
-      '-f',
-      `owner=${owner}`,
-      '-f',
-      `name=${name}`,
-      '-F',
-      `limit=${limit}`,
-      ...this.buildStatesFilterArgs(state),
-      ...(cursor ? ['-f', `after=${cursor}`] : []),
-    ]).catch((error) => {
-      throw mapGhError(error, 'fetch');
+    const data = await this.client.request<PrListQuery>(prListGql, {
+      owner,
+      name,
+      limit,
+      states: GRAPHQL_PR_STATES[state],
+      after: cursor ?? undefined,
     });
-    const result = JSON.parse(stdout) as GhGraphQLResponse<PrListQuery>;
 
-    if (result.errors || !result.data) {
-      const message = result.errors?.[0]?.message ?? 'Unknown GraphQL error';
-      throw new AppError(
-        `GraphQL query failed: ${message}`,
-        HttpStatus.BAD_GATEWAY
-      );
-    }
-
-    const prs = result.data.repository?.pullRequests;
-    if (!prs)
+    const prs = data.repository?.pullRequests;
+    if (!prs) {
       throw new AppError(
         'GraphQL query failed: no data',
         HttpStatus.BAD_GATEWAY
       );
+    }
 
     return {
       totalCount: prs.totalCount,
@@ -181,9 +145,5 @@ export class PRListService {
       return state as PRState;
     }
     return 'open';
-  }
-
-  private buildStatesFilterArgs(state: PRState): string[] {
-    return GRAPHQL_PR_STATES[state].flatMap((s) => ['-f', `states[]=${s}`]);
   }
 }

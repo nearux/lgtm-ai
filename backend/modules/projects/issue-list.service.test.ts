@@ -1,20 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { IssueListItem } from './types/issue.types.js';
-
-const mockExecAsync = vi.hoisted(() => vi.fn());
-
-vi.mock('node:util', () => ({
-  promisify: () => mockExecAsync,
-}));
-
-const { IssueListService } = await import('./issue-list.service.js');
+import { GhGraphQLClient } from './gh-graphql.client.js';
+import { IssueListService } from './issue-list.service.js';
+import { AppError } from '../../errors/AppError.js';
+import HttpStatus from 'http-status';
 
 describe('IssueListService.fetchIssueList', () => {
-  let service: InstanceType<typeof IssueListService>;
+  let mockRequest: ReturnType<typeof vi.fn>;
+  let service: IssueListService;
 
   beforeEach(() => {
-    vi.clearAllMocks();
-    service = new IssueListService();
+    mockRequest = vi.fn();
+    const mockClient = { request: mockRequest } as unknown as GhGraphQLClient;
+    service = new IssueListService(mockClient);
   });
 
   const mockIssueNodes = [
@@ -37,20 +35,21 @@ describe('IssueListService.fetchIssueList', () => {
     },
   ];
 
-  const mockResponse = {
-    data: {
-      repository: {
-        issues: {
-          totalCount: 1,
-          nodes: mockIssueNodes,
-        },
-      },
-    },
-  };
+  function mockListResponse(totalCount: number, nodes = mockIssueNodes) {
+    mockRequest.mockResolvedValueOnce({
+      repository: { issues: { totalCount, nodes } },
+    });
+  }
+
+  function mockCursorResponse(endCursor: string | null) {
+    mockRequest.mockResolvedValueOnce({
+      repository: { issues: { pageInfo: { endCursor } } },
+    });
+  }
 
   it('returns issue list with correct shape', async () => {
     // given
-    mockExecAsync.mockResolvedValue({ stdout: JSON.stringify(mockResponse) });
+    mockListResponse(1);
 
     // when
     const result = await service.fetchIssueList('owner/repo', {
@@ -81,13 +80,7 @@ describe('IssueListService.fetchIssueList', () => {
 
   it('calculates lastPage correctly', async () => {
     // given
-    mockExecAsync.mockResolvedValue({
-      stdout: JSON.stringify({
-        data: {
-          repository: { issues: { totalCount: 250, nodes: mockIssueNodes } },
-        },
-      }),
-    });
+    mockListResponse(250);
 
     // when
     const result = await service.fetchIssueList('owner/repo', { limit: 100 });
@@ -96,36 +89,38 @@ describe('IssueListService.fetchIssueList', () => {
     expect(result.lastPage).toBe(3);
   });
 
-  it('passes OPEN state to gh CLI for open filter', async () => {
+  it('passes OPEN state to client for open filter', async () => {
     // given
-    mockExecAsync.mockResolvedValue({ stdout: JSON.stringify(mockResponse) });
+    mockListResponse(1);
 
     // when
     await service.fetchIssueList('owner/repo', { state: 'open' });
 
     // then
-    const args = mockExecAsync.mock.calls[0][1] as string[];
-    expect(args).toContain('states[]=OPEN');
+    expect(mockRequest).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ states: ['OPEN'] })
+    );
   });
 
-  it('passes CLOSED state to gh CLI for closed filter', async () => {
+  it('passes CLOSED state to client for closed filter', async () => {
     // given
-    mockExecAsync.mockResolvedValue({ stdout: JSON.stringify(mockResponse) });
+    mockListResponse(1);
 
     // when
     await service.fetchIssueList('owner/repo', { state: 'closed' });
 
     // then
-    const args = mockExecAsync.mock.calls[0][1] as string[];
-    expect(args).toContain('states[]=CLOSED');
+    expect(mockRequest).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ states: ['CLOSED'] })
+    );
   });
 
   it('returns empty items when GraphQL returns null nodes', async () => {
     // given
-    mockExecAsync.mockResolvedValue({
-      stdout: JSON.stringify({
-        data: { repository: { issues: { totalCount: 0, nodes: null } } },
-      }),
+    mockRequest.mockResolvedValueOnce({
+      repository: { issues: { totalCount: 0, nodes: null } },
     });
 
     // when
@@ -143,19 +138,8 @@ describe('IssueListService.fetchIssueList', () => {
 
   it('fetches page 2 by resolving cursor first', async () => {
     // given
-    const cursorResponse = {
-      data: {
-        repository: {
-          issues: {
-            pageInfo: { endCursor: 'cursor_abc' },
-          },
-        },
-      },
-    };
-
-    mockExecAsync
-      .mockResolvedValueOnce({ stdout: JSON.stringify(cursorResponse) })
-      .mockResolvedValueOnce({ stdout: JSON.stringify(mockResponse) });
+    mockCursorResponse('cursor_abc');
+    mockListResponse(1);
 
     // when
     const result = await service.fetchIssueList('owner/repo', {
@@ -164,31 +148,23 @@ describe('IssueListService.fetchIssueList', () => {
     });
 
     // then
-    expect(mockExecAsync).toHaveBeenCalledTimes(2);
-    const cursorArgs = mockExecAsync.mock.calls[0][1] as string[];
-    expect(cursorArgs).toContain('skip=10');
-
-    const listArgs = mockExecAsync.mock.calls[1][1] as string[];
-    expect(listArgs).toContain('after=cursor_abc');
-
+    expect(mockRequest).toHaveBeenCalledTimes(2);
+    expect(mockRequest).toHaveBeenNthCalledWith(
+      1,
+      expect.any(String),
+      expect.objectContaining({ skip: 10 })
+    );
+    expect(mockRequest).toHaveBeenNthCalledWith(
+      2,
+      expect.any(String),
+      expect.objectContaining({ after: 'cursor_abc' })
+    );
     expect(result.items).toHaveLength(1);
   });
 
   it('returns empty items when cursor hop returns null (page exceeds total)', async () => {
     // given
-    const emptyCursorResponse = {
-      data: {
-        repository: {
-          issues: {
-            pageInfo: { endCursor: null },
-          },
-        },
-      },
-    };
-
-    mockExecAsync.mockResolvedValueOnce({
-      stdout: JSON.stringify(emptyCursorResponse),
-    });
+    mockCursorResponse(null);
 
     // when
     const result = await service.fetchIssueList('owner/repo', {
@@ -201,29 +177,24 @@ describe('IssueListService.fetchIssueList', () => {
     expect(result.lastPage).toBe(1);
   });
 
-  it('throws BAD_GATEWAY when GraphQL response contains errors', async () => {
+  it('throws BAD_GATEWAY when client throws GraphQL error', async () => {
     // given
-    mockExecAsync.mockResolvedValue({
-      stdout: JSON.stringify({
-        errors: [{ message: 'Some GraphQL error' }],
-      }),
-    });
+    mockRequest.mockRejectedValue(
+      new AppError(
+        'GraphQL query failed: Some GraphQL error',
+        HttpStatus.BAD_GATEWAY
+      )
+    );
 
     // when / then
     await expect(service.fetchIssueList('owner/repo')).rejects.toMatchObject({
-      message:
-        'GraphQL issue list query failed for owner/repo: Some GraphQL error',
       statusCode: 502,
     });
   });
 
   it('throws BAD_GATEWAY when GraphQL response has no repository', async () => {
     // given
-    mockExecAsync.mockResolvedValue({
-      stdout: JSON.stringify({
-        data: { repository: null },
-      }),
-    });
+    mockRequest.mockResolvedValueOnce({ repository: null });
 
     // when / then
     await expect(service.fetchIssueList('owner/repo')).rejects.toMatchObject({
@@ -235,69 +206,66 @@ describe('IssueListService.fetchIssueList', () => {
 
   it('maps authentication error to AppError with 503', async () => {
     // given
-    mockExecAsync.mockRejectedValue(new Error('authentication required'));
-
-    const { AppError } = await import('../../errors/AppError.js');
-    type AppErrorInstance = InstanceType<typeof AppError>;
+    mockRequest.mockRejectedValue(
+      new AppError(
+        'GitHub CLI is not authenticated. Please check your account in the header.',
+        HttpStatus.SERVICE_UNAVAILABLE
+      )
+    );
 
     // when / then
-    try {
-      await service.fetchIssueList('owner/repo');
-    } catch (err) {
-      expect(err).toBeInstanceOf(AppError);
-      expect((err as AppErrorInstance).statusCode).toBe(503);
-    }
+    await expect(service.fetchIssueList('owner/repo')).rejects.toMatchObject({
+      statusCode: 503,
+    });
   });
 
   it('maps not found error to 403 AppError', async () => {
     // given
-    mockExecAsync.mockRejectedValue(new Error('not found'));
-
-    const { AppError } = await import('../../errors/AppError.js');
-    type AppErrorInstance = InstanceType<typeof AppError>;
+    mockRequest.mockRejectedValue(
+      new AppError(
+        'Cannot access this repository. Try switching your GitHub account in the header.',
+        HttpStatus.FORBIDDEN
+      )
+    );
 
     // when / then
-    try {
-      await service.fetchIssueList('owner/repo');
-    } catch (err) {
-      expect(err).toBeInstanceOf(AppError);
-      expect((err as AppErrorInstance).statusCode).toBe(403);
-    }
+    await expect(service.fetchIssueList('owner/repo')).rejects.toMatchObject({
+      statusCode: 403,
+    });
   });
 
   it('defaults to open state when given an invalid state value', async () => {
     // given
-    mockExecAsync.mockResolvedValue({ stdout: JSON.stringify(mockResponse) });
+    mockListResponse(1);
 
     // when
-    await service.fetchIssueList('owner/repo', {
-      state: 'invalid' as never,
-    });
+    await service.fetchIssueList('owner/repo', { state: 'invalid' as never });
 
     // then
-    const args = mockExecAsync.mock.calls[0][1] as string[];
-    expect(args).toContain('states[]=OPEN');
+    expect(mockRequest).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ states: ['OPEN'] })
+    );
   });
 
   it('handles null author and null body fields in GraphQL node', async () => {
     // given
-    const nodeWithNulls = {
-      ...mockIssueNodes[0],
-      body: null,
-      author: null,
-      assignees: { nodes: [] },
-      labels: { nodes: [] },
-      comments: { totalCount: 0 },
-    };
-
-    mockExecAsync.mockResolvedValue({
-      stdout: JSON.stringify({
-        data: {
-          repository: {
-            issues: { totalCount: 1, nodes: [nodeWithNulls] },
-          },
+    mockRequest.mockResolvedValueOnce({
+      repository: {
+        issues: {
+          totalCount: 1,
+          nodes: [
+            {
+              ...mockIssueNodes[0],
+              body: null,
+              author: null,
+              assignees: { nodes: [] },
+              labels: { nodes: [] },
+              comments: { totalCount: 0 },
+            },
+          ],
         },
-      }),
+      },
     });
 
     // when

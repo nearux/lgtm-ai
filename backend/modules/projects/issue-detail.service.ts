@@ -1,20 +1,19 @@
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
-import { injectable } from 'inversify';
+import { injectable, inject } from 'inversify';
 import HttpStatus from 'http-status';
 import type { IssueDetail } from './types/issue.types.js';
 import type { IssueDetailQuery } from '../../graphql/generated/graphql.js';
 import issueDetailGql from '../../graphql/queries/issue-detail.gql';
 import { IssueDetailDto } from './dto/issue-detail.dto.js';
-import { validateRepoOwnerName, mapGhError } from './gh.util.js';
+import { validateRepoOwnerName } from './gh.util.js';
 import { AppError } from '../../errors/AppError.js';
-
-const execFileAsync = promisify(execFile);
-
-type GhGraphQLResponse<T> = { data?: T; errors?: { message: string }[] };
+import { GhGraphQLClient } from './gh-graphql.client.js';
 
 @injectable()
 export class IssueDetailService {
+  constructor(
+    @inject(GhGraphQLClient) private readonly client: GhGraphQLClient
+  ) {}
+
   async fetchIssueDetail(
     repoOwnerName: string,
     issueNumber: number
@@ -22,45 +21,18 @@ export class IssueDetailService {
     validateRepoOwnerName(repoOwnerName);
 
     const [owner, name] = repoOwnerName.split('/');
-    const result = await this.queryIssueDetail(owner, name, issueNumber);
 
-    if (result.errors || !result.data) {
-      const message = result.errors?.[0]?.message ?? 'Unknown GraphQL error';
-      throw new AppError(
-        `GraphQL issue detail query failed for ${owner}/${name}#${issueNumber}: ${message}`,
-        HttpStatus.INTERNAL_SERVER_ERROR
-      );
-    }
+    const data = await this.client.request<IssueDetailQuery>(issueDetailGql, {
+      owner,
+      name,
+      number: issueNumber,
+    });
 
-    const issue = result.data.repository?.issue;
+    const issue = data.repository?.issue;
     if (!issue) {
       throw new AppError('Issue not found', HttpStatus.NOT_FOUND);
     }
 
     return IssueDetailDto.fromGraphQL(issue);
-  }
-
-  private async queryIssueDetail(
-    owner: string,
-    name: string,
-    issueNumber: number
-  ): Promise<GhGraphQLResponse<IssueDetailQuery>> {
-    try {
-      const { stdout } = await execFileAsync('gh', [
-        'api',
-        'graphql',
-        '-f',
-        `query=${issueDetailGql}`,
-        '-f',
-        `owner=${owner}`,
-        '-f',
-        `name=${name}`,
-        '-F',
-        `number=${issueNumber}`,
-      ]);
-      return JSON.parse(stdout) as GhGraphQLResponse<IssueDetailQuery>;
-    } catch (error) {
-      throw mapGhError(error, 'fetch');
-    }
   }
 }
