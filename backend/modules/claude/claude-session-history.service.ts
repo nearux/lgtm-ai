@@ -14,10 +14,10 @@ export interface ClaudeTranscriptHistory {
 }
 
 type TranscriptLine = {
-  type?: string;
+  type?: 'user' | 'assistant' | 'system';
   timestamp?: string;
   message?: {
-    role?: string;
+    role?: 'user' | 'assistant' | 'system';
     content?: string | Array<Record<string, unknown>>;
   };
 };

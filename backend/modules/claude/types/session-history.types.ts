@@ -1,5 +1,5 @@
 export interface ChatSessionHistoryEntry {
-  role: string;
+  role: 'user' | 'assistant' | 'system';
   messageType: 'text' | 'tool' | 'tool_result' | 'user';
   content: string;
   toolName?: string;
